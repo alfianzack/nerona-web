@@ -226,7 +226,7 @@ git commit -m "Scaffold Next.js + TypeScript + Tailwind project"
 
 **Interfaces:**
 - Consumes: `DATABASE_URL` from `.env.local` (you obtained this from Neon in the "Before you start" section).
-- Produces: Postgres tables `users`, `accounts`, `sessions`, `verification_tokens`, `admin_roles`, `plans`, `subscriptions`, `licenses`, `orders`, `settings`. Later tasks query these via Prisma Client generated from this schema.
+- Produces: Postgres tables `users`, `accounts`, `sessions`, `verification_tokens`, `admin_roles`, `plans`, `subscriptions`, `licenses`, `orders`, `settings`. Later tasks query these via Prisma Client generated from this schema. Also produces `npm run prisma:migrate` / `prisma:seed` / `prisma:studio` scripts (via a `dotenv-cli` wrapper) — the Prisma CLI only auto-loads a plain `.env` file, not `.env.local`, so raw `npx prisma ...` commands silently fail to find `DATABASE_URL`. Every later task and the README must invoke Prisma through these `npm run` scripts, not raw `npx prisma` commands.
 
 - [ ] **Step 1: Install Prisma**
 
@@ -401,16 +401,36 @@ model Setting {
 }
 ```
 
-- [ ] **Step 4: Run the initial migration**
+- [ ] **Step 4: Add a `dotenv-cli` wrapper so the Prisma CLI can find `DATABASE_URL`**
 
-Run: `npx prisma migrate dev --name init`
-Expected: output ends with `Your database is now in sync with your schema.` and a new folder `prisma/migrations/<timestamp>_init/` is created. If this fails with a connection error, double-check `DATABASE_URL` in `.env.local` against the string Neon gave you.
+The Prisma CLI only auto-loads a plain `.env` file, not `.env.local` — since this project keeps
+secrets in `.env.local` (gitignored, per Task 1), raw `npx prisma ...` commands would silently
+fail to find `DATABASE_URL`. Install the wrapper and add scripts instead:
 
-- [ ] **Step 5: Commit (schema and migration only — `.env.local` must NOT be committed)**
+Run: `npm install -D dotenv-cli`
+
+Add to `package.json`'s `"scripts"`:
+
+```json
+"prisma:migrate": "dotenv -e .env.local -- prisma migrate dev",
+"prisma:seed": "dotenv -e .env.local -- prisma db seed",
+"prisma:studio": "dotenv -e .env.local -- prisma studio"
+```
+
+From this point on, every later task and the README use `npm run prisma:migrate` /
+`prisma:seed` / `prisma:studio` — never raw `npx prisma ...` commands, which won't see
+`DATABASE_URL`.
+
+- [ ] **Step 5: Run the initial migration**
+
+Run: `npm run prisma:migrate -- --name init`
+Expected: output ends with `Your database is now in sync with your schema.` and a new folder `prisma/migrations/<timestamp>_init/` is created. If this fails with a connection error, double-check `DATABASE_URL` in `.env.local`.
+
+- [ ] **Step 6: Commit (schema, migration, and the dotenv-cli wrapper — `.env.local` must NOT be committed)**
 
 ```bash
-git add prisma/schema.prisma prisma/migrations
-git commit -m "Add Prisma schema and initial migration"
+git add prisma/schema.prisma prisma/migrations package.json package-lock.json
+git commit -m "Add Prisma schema, initial migration, and dotenv-cli wrapper"
 ```
 
 ---
@@ -516,7 +536,7 @@ export { handler as GET, handler as POST };
 - [ ] **Step 5: Manually verify sign-in works**
 
 Run: `npm run dev`, open `http://localhost:3000/api/auth/signin`, click "Sign in with Google", complete the Google prompt.
-Expected: you're redirected back to the app without an error; check Prisma Studio (`npx prisma studio`) and confirm a row now exists in the `users` table with your email, and a matching row in `accounts`. Stop the dev server once confirmed.
+Expected: you're redirected back to the app without an error; check Prisma Studio (`npm run prisma:studio`) and confirm a row now exists in the `users` table with your email, and a matching row in `accounts`. Stop the dev server once confirmed.
 
 - [ ] **Step 6: Commit**
 
@@ -922,7 +942,7 @@ git commit -m "Add session-gated /account and /admin pages"
 
 **Interfaces:**
 - Consumes: `OWNER_ADMIN_EMAIL` from `.env.local`; Prisma models `User`, `AdminRole` from Task 2.
-- Produces: a runnable `npx prisma db seed` command that guarantees an `owner_admin` row exists (satisfies the spec's "there must always be at least one owner_admin" constraint, from the very first setup).
+- Produces: a runnable `npm run prisma:seed` command that guarantees an `owner_admin` row exists (satisfies the spec's "there must always be at least one owner_admin" constraint, from the very first setup).
 
 - [ ] **Step 1: Install `tsx` to run the TypeScript seed script**
 
@@ -984,7 +1004,7 @@ OWNER_ADMIN_EMAIL="<the Google account email you signed in with in Task 4>"
 
 - [ ] **Step 5: Run the seed script**
 
-Run: `npx prisma db seed`
+Run: `npm run prisma:seed`
 Expected: prints `Granted owner_admin to <your email>`.
 
 - [ ] **Step 6: Manually verify admin access now works**
@@ -1010,9 +1030,13 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
      `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI.
    - `OWNER_ADMIN_EMAIL` — the Google account email that should get full admin access.
 2. Install dependencies: `npm install`
-3. Apply the database schema: `npx prisma migrate dev`
-4. Grant yourself admin access: `npx prisma db seed`
+3. Apply the database schema: `npm run prisma:migrate`
+4. Grant yourself admin access: `npm run prisma:seed`
 5. Start the dev server: `npm run dev`
+
+Note: Prisma CLI commands always go through the `npm run prisma:*` scripts (not raw
+`npx prisma ...`) because those scripts load secrets from `.env.local` via `dotenv-cli` — the
+Prisma CLI itself only auto-loads a plain `.env` file.
 
 ## Testing
 
