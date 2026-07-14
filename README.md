@@ -17,6 +17,10 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
      https://console.cloud.google.com/apis/credentials (type "Web application"), with
      `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI.
    - `OWNER_ADMIN_EMAIL` — the Google account email that should get full admin access.
+   - `RESEND_API_KEY` — from https://resend.dev (Dashboard → API Keys). Used to send
+     verification and password-reset emails. Without a verified sending domain, Resend can
+     only deliver to the email address your Resend account was created with.
+   - `EMAIL_FROM` — optional, defaults to `"Nerona <onboarding@resend.dev>"`.
 2. Install dependencies: `npm install`
 3. Apply the database schema: `npm run prisma:migrate`
 4. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
@@ -31,6 +35,13 @@ Prisma CLI itself only auto-loads a plain `.env` file.
 
 Run `npm test` for the unit test suite (session/role-guard logic). Payment and OAuth flows are
 verified manually against Stripe/Google test modes — see later phase plans.
+
+## Auth methods
+
+Two ways to sign in: Google OAuth, or email/password (`/register`, `/login`). Email/password
+accounts get a verification email on signup (`/verify-email`) and can reset their password via
+`/reset-password`. Unverified accounts can still sign in and use `/account`, with a reminder
+banner shown there until verified.
 
 ## Project structure
 
