@@ -1,15 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-var sendMockFn;
+const { sendMock } = vi.hoisted(() => ({
+  sendMock: vi.fn(),
+}));
 
-vi.mock("resend", () => {
-  sendMockFn = vi.fn();
-  return {
-    Resend: vi.fn().mockImplementation(() => ({
-      emails: { send: sendMockFn },
-    })),
-  };
-});
+vi.mock("resend", () => ({
+  Resend: vi.fn().mockImplementation(() => ({
+    emails: { send: sendMock },
+  })),
+}));
 
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/mail";
 
@@ -21,8 +20,8 @@ describe("sendVerificationEmail", () => {
   it("sends an email containing a verify-email link with the token", async () => {
     await sendVerificationEmail("user@example.com", "abc123");
 
-    expect(sendMockFn).toHaveBeenCalledTimes(1);
-    const call = sendMockFn.mock.calls[0][0];
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const call = sendMock.mock.calls[0][0];
     expect(call.to).toBe("user@example.com");
     expect(call.html).toContain("/verify-email?token=abc123");
   });
@@ -36,8 +35,8 @@ describe("sendPasswordResetEmail", () => {
   it("sends an email containing a reset-password link with the token", async () => {
     await sendPasswordResetEmail("user@example.com", "xyz789");
 
-    expect(sendMockFn).toHaveBeenCalledTimes(1);
-    const call = sendMockFn.mock.calls[0][0];
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const call = sendMock.mock.calls[0][0];
     expect(call.to).toBe("user@example.com");
     expect(call.html).toContain("/reset-password/xyz789");
   });
