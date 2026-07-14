@@ -28,7 +28,11 @@ export async function registerUser(email: string, password: string): Promise<Reg
   });
 
   const token = await createEmailVerificationToken(user.id);
-  await sendVerificationEmail(normalizedEmail, token);
+  try {
+    await sendVerificationEmail(normalizedEmail, token);
+  } catch (err) {
+    console.error("Failed to send verification email during registration:", err);
+  }
 
   return { ok: true };
 }
