@@ -24,8 +24,8 @@ export default async function HomePage() {
         </div>
       ) : (
         <p className="mt-4">
-          <a href="/api/auth/signin" className="text-blue-600 underline">
-            Sign in with Google
+          <a href="/login" className="text-blue-600 underline">
+            Sign in
           </a>
         </p>
       )}
