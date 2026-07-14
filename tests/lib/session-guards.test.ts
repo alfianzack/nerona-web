@@ -27,7 +27,7 @@ describe("requireUser", () => {
   it("redirects to sign-in when there is no session", async () => {
     getServerSessionMock.mockResolvedValue(null);
 
-    await expect(requireUser()).rejects.toThrow("REDIRECT:/api/auth/signin");
+    await expect(requireUser()).rejects.toThrow("REDIRECT:/login");
   });
 
   it("returns the session when signed in", async () => {

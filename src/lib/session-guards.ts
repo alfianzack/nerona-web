@@ -5,7 +5,7 @@ import { authOptions } from "./auth";
 export async function requireUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    redirect("/api/auth/signin");
+    redirect("/login");
   }
   return session;
 }
