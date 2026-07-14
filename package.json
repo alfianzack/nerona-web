@@ -1,17 +1,13 @@
 {
   "name": "nerona-web",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "postinstall": "prisma generate",
     "prisma:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "prisma:seed": "dotenv -e .env.local -- prisma db seed",
     "prisma:studio": "dotenv -e .env.local -- prisma studio"

@@ -14,8 +14,9 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
    - `OWNER_ADMIN_EMAIL` — the Google account email that should get full admin access.
 2. Install dependencies: `npm install`
 3. Apply the database schema: `npm run prisma:migrate`
-4. Grant yourself admin access: `npm run prisma:seed`
-5. Start the dev server: `npm run dev`
+4. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
+   `OWNER_ADMIN_EMAIL` (this creates your `User` + linked `Account` row)
+5. Grant yourself admin access: `npm run prisma:seed`
 
 Note: Prisma CLI commands always go through the `npm run prisma:*` scripts (not raw
 `npx prisma ...`) because those scripts load secrets from `.env.local` via `dotenv-cli` — the
@@ -23,7 +24,7 @@ Prisma CLI itself only auto-loads a plain `.env` file.
 
 ## Testing
 
-Run `npm test` for the unit test suite (license/session logic). Payment and OAuth flows are
+Run `npm test` for the unit test suite (session/role-guard logic). Payment and OAuth flows are
 verified manually against Stripe/Google test modes — see later phase plans.
 
 ## Project structure
