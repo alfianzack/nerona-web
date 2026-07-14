@@ -5,7 +5,12 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
 ## Setup
 
 1. Copy `.env.example` to `.env.local` and fill in:
-   - `DATABASE_URL` — Postgres connection string (e.g. from https://neon.tech).
+   - `DATABASE_URL` — Supabase **pooled** connection string (port `6543`, "Transaction" mode,
+     with `?pgbouncer=true`), from Project Settings → Database → Connection Pooling. Used by the
+     app at runtime.
+   - `DIRECT_URL` — Supabase **session-mode** connection string on the same pooler host (port
+     `5432`, no `pgbouncer` param). Used only by Prisma CLI for migrations, since the transaction
+     pooler doesn't support the features `prisma migrate` needs.
    - `NEXTAUTH_URL` — `http://localhost:3000` for local dev.
    - `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`.
    - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from an OAuth 2.0 Client ID at
