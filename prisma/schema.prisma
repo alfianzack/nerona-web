@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth.js (next-auth) required models ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// --- Application models ---
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  accounts        Account[]
+  sessions        Session[]
+  adminRole       AdminRole?
+  subscriptions   Subscription[]
+  licenses        License[]        @relation("UserLicenses")
+  grantedLicenses License[]        @relation("GrantedByAdmin")
+  orders          Order[]
+
+  @@map("users")
+}
+
+model AdminRole {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // "owner_admin" | "support"
+  createdAt DateTime @default(now())
+
+  @@map("admin_roles")
+}
+
+model Plan {
+  id                   String   @id @default(cuid())
+  name                 String
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  marketplaces         String   @default("*")
+  rejectAnalyzer       Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  subscriptions Subscription[]
+  licenses      License[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+  planId               String
+  plan                 Plan     @relation(fields: [planId], references: [id])
+  stripeSubscriptionId String   @unique
+  status               String   // "active" | "trialing" | "past_due" | "canceled"
+  currentPeriodEnd     DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+model License {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("UserLicenses", fields: [userId], references: [id])
+  licenseKey     String    @unique
+  status         String    // "active" | "revoked" | "comp"
+  source         String    // "stripe" | "manual_grant"
+  grantedById    String?
+  grantedBy      User?     @relation("GrantedByAdmin", fields: [grantedById], references: [id])
+  notes          String?
+  planId         String?
+  plan           Plan?     @relation(fields: [planId], references: [id])
+  validUntil     DateTime?
+  marketplaces   String    @default("*")
+  rejectAnalyzer Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("licenses")
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  stripeInvoiceId String   @unique
+  amount          Int
+  currency        String   @default("usd")
+  status          String
+  refunded        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@map("orders")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
