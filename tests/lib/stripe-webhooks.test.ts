@@ -17,7 +17,12 @@ vi.mock("@/lib/stripe", () => ({
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
 vi.mock("@/lib/mail", () => ({ sendLicenseEmail: vi.fn() }));
 
-import { handleCheckoutSessionCompleted } from "@/lib/stripe-webhooks";
+import {
+  handleCheckoutSessionCompleted,
+  handleInvoicePaid,
+  handleSubscriptionDeleted,
+  handleSubscriptionUpdated,
+} from "@/lib/stripe-webhooks";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { generateLicenseKey } from "@/lib/license";
@@ -124,5 +129,175 @@ describe("handleCheckoutSessionCompleted", () => {
       data: expect.objectContaining({ status: "active", planId: "plan-1" }),
     });
     expect(sendLicenseEmail).toHaveBeenCalledWith("user@example.com", "NERONA-EXIST-ING1-KEY0");
+  });
+});
+
+describe("handleSubscriptionUpdated", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("logs and returns when no Subscription row is found", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue(null);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleSubscriptionUpdated({
+      id: "sub_missing",
+      status: "active",
+      current_period_end: 1_800_000_000,
+      items: { data: [{ current_period_end: 1_800_000_000 }] },
+    } as any);
+
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("sets the license active and clears pastDueSince when status returns to active", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue({
+      id: "subscription-row-1",
+      userId: "user-1",
+      pastDueSince: new Date("2026-01-01"),
+    });
+
+    await handleSubscriptionUpdated({
+      id: "sub_1",
+      status: "active",
+      current_period_end: 1_800_000_000,
+      items: { data: [{ current_period_end: 1_800_000_000 }] },
+    } as any);
+
+    expect(prisma.subscription.update).toHaveBeenCalledWith({
+      where: { id: "subscription-row-1" },
+      data: expect.objectContaining({ status: "active", pastDueSince: null }),
+    });
+    expect(prisma.license.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: expect.objectContaining({ status: "active" }),
+    });
+  });
+
+  it("sets pastDueSince on first past_due delivery and keeps the license active (within grace)", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue({
+      id: "subscription-row-1",
+      userId: "user-1",
+      pastDueSince: null,
+    });
+
+    await handleSubscriptionUpdated({
+      id: "sub_1",
+      status: "past_due",
+      current_period_end: 1_800_000_000,
+      items: { data: [{ current_period_end: 1_800_000_000 }] },
+    } as any);
+
+    expect(prisma.subscription.update).toHaveBeenCalledWith({
+      where: { id: "subscription-row-1" },
+      data: expect.objectContaining({ status: "past_due", pastDueSince: expect.any(Date) }),
+    });
+    expect(prisma.license.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: expect.objectContaining({ status: "active" }),
+    });
+  });
+
+  it("expires the license once past_due has exceeded the grace period", async () => {
+    const longAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
+    (prisma.subscription.findUnique as any).mockResolvedValue({
+      id: "subscription-row-1",
+      userId: "user-1",
+      pastDueSince: longAgo,
+    });
+
+    await handleSubscriptionUpdated({
+      id: "sub_1",
+      status: "past_due",
+      current_period_end: 1_800_000_000,
+      items: { data: [{ current_period_end: 1_800_000_000 }] },
+    } as any);
+
+    expect(prisma.license.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: expect.objectContaining({ status: "expired" }),
+    });
+  });
+});
+
+describe("handleSubscriptionDeleted", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("logs and returns when no Subscription row is found", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue(null);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleSubscriptionDeleted({ id: "sub_missing" } as any);
+
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("marks the Subscription canceled and the License expired", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue({ id: "subscription-row-1", userId: "user-1" });
+
+    await handleSubscriptionDeleted({ id: "sub_1" } as any);
+
+    expect(prisma.subscription.update).toHaveBeenCalledWith({
+      where: { id: "subscription-row-1" },
+      data: { status: "canceled" },
+    });
+    expect(prisma.license.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: { status: "expired" },
+    });
+  });
+});
+
+describe("handleInvoicePaid", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does nothing when the invoice has no subscription", async () => {
+    await handleInvoicePaid({ id: "in_1", parent: null } as any);
+
+    expect(prisma.order.create).not.toHaveBeenCalled();
+  });
+
+  it("logs and returns when no Subscription row is found", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue(null);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleInvoicePaid({
+      id: "in_1",
+      parent: { subscription_details: { subscription: "sub_missing" } },
+    } as any);
+
+    expect(prisma.order.create).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("creates an Order row for the invoice", async () => {
+    (prisma.subscription.findUnique as any).mockResolvedValue({ id: "subscription-row-1", userId: "user-1" });
+
+    await handleInvoicePaid({
+      id: "in_1",
+      parent: { subscription_details: { subscription: "sub_1" } },
+      amount_paid: 1200,
+      currency: "usd",
+      status: "paid",
+    } as any);
+
+    expect(prisma.order.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        stripeInvoiceId: "in_1",
+        amount: 1200,
+        currency: "usd",
+        status: "paid",
+        refunded: false,
+      },
+    });
   });
 });
