@@ -8,7 +8,12 @@ export async function createCheckoutSession(
   email: string,
   interval: CheckoutInterval
 ): Promise<{ url: string } | null> {
-  const plan = await prisma.plan.findFirst();
+  const plan = await prisma.plan.findFirst({
+    where:
+      interval === "monthly"
+        ? { stripePriceIdMonthly: { not: null } }
+        : { stripePriceIdYearly: { not: null } },
+  });
   if (!plan) {
     return null;
   }
