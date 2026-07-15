@@ -26,7 +26,11 @@ export async function handleCheckoutSessionCompleted(
 
   const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
   const subscriptionItem = stripeSubscription.items.data[0];
-  const priceId = subscriptionItem?.price.id;
+  if (!subscriptionItem) {
+    console.error(`checkout.session.completed: subscription ${stripeSubscription.id} has no line items`);
+    return;
+  }
+  const priceId = subscriptionItem.price.id;
   const plan = await prisma.plan.findFirst({
     where: { OR: [{ stripePriceIdMonthly: priceId }, { stripePriceIdYearly: priceId }] },
   });
@@ -37,7 +41,7 @@ export async function handleCheckoutSessionCompleted(
 
   // Stripe API 2026-06-24.dahlia moved current_period_end from the Subscription
   // object down to each SubscriptionItem.
-  const currentPeriodEnd = new Date((subscriptionItem?.current_period_end ?? 0) * 1000);
+  const currentPeriodEnd = new Date(subscriptionItem.current_period_end * 1000);
 
   await prisma.subscription.create({
     data: {
