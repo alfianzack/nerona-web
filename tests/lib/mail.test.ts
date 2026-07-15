@@ -10,7 +10,7 @@ vi.mock("resend", () => ({
   })),
 }));
 
-import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/mail";
+import { sendLicenseEmail, sendPasswordResetEmail, sendVerificationEmail } from "@/lib/mail";
 
 describe("sendVerificationEmail", () => {
   beforeEach(() => {
@@ -39,5 +39,20 @@ describe("sendPasswordResetEmail", () => {
     const call = sendMock.mock.calls[0][0];
     expect(call.to).toBe("user@example.com");
     expect(call.html).toContain("/reset-password/xyz789");
+  });
+});
+
+describe("sendLicenseEmail", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("sends an email containing the license key", async () => {
+    await sendLicenseEmail("user@example.com", "NERONA-AB12-CD34-EF56");
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const call = sendMock.mock.calls[0][0];
+    expect(call.to).toBe("user@example.com");
+    expect(call.html).toContain("NERONA-AB12-CD34-EF56");
   });
 });

@@ -23,3 +23,12 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
     html: `<p>Click the link below to reset your password (expires in 1 hour):</p><p><a href="${link}">${link}</a></p>`,
   });
 }
+
+export async function sendLicenseEmail(email: string, licenseKey: string): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: "Your Nerona Pro license key",
+    html: `<p>Thanks for subscribing to Nerona Pro! Your license key is:</p><p><code>${licenseKey}</code></p><p>Paste it into the extension popup to activate it. You can view it any time from your <a href="${baseUrl()}/account">account page</a>.</p>`,
+  });
+}
