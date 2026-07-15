@@ -46,6 +46,10 @@ work).
   reports `status: "past_due"` (not re-set on repeated `past_due` events for the same episode),
   cleared when the subscription returns to `active`/`trialing`. Drives the grace-period
   calculation below.
+- `Subscription` also gains `stripeCustomerId String` — captured from the Checkout Session at
+  creation time. Needed to open a Stripe Billing Portal session for a user (the Billing Portal
+  API takes a Stripe customer ID, which isn't derivable from anything else already on `User` or
+  `License`).
 - `License.status` gains a new value, `"expired"` (alongside the existing `"active"`/
   `"revoked"`/`"comp"`) — set when a subscription lapses past its grace period or is canceled.
   `"revoked"` remains reserved for a future manual admin action; this phase never sets it.
@@ -112,9 +116,10 @@ event types:
 - Alongside the existing email-verification banner, `/account` gains a license section (for
   users who have a `License`): license key (monospace, copy-to-clipboard button), plan name,
   status, `validUntil`, and a "Manage billing" link.
-- **`POST /api/billing-portal`**: authenticated route, creates a Stripe Billing Portal session
-  for the user's Stripe customer, returns `{ url }`; the "Manage billing" link redirects there.
-  This is how customers self-serve cancel/upgrade — no custom UI for that.
+- **`POST /api/billing-portal`**: authenticated route, looks up the user's most recent
+  `Subscription` row for its `stripeCustomerId`, creates a Stripe Billing Portal session for
+  that customer, returns `{ url }`; the "Manage billing" link redirects there. This is how
+  customers self-serve cancel/upgrade — no custom UI for that.
 - Users with no `License` yet see a "Subscribe" link to `/pricing` instead.
 
 ## Error Handling & Edge Cases
