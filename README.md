@@ -21,11 +21,22 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
      verification and password-reset emails. Without a verified sending domain, Resend can
      only deliver to the email address your Resend account was created with.
    - `EMAIL_FROM` — optional, defaults to `"Nerona <onboarding@resend.dev>"`.
-2. Install dependencies: `npm install`
-3. Apply the database schema: `npm run prisma:migrate`
-4. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
+   - `STRIPE_SECRET_KEY` — from https://dashboard.stripe.com (test mode) → Developers → API
+     keys.
+   - `STRIPE_PRICE_ID_MONTHLY` / `STRIPE_PRICE_ID_YEARLY` — create one product ("Nerona Pro")
+     with a monthly and a yearly recurring price in test mode, then copy each price's ID.
+   - `STRIPE_WEBHOOK_SECRET` — run `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+     (requires the Stripe CLI: https://stripe.com/docs/stripe-cli) and copy the webhook signing
+     secret it prints. This secret is only valid for that `stripe listen` session — a real
+     deployed webhook endpoint gets its own secret from the dashboard later, not needed for
+     local development.
+2. Set up your Stripe test-mode account: create the product and prices, and start
+   `stripe listen` to get a webhook secret, as described above.
+3. Install dependencies: `npm install`
+4. Apply the database schema: `npm run prisma:migrate`
+5. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
    `OWNER_ADMIN_EMAIL` (this creates your `User` + linked `Account` row)
-5. Grant yourself admin access: `npm run prisma:seed`. Sign out and back in afterward — sessions
+6. Grant yourself admin access: `npm run prisma:seed`. Sign out and back in afterward — sessions
    use JWTs, so your existing session's token won't reflect the new role until you get a fresh
    one.
 

@@ -1,11 +1,8 @@
 import { Resend } from "resend";
+import { baseUrl } from "./base-url";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.EMAIL_FROM || "Nerona <onboarding@resend.dev>";
-
-function baseUrl(): string {
-  return process.env.NEXTAUTH_URL || "http://localhost:3000";
-}
 
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const link = `${baseUrl()}/verify-email?token=${token}`;
