@@ -21,6 +21,34 @@ async function main() {
   });
 
   console.log(`Granted owner_admin to ${ownerEmail}`);
+
+  const priceIdMonthly = process.env.STRIPE_PRICE_ID_MONTHLY;
+  const priceIdYearly = process.env.STRIPE_PRICE_ID_YEARLY;
+  if (!priceIdMonthly || !priceIdYearly) {
+    throw new Error(
+      "Set STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY in .env.local before running the seed script."
+    );
+  }
+
+  const existingPlan = await prisma.plan.findFirst({ where: { name: "Pro" } });
+  if (existingPlan) {
+    await prisma.plan.update({
+      where: { id: existingPlan.id },
+      data: { stripePriceIdMonthly: priceIdMonthly, stripePriceIdYearly: priceIdYearly },
+    });
+  } else {
+    await prisma.plan.create({
+      data: {
+        name: "Pro",
+        stripePriceIdMonthly: priceIdMonthly,
+        stripePriceIdYearly: priceIdYearly,
+        marketplaces: "*",
+        rejectAnalyzer: true,
+      },
+    });
+  }
+
+  console.log("Seeded Pro plan");
 }
 
 main()
