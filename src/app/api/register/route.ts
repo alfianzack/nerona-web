@@ -4,11 +4,13 @@ import { registerUser } from "@/lib/register";
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_email: "Enter a valid email address.",
   weak_password: "Password must be at least 8 characters.",
-  email_taken: "An account with this email may already exist — try signing in instead.",
 };
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
+  }
   const email = String(body.email || "");
   const password = String(body.password || "");
 

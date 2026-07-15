@@ -5,7 +5,7 @@ import { sendVerificationEmail } from "./mail";
 
 export type RegisterResult =
   | { ok: true }
-  | { ok: false; error: "invalid_email" | "weak_password" | "email_taken" };
+  | { ok: false; error: "invalid_email" | "weak_password" };
 
 export async function registerUser(email: string, password: string): Promise<RegisterResult> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -19,7 +19,7 @@ export async function registerUser(email: string, password: string): Promise<Reg
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
-    return { ok: false, error: "email_taken" };
+    return { ok: true };
   }
 
   const passwordHash = await hashPassword(password);

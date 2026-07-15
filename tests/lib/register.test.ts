@@ -33,13 +33,14 @@ describe("registerUser", () => {
     expect(result).toEqual({ ok: false, error: "weak_password" });
   });
 
-  it("rejects when the email is already registered", async () => {
+  it("returns ok without creating a duplicate account or sending a new email when already registered", async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: "existing-user" });
 
     const result = await registerUser("a@example.com", "long-enough-password");
 
-    expect(result).toEqual({ ok: false, error: "email_taken" });
+    expect(result).toEqual({ ok: true });
     expect(prisma.user.create).not.toHaveBeenCalled();
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
   });
 
   it("creates the user, sends a verification email, and returns ok on success", async () => {
@@ -56,5 +57,17 @@ describe("registerUser", () => {
     });
     expect(createEmailVerificationToken).toHaveBeenCalledWith("new-user");
     expect(sendVerificationEmail).toHaveBeenCalledWith("a@example.com", "token-abc");
+  });
+
+  it("still returns ok when sending the verification email fails for a new registration", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (hashPassword as any).mockResolvedValue("hashed-password");
+    (prisma.user.create as any).mockResolvedValue({ id: "new-user", email: "a@example.com" });
+    (createEmailVerificationToken as any).mockResolvedValue("token-abc");
+    (sendVerificationEmail as any).mockRejectedValue(new Error("send failed"));
+
+    const result = await registerUser("a@example.com", "long-enough-password");
+
+    expect(result).toEqual({ ok: true });
   });
 });

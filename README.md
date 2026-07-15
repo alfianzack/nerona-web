@@ -25,7 +25,9 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
 3. Apply the database schema: `npm run prisma:migrate`
 4. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
    `OWNER_ADMIN_EMAIL` (this creates your `User` + linked `Account` row)
-5. Grant yourself admin access: `npm run prisma:seed`
+5. Grant yourself admin access: `npm run prisma:seed`. Sign out and back in afterward — sessions
+   use JWTs, so your existing session's token won't reflect the new role until you get a fresh
+   one.
 
 Note: Prisma CLI commands always go through the `npm run prisma:*` scripts (not raw
 `npx prisma ...`) because those scripts load secrets from `.env.local` via `dotenv-cli` — the

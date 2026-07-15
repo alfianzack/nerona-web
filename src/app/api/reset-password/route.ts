@@ -7,7 +7,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
+  }
   const token = String(body.token || "");
   const password = String(body.password || "");
 
