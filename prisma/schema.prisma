@@ -106,8 +106,10 @@ model Subscription {
   planId               String
   plan                 Plan     @relation(fields: [planId], references: [id])
   stripeSubscriptionId String   @unique
+  stripeCustomerId     String
   status               String   // "active" | "trialing" | "past_due" | "canceled"
   currentPeriodEnd     DateTime
+  pastDueSince         DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
