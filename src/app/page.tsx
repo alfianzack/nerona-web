@@ -4,6 +4,8 @@ import { MetadataCardMockup } from "@/components/marketing/mockups/MetadataCardM
 import { MarketplaceTabsMockup } from "@/components/marketing/mockups/MarketplaceTabsMockup";
 import { KeywordChipsMockup } from "@/components/marketing/mockups/KeywordChipsMockup";
 import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgressMockup";
+import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
+import { PricingTeaser } from "@/components/marketing/PricingTeaser";
 
 export default function HomePage() {
   return (
@@ -37,6 +39,8 @@ export default function HomePage() {
         theme="dark"
         imageSide="left"
       />
+      <MarketplaceRow />
+      <PricingTeaser />
     </main>
   );
 }
