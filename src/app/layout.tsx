@@ -15,9 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans">
-        <Header />
-        {children}
-        <Footer />
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </div>
       </body>
     </html>
   );

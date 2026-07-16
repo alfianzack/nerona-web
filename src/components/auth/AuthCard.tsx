@@ -8,7 +8,7 @@ export function AuthCard({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-4 dark:bg-black">
+    <main className="flex flex-1 items-center justify-center bg-white px-4 dark:bg-black">
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 p-8 shadow-xl dark:border-gray-800">
         <h1 className="text-center text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
           {title}
