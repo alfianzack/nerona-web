@@ -1,46 +1,55 @@
-import { Hero } from "@/components/marketing/Hero";
+import Link from "next/link";
 import { FeatureSection } from "@/components/marketing/FeatureSection";
 import { MetadataCardMockup } from "@/components/marketing/mockups/MetadataCardMockup";
-import { MarketplaceTabsMockup } from "@/components/marketing/mockups/MarketplaceTabsMockup";
-import { KeywordChipsMockup } from "@/components/marketing/mockups/KeywordChipsMockup";
-import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgressMockup";
-import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
-import { PricingTeaser } from "@/components/marketing/PricingTeaser";
+import { AgentChatMockup } from "@/components/marketing/mockups/AgentChatMockup";
 
 export default function HomePage() {
   return (
     <main>
-      <Hero />
+      <section className="bg-white px-6 pb-24 pt-20 text-center dark:bg-black sm:pt-28">
+        <div className="mx-auto max-w-4xl">
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Nerona</p>
+          <h1 className="mt-3 text-5xl font-semibold tracking-tight text-gray-950 dark:text-white sm:text-7xl">
+            Satu perusahaan,{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-sky-400 bg-clip-text text-transparent">
+              alat AI untuk kontributor dan pemilik bisnis.
+            </span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500 dark:text-gray-400 sm:text-xl">
+            Dari metadata otomatis untuk kontributor stock, sampai asisten AI WhatsApp untuk
+            pemilik usaha kecil — Nerona membangun alat yang bekerja untuk Anda.
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-6">
+            <Link
+              href="/metadata"
+              className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
+            >
+              Lihat Metadata
+            </Link>
+            <Link
+              href="/agent"
+              className="text-sm font-medium text-blue-600 transition hover:underline dark:text-blue-400"
+            >
+              Lihat Agent <span aria-hidden="true">›</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <FeatureSection
-        title="Write once, skip the typing."
-        body="AI drafts a title, description, and 30 keywords for every image you upload."
+        title="Nerona Metadata"
+        body="Judul, deskripsi, dan kata kunci dibuat otomatis dengan AI, lalu diisi langsung ke formulir unggah Adobe Stock, Shutterstock, Vecteezy, Canva, dan lainnya."
         mockup={<MetadataCardMockup />}
-        theme="light"
-        imageSide="right"
-      />
-      <FeatureSection
-        title="One click. Every marketplace."
-        body="Works directly on Adobe Stock, Freepik, Vecteezy, and Shutterstock's own upload forms — no copy-paste."
-        mockup={<MarketplaceTabsMockup />}
         theme="dark"
         imageSide="left"
       />
       <FeatureSection
-        title="Keywords that keep pace."
-        body="30 AI-generated keywords plus room for your own, kept consistent across every upload."
-        mockup={<KeywordChipsMockup />}
+        title="Nerona Agent"
+        body="Asisten AI yang chat langsung di WhatsApp — catat pesanan, ingat percakapan, dan bantu jawab pelanggan, tanpa aplikasi baru untuk dipelajari."
+        mockup={<AgentChatMockup />}
         theme="light"
         imageSide="right"
       />
-      <FeatureSection
-        title="Built for batches."
-        body="Pick multiple images, watch progress per image, and apply across every open marketplace tab at once."
-        mockup={<BatchProgressMockup />}
-        theme="dark"
-        imageSide="left"
-      />
-      <MarketplaceRow />
-      <PricingTeaser />
     </main>
   );
 }
