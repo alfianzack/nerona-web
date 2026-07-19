@@ -42,14 +42,18 @@ export async function processJob(jobId: string): Promise<void> {
     const { permanentlyFailed } = await failJob(jobId, job.attempts, message);
 
     if (permanentlyFailed) {
-      const profile = await prisma.agentProfile.findUnique({ where: { id: job.profileId } });
-      if (profile?.whatsappPhone) {
-        await sendWhatsAppText(profile.whatsappPhone, FAILURE_APOLOGY).catch(() => {});
-        await logOutbound({
-          profileId: profile.id,
-          phone: profile.whatsappPhone,
-          body: FAILURE_APOLOGY,
-        }).catch(() => {});
+      try {
+        const profile = await prisma.agentProfile.findUnique({ where: { id: job.profileId } });
+        if (profile?.whatsappPhone) {
+          await sendWhatsAppText(profile.whatsappPhone, FAILURE_APOLOGY).catch(() => {});
+          await logOutbound({
+            profileId: profile.id,
+            phone: profile.whatsappPhone,
+            body: FAILURE_APOLOGY,
+          }).catch(() => {});
+        }
+      } catch {
+        // best-effort apology; a failure here must not mask that failJob already ran
       }
     }
   }

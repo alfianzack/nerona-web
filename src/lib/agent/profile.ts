@@ -1,4 +1,5 @@
 import { randomInt } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
@@ -45,15 +46,22 @@ export async function startPhoneLink(
   const code = generateSixDigitCode();
   const expires = new Date(Date.now() + LINK_CODE_TTL_MS);
 
-  await prisma.agentProfile.update({
-    where: { id: profileId },
-    data: {
-      whatsappPhone: phone,
-      phoneVerifiedAt: null,
-      linkCode: code,
-      linkCodeExpires: expires,
-    },
-  });
+  try {
+    await prisma.agentProfile.update({
+      where: { id: profileId },
+      data: {
+        whatsappPhone: phone,
+        phoneVerifiedAt: null,
+        linkCode: code,
+        linkCodeExpires: expires,
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { ok: false, reason: "phone_taken" };
+    }
+    throw err;
+  }
 
   return { ok: true, code, expires };
 }

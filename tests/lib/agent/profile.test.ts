@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -108,6 +109,19 @@ describe("startPhoneLink", () => {
     const result = await startPhoneLink("profile-1", "+15551234567");
 
     expect(result.ok).toBe(true);
+  });
+
+  it("returns phone_taken when the update hits a concurrent unique-constraint violation", async () => {
+    (prisma.agentProfile.findUnique as any).mockResolvedValue(null);
+    const p2002 = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "test",
+    });
+    (prisma.agentProfile.update as any).mockRejectedValueOnce(p2002);
+
+    const result = await startPhoneLink("profile-1", "+15551234567");
+
+    expect(result).toEqual({ ok: false, reason: "phone_taken" });
   });
 });
 

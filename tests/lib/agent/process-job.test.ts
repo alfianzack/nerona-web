@@ -110,4 +110,15 @@ describe("processJob — permanent failure", () => {
       expect.objectContaining({ profileId: "profile-1", phone: "+15551234567" })
     );
   });
+
+  it("does not reject processJob when the apology-path profile re-fetch throws", async () => {
+    (prisma.agentProfile.findUnique as any)
+      .mockResolvedValueOnce(profile)
+      .mockRejectedValueOnce(new Error("transient DB error"));
+
+    await expect(processJob("job-1")).resolves.toBeUndefined();
+
+    expect(completeJob).not.toHaveBeenCalled();
+    expect(sendWhatsAppText).not.toHaveBeenCalled();
+  });
 });

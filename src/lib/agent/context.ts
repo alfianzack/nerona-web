@@ -3,7 +3,12 @@ import type { HistoryEntry } from "./messages";
 export function toClaudeHistory(
   history: HistoryEntry[]
 ): { role: "user" | "assistant"; content: string }[] {
-  return history.map((entry) => ({
+  const firstInboundIndex = history.findIndex((entry) => entry.direction === "in");
+  if (firstInboundIndex === -1) {
+    return [];
+  }
+
+  return history.slice(firstInboundIndex).map((entry) => ({
     role: entry.direction === "in" ? "user" : "assistant",
     content: entry.body,
   }));

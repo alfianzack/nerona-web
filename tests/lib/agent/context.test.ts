@@ -13,6 +13,28 @@ describe("toClaudeHistory", () => {
       { role: "assistant", content: "hai, ada yang bisa dibantu?" },
     ]);
   });
+
+  it("drops a leading outbound entry so the history starts with a user turn", () => {
+    const result = toClaudeHistory([
+      { direction: "out", body: "pesan lama dari agent" },
+      { direction: "in", body: "halo lagi" },
+      { direction: "out", body: "hai lagi" },
+    ]);
+
+    expect(result).toEqual([
+      { role: "user", content: "halo lagi" },
+      { role: "assistant", content: "hai lagi" },
+    ]);
+  });
+
+  it("returns an empty array when there is no inbound entry at all", () => {
+    const result = toClaudeHistory([
+      { direction: "out", body: "pesan 1" },
+      { direction: "out", body: "pesan 2" },
+    ]);
+
+    expect(result).toEqual([]);
+  });
 });
 
 describe("buildSystemPrompt", () => {
