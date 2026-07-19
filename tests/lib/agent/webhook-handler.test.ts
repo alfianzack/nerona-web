@@ -26,6 +26,9 @@ vi.mock("@/lib/agent/wait-until", () => ({
 vi.mock("@/lib/base-url", () => ({
   baseUrl: () => "http://localhost:3000",
 }));
+vi.mock("@/lib/agent/limits", () => ({
+  hasExceededMonthlyLimit: vi.fn(),
+}));
 
 import {
   handleIncomingWebhook,
@@ -37,6 +40,7 @@ import { findProfileByPhone, matchesLinkCode, markPhoneVerified } from "@/lib/ag
 import { createJob } from "@/lib/agent/jobs";
 import { processJob } from "@/lib/agent/process-job";
 import { runInBackground } from "@/lib/agent/wait-until";
+import { hasExceededMonthlyLimit } from "@/lib/agent/limits";
 
 function textPayload(from: string, body: string, id = "wamid.1") {
   return JSON.stringify({
@@ -226,8 +230,10 @@ describe("handleIncomingWebhook", () => {
     (findProfileByPhone as any).mockResolvedValue({
       id: "profile-1",
       status: "active",
+      plan: "free",
       phoneVerifiedAt: new Date(),
     });
+    (hasExceededMonthlyLimit as any).mockResolvedValue(false);
     (createJob as any).mockResolvedValue({ id: "job-1" });
 
     const result = await handleIncomingWebhook(
@@ -236,6 +242,7 @@ describe("handleIncomingWebhook", () => {
     );
 
     expect(result.status).toBe(200);
+    expect(hasExceededMonthlyLimit).toHaveBeenCalledWith("profile-1", "free");
     expect(createJob).toHaveBeenCalledWith({
       profileId: "profile-1",
       waMessageId: "wamid.1",
@@ -243,5 +250,27 @@ describe("handleIncomingWebhook", () => {
     });
     expect(runInBackground).toHaveBeenCalledTimes(1);
     expect(processJob).toHaveBeenCalledWith("job-1");
+  });
+
+  it("replies with an upgrade message and creates no job when the monthly limit is exceeded", async () => {
+    (findProfileByPhone as any).mockResolvedValue({
+      id: "profile-1",
+      status: "active",
+      plan: "free",
+      phoneVerifiedAt: new Date(),
+    });
+    (hasExceededMonthlyLimit as any).mockResolvedValue(true);
+
+    const result = await handleIncomingWebhook(
+      textPayload("15551234567", "halo"),
+      "sha256=ok"
+    );
+
+    expect(result.status).toBe(200);
+    expect(sendWhatsAppText).toHaveBeenCalledWith(
+      "+15551234567",
+      expect.stringContaining("Kuota pesan bulanan")
+    );
+    expect(createJob).not.toHaveBeenCalled();
   });
 });

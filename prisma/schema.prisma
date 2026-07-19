@@ -63,13 +63,16 @@ model User {
   accounts                   Account[]
   sessions                   Session[]
   adminRole                  AdminRole?
-  subscriptions              Subscription[]
   licenses                   License[]        @relation("UserLicenses")
   grantedLicenses            License[]        @relation("GrantedByAdmin")
   orders                     Order[]
   emailVerificationTokens    EmailVerificationToken[]
   passwordResetTokens        PasswordResetToken[]
+  enrollments                Enrollment[]
+  lessonProgress             LessonProgress[]
   agentProfile               AgentProfile?
+  orderRequests              OrderRequest[]   @relation("UserOrderRequests")
+  fulfilledOrderRequests     OrderRequest[]   @relation("FulfilledOrderRequests")
 
   @@map("users")
 }
@@ -85,36 +88,21 @@ model AdminRole {
 }
 
 model Plan {
-  id                   String   @id @default(cuid())
-  name                 String
-  stripePriceIdMonthly String?
-  stripePriceIdYearly  String?
-  marketplaces         String   @default("*")
-  rejectAnalyzer       Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  priceLabel     String?
+  marketplaces   String   @default("*")
+  rejectAnalyzer Boolean  @default(false)
+  // AI generations per month shown on pricing pages; null = unlimited.
+  // Display-only for now — the extension has no backend hook to enforce it,
+  // same as the marketplaces limit.
+  generationLimit Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  subscriptions Subscription[]
-  licenses      License[]
+  licenses License[]
 
   @@map("plans")
-}
-
-model Subscription {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id])
-  planId               String
-  plan                 Plan     @relation(fields: [planId], references: [id])
-  stripeSubscriptionId String   @unique
-  stripeCustomerId     String
-  status               String   // "active" | "trialing" | "past_due" | "canceled"
-  currentPeriodEnd     DateTime
-  pastDueSince         DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  @@map("subscriptions")
 }
 
 model License {
@@ -123,7 +111,7 @@ model License {
   user           User      @relation("UserLicenses", fields: [userId], references: [id])
   licenseKey     String    @unique
   status         String    // "active" | "revoked" | "comp"
-  source         String    // "stripe" | "manual_grant"
+  source         String    // "manual_grant"
   grantedById    String?
   grantedBy      User?     @relation("GrantedByAdmin", fields: [grantedById], references: [id])
   notes          String?
@@ -138,16 +126,18 @@ model License {
   @@map("licenses")
 }
 
+// A manual-payment ledger entry, recorded when an admin grants access with an
+// amount (whole rupiah). courseId null means the payment was for a license grant.
 model Order {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  stripeInvoiceId String   @unique
-  amount          Int
-  currency        String   @default("usd")
-  status          String
-  refunded        Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id])
+  amount    Int
+  currency  String   @default("idr")
+  note      String?
+  createdAt DateTime @default(now())
 
   @@map("orders")
 }
@@ -182,6 +172,91 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// --- Video courses (tutorials / classes, sold as one-time purchases) ---
+
+model Course {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  priceLabel  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  enrollments Enrollment[]
+  orders      Order[]
+
+  @@map("courses")
+}
+
+// A raw video asset (hosted on Vimeo). Exists independently of any one
+// course/module so the same recording can be reused across courses — e.g.
+// the "class" course's modules reuse the "tutorial" course's videos.
+model Video {
+  id        String   @id @default(cuid())
+  title     String
+  vimeoId   String
+  createdAt DateTime @default(now())
+
+  lessons Lesson[]
+
+  @@map("videos")
+}
+
+model Module {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title    String
+  order    Int
+
+  lessons Lesson[]
+
+  @@map("modules")
+}
+
+// A placement of a Video inside a Module, with its own order and optional
+// title override.
+model Lesson {
+  id       String  @id @default(cuid())
+  moduleId String
+  module   Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  videoId  String
+  video    Video   @relation(fields: [videoId], references: [id])
+  title    String?
+  order    Int
+
+  progress LessonProgress[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  source    String   // "manual_grant"
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  completedAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
 // --- Nerona Agent (WhatsApp AI business assistant) ---
 
 model AgentProfile {
@@ -195,6 +270,7 @@ model AgentProfile {
   businessName        String?
   timezone            String    @default("Asia/Jakarta")
   status              String    @default("pending") // "pending" | "active" | "disabled"
+  plan                String    @default("free") // "free" | "pro" | "business"
   googleRefreshToken  String?   @db.Text
   googleCalendarEmail String?
   createdAt           DateTime  @default(now())
@@ -303,4 +379,24 @@ model AgentJob {
   updatedAt   DateTime     @updatedAt
 
   @@map("agent_jobs")
+}
+
+// A self-served upgrade request from the pricing pages. Payment stays
+// off-platform: paid-tier requests sit "pending" until an admin fulfills them
+// after receiving payment; free-tier signups never create one (activated
+// instantly instead).
+model OrderRequest {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserOrderRequests", fields: [userId], references: [id], onDelete: Cascade)
+  product       String // "metadata" | "agent"
+  planName      String // "Pro" | "Business"
+  contactNote   String?
+  status        String    @default("pending") // "pending" | "fulfilled" | "cancelled"
+  createdAt     DateTime  @default(now())
+  fulfilledAt   DateTime?
+  fulfilledById String?
+  fulfilledBy   User?     @relation("FulfilledOrderRequests", fields: [fulfilledById], references: [id])
+
+  @@map("order_requests")
 }

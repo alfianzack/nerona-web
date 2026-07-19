@@ -1,0 +1,239 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    plan: { findFirst: vi.fn() },
+    license: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+    agentProfile: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn() },
+    orderRequest: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      findMany: vi.fn(),
+    },
+  },
+}));
+vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
+vi.mock("@/lib/admin-grants", () => ({ grantLicense: vi.fn() }));
+
+import { cancelOrderRequest, fulfillOrderRequest, submitOrder } from "@/lib/orders";
+import { prisma } from "@/lib/prisma";
+import { generateLicenseKey } from "@/lib/license";
+import { grantLicense } from "@/lib/admin-grants";
+
+describe("submitOrder — validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects an unknown product", async () => {
+    expect(await submitOrder("user-1", "courses", "Pro")).toEqual({
+      ok: false,
+      reason: "invalid_product",
+    });
+  });
+
+  it("rejects an unknown plan", async () => {
+    expect(await submitOrder("user-1", "metadata", "Ultimate")).toEqual({
+      ok: false,
+      reason: "invalid_plan",
+    });
+  });
+});
+
+describe("submitOrder — Free metadata", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns plan_not_found when the Free plan isn't seeded", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue(null);
+
+    expect(await submitOrder("user-1", "metadata", "Free")).toEqual({
+      ok: false,
+      reason: "plan_not_found",
+    });
+  });
+
+  it("never downgrades an existing active license", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-free" });
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "lic-1", status: "active" });
+
+    const result = await submitOrder("user-1", "metadata", "Free");
+
+    expect(result).toEqual({ ok: true, kind: "free_activated" });
+    expect(prisma.license.update).not.toHaveBeenCalled();
+    expect(prisma.license.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a fresh free license when the user has none", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({
+      id: "plan-free",
+      marketplaces: "adobe",
+      rejectAnalyzer: false,
+    });
+    (prisma.license.findFirst as any).mockResolvedValue(null);
+    (generateLicenseKey as any).mockResolvedValue("NERONA-FREE-AAAA-BBBB");
+
+    const result = await submitOrder("user-1", "metadata", "Free");
+
+    expect(result).toEqual({ ok: true, kind: "free_activated" });
+    expect(prisma.license.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: "user-1",
+        licenseKey: "NERONA-FREE-AAAA-BBBB",
+        status: "active",
+        source: "free_signup",
+        planId: "plan-free",
+      }),
+    });
+  });
+});
+
+describe("submitOrder — Free agent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("refuses when the profile was disabled by an admin", async () => {
+    (prisma.agentProfile.findUnique as any).mockResolvedValue({ id: "p1", status: "disabled" });
+
+    expect(await submitOrder("user-1", "agent", "Free")).toEqual({
+      ok: false,
+      reason: "account_disabled",
+    });
+  });
+
+  it("creates an active free profile when none exists", async () => {
+    (prisma.agentProfile.findUnique as any).mockResolvedValue(null);
+
+    const result = await submitOrder("user-1", "agent", "Free");
+
+    expect(result).toEqual({ ok: true, kind: "free_activated" });
+    expect(prisma.agentProfile.create).toHaveBeenCalledWith({
+      data: { userId: "user-1", status: "active", plan: "free" },
+    });
+  });
+});
+
+describe("submitOrder — paid plans", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects a duplicate pending request for the same product", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (prisma.orderRequest.findFirst as any).mockResolvedValue({ id: "req-1" });
+
+    expect(await submitOrder("user-1", "metadata", "Pro")).toEqual({
+      ok: false,
+      reason: "already_pending",
+    });
+    expect(prisma.orderRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a pending request with the contact note", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+
+    const result = await submitOrder("user-1", "metadata", "Pro", "WA 0812...");
+
+    expect(result).toEqual({ ok: true, kind: "request_created" });
+    expect(prisma.orderRequest.create).toHaveBeenCalledWith({
+      data: { userId: "user-1", product: "metadata", planName: "Pro", contactNote: "WA 0812..." },
+    });
+  });
+});
+
+describe("fulfillOrderRequest", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns order_not_found for a missing order", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue(null);
+
+    expect(await fulfillOrderRequest("admin-1", "req-x")).toEqual({
+      ok: false,
+      reason: "order_not_found",
+    });
+  });
+
+  it("refuses to fulfill a non-pending order", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-1",
+      status: "fulfilled",
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    expect(await fulfillOrderRequest("admin-1", "req-1")).toEqual({
+      ok: false,
+      reason: "not_pending",
+    });
+  });
+
+  it("grants a metadata license via the admin-grant path and marks fulfilled", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-1",
+      status: "pending",
+      product: "metadata",
+      planName: "Pro",
+      user: { id: "user-1", email: "a@b.c" },
+    });
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (grantLicense as any).mockResolvedValue({ ok: true });
+
+    const result = await fulfillOrderRequest("admin-1", "req-1");
+
+    expect(result).toEqual({ ok: true });
+    expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
+      note: "Order req-1",
+    });
+    expect(prisma.orderRequest.update).toHaveBeenCalledWith({
+      where: { id: "req-1" },
+      data: expect.objectContaining({ status: "fulfilled", fulfilledById: "admin-1" }),
+    });
+  });
+
+  it("activates the agent profile with the lowercased plan name", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-2",
+      status: "pending",
+      product: "agent",
+      planName: "Business",
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    const result = await fulfillOrderRequest("admin-1", "req-2");
+
+    expect(result).toEqual({ ok: true });
+    expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      update: { status: "active", plan: "business" },
+      create: { userId: "user-1", status: "active", plan: "business" },
+    });
+  });
+});
+
+describe("cancelOrderRequest", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("cancels a pending order", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({ id: "req-1", status: "pending" });
+
+    expect(await cancelOrderRequest("req-1")).toEqual({ ok: true });
+    expect(prisma.orderRequest.update).toHaveBeenCalledWith({
+      where: { id: "req-1" },
+      data: { status: "cancelled" },
+    });
+  });
+
+  it("refuses to cancel a fulfilled order", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({ id: "req-1", status: "fulfilled" });
+
+    expect(await cancelOrderRequest("req-1")).toEqual({ ok: false, reason: "not_pending" });
+  });
+});

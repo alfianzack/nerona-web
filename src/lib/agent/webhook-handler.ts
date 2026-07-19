@@ -5,6 +5,7 @@ import { findProfileByPhone, matchesLinkCode, markPhoneVerified } from "./profil
 import { createJob } from "./jobs";
 import { processJob } from "./process-job";
 import { runInBackground } from "./wait-until";
+import { hasExceededMonthlyLimit } from "./limits";
 
 export async function handleWebhookVerification(params: {
   mode: string | null;
@@ -88,6 +89,15 @@ export async function handleIncomingWebhook(
         "Nomor ini belum terverifikasi. Buka dashboard Nerona Agent untuk mendapatkan kode verifikasi."
       );
     }
+    return { status: 200 };
+  }
+
+  if (await hasExceededMonthlyLimit(profile.id, profile.plan)) {
+    await replyStatic(
+      phone,
+      profile.id,
+      `Kuota pesan bulanan paket Anda sudah habis. Upgrade paket di ${baseUrl()}/agent untuk melanjutkan.`
+    );
     return { status: 200 };
   }
 
