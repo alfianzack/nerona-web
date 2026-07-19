@@ -6,7 +6,7 @@ import { AuthButton } from "./AuthButton";
 export function GoogleButton() {
   return (
     <AuthButton variant="secondary" onClick={() => signIn("google", { callbackUrl: "/account" })}>
-      Continue with Google
+      Lanjutkan dengan Google
     </AuthButton>
   );
 }

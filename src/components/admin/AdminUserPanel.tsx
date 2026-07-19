@@ -113,7 +113,7 @@ export function AdminUserPanel() {
 
   return (
     <div className="mt-8 max-w-xl">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Pengguna</h2>
+      <h2 className="text-lg font-semibold text-white">Pengguna</h2>
 
       <div className="mt-2 flex gap-2">
         <input
@@ -121,21 +121,21 @@ export function AdminUserPanel() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="pengguna@contoh.com"
-          className="flex-1 rounded-xl bg-gray-100 px-3 py-2 text-sm ring-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:focus:bg-gray-900 text-gray-950 dark:text-white"
+          className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
         <button
           onClick={handleSearch}
           disabled={searching || !email}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
         >
           {searching ? "Mencari..." : "Cari"}
         </button>
       </div>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
 
       {user && (
         <div className="mt-6 space-y-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-navy-300">
             {user.name ?? user.email} ({user.email})
           </p>
 
@@ -145,26 +145,26 @@ export function AdminUserPanel() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Catatan (opsional)"
-              className="flex-1 rounded-xl bg-gray-100 px-3 py-2 text-sm ring-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:focus:bg-gray-900 text-gray-950 dark:text-white"
+              className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Jumlah Rp (opsional)"
-              className="w-36 rounded-xl bg-gray-100 px-3 py-2 text-sm ring-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:focus:bg-gray-900 text-gray-950 dark:text-white"
+              className="w-36 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-            <p className="font-medium text-gray-900 dark:text-white">Lisensi</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
+            <p className="font-medium text-white">Lisensi</p>
+            <p className="text-sm text-navy-300">
               Status: {license?.status ?? "belum ada"}
             </p>
             <select
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
-              className="mt-2 rounded-xl bg-gray-100 px-3 py-2 text-sm ring-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:focus:bg-gray-900 text-gray-950 dark:text-white"
+              className="mt-2 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
               {plans.map((plan) => (
                 <option key={plan.id} value={plan.id}>
@@ -176,23 +176,23 @@ export function AdminUserPanel() {
               <button
                 onClick={() => handleLicenseAction("grant")}
                 disabled={actionLoading || !planId}
-                className="rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+                className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
               >
                 Berikan
               </button>
               <button
                 onClick={() => handleLicenseAction("revoke")}
                 disabled={actionLoading || !license || license.status === "revoked"}
-                className="rounded-full bg-gray-100 px-3.5 py-1.5 text-sm font-medium text-gray-950 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20 disabled:opacity-50"
               >
                 Cabut
               </button>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-            <p className="font-medium text-gray-900 dark:text-white">Agent</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
+            <p className="font-medium text-white">Agent</p>
+            <p className="text-sm text-navy-300">
               Status: {user.agentProfile?.status ?? "belum ada"}
               {user.agentProfile?.whatsappPhone
                 ? ` — ${user.agentProfile.whatsappPhone} (${
@@ -204,14 +204,14 @@ export function AdminUserPanel() {
               <button
                 onClick={() => handleAgentAction("activate")}
                 disabled={actionLoading || user.agentProfile?.status === "active"}
-                className="rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+                className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
               >
                 Aktifkan
               </button>
               <button
                 onClick={() => handleAgentAction("disable")}
                 disabled={actionLoading || !user.agentProfile || user.agentProfile.status === "disabled"}
-                className="rounded-full bg-gray-100 px-3.5 py-1.5 text-sm font-medium text-gray-950 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20 disabled:opacity-50"
               >
                 Nonaktifkan
               </button>
@@ -219,15 +219,15 @@ export function AdminUserPanel() {
           </div>
 
           <div className="space-y-3">
-            <p className="font-medium text-gray-900 dark:text-white">Kelas</p>
+            <p className="font-medium text-white">Kelas</p>
             {courses.map((course) => {
               const enrolled = enrolledCourseIds.has(course.id);
               return (
                 <div
                   key={course.id}
-                  className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10"
+                  className="flex items-center justify-between rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-4 shadow-lg shadow-black/40 ring-1 ring-white/10"
                 >
-                  <span className="text-sm text-gray-900 dark:text-white">
+                  <span className="text-sm text-white">
                     {course.title}
                     {enrolled ? " — terdaftar" : ""}
                   </span>
@@ -235,14 +235,14 @@ export function AdminUserPanel() {
                     <button
                       onClick={() => handleEnrollmentAction(course.id, "grant")}
                       disabled={actionLoading || enrolled}
-                      className="rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+                      className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
                     >
                       Berikan
                     </button>
                     <button
                       onClick={() => handleEnrollmentAction(course.id, "revoke")}
                       disabled={actionLoading || !enrolled}
-                      className="rounded-full bg-gray-100 px-3.5 py-1.5 text-sm font-medium text-gray-950 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                      className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20 disabled:opacity-50"
                     >
                       Cabut
                     </button>

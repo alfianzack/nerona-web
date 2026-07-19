@@ -50,9 +50,9 @@ export function AgentLinkPanel({
 
   if (verifiedAt) {
     return (
-      <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-        <p className="font-medium text-gray-900 dark:text-white">WhatsApp terhubung ✓</p>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+      <div className="mt-8 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-6 shadow-lg shadow-black/40 ring-1 ring-white/10">
+        <p className="font-medium text-white">WhatsApp terhubung ✓</p>
+        <p className="mt-1 text-sm text-navy-300">
           Nomor: {whatsappPhone}. Anda sekarang bisa chat langsung dengan Nerona Agent di{" "}
           {displayNumber}.
         </p>
@@ -68,34 +68,34 @@ export function AgentLinkPanel({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08123456789"
-          className="flex-1 rounded-xl bg-gray-100 px-3 py-2 text-sm ring-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:focus:bg-gray-900 text-gray-950 dark:text-white"
+          className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
         <button
           onClick={handleSubmit}
           disabled={loading || !phone}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
         >
           {loading ? "Memproses..." : "Hubungkan"}
         </button>
       </div>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
 
       {code && (
-        <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-4 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
+          <p className="text-sm text-navy-300">
             Kirim kode berikut ke WhatsApp {displayNumber} untuk menyelesaikan tautan:
           </p>
-          <p className="mt-2 text-2xl font-semibold tracking-widest text-gray-950 dark:text-white">
+          <p className="mt-2 text-2xl font-semibold tracking-widest text-white">
             {code}
           </p>
           {expires && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-navy-300">
               Berlaku sampai {new Date(expires).toLocaleTimeString("id-ID")}
             </p>
           )}
           <button
             onClick={handleRefreshStatus}
-            className="mt-4 rounded-full bg-gray-100 px-3.5 py-1.5 text-sm font-medium text-gray-950 transition hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            className="mt-4 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20"
           >
             Cek status
           </button>

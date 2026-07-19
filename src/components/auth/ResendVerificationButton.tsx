@@ -12,16 +12,16 @@ export function ResendVerificationButton() {
   }
 
   if (status === "sent") {
-    return <p className="text-sm text-green-600">Verification email sent — check your inbox.</p>;
+    return <p className="text-sm text-emerald-400">Email verifikasi terkirim — periksa kotak masuk Anda.</p>;
   }
 
   return (
     <button
       onClick={handleClick}
       disabled={status === "sending"}
-      className="text-sm font-medium text-gray-900 underline disabled:opacity-50 dark:text-white"
+      className="text-sm font-medium text-gold-400 underline disabled:opacity-50"
     >
-      {status === "sending" ? "Sending..." : "Resend verification email"}
+      {status === "sending" ? "Mengirim..." : "Kirim ulang email verifikasi"}
     </button>
   );
 }

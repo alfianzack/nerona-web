@@ -14,7 +14,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(
-    searchParams.get("error") ? "Something went wrong signing in." : ""
+    searchParams.get("error") ? "Terjadi kesalahan saat masuk." : ""
   );
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,7 +26,7 @@ function LoginForm() {
     const result = await signIn("credentials", { email, password, redirect: false });
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      setError("Email atau kata sandi salah.");
       setSubmitting(false);
       return;
     }
@@ -35,17 +35,17 @@ function LoginForm() {
   }
 
   return (
-    <AuthCard title="Sign in" subtitle="Manage your Nerona license.">
+    <AuthCard title="Masuk" subtitle="Kelola lisensi Nerona Anda.">
       <GoogleButton />
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
-        <span className="text-xs text-gray-400">or</span>
-        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-navy-300/70">atau</span>
+        <div className="h-px flex-1 bg-white/10" />
       </div>
       <form onSubmit={handleSubmit}>
         <AuthInput label="Email" type="email" name="email" value={email} onChange={setEmail} autoComplete="email" />
         <AuthInput
-          label="Password"
+          label="Kata sandi"
           type="password"
           name="password"
           value={password}
@@ -54,18 +54,18 @@ function LoginForm() {
           autoComplete="current-password"
         />
         <div className="mb-4 text-right">
-          <a href="/reset-password" className="text-sm text-gray-500 underline">
-            Forgot password?
+          <a href="/reset-password" className="text-sm text-navy-300 underline">
+            Lupa kata sandi?
           </a>
         </div>
         <AuthButton type="submit" disabled={submitting}>
-          {submitting ? "Signing in..." : "Sign in"}
+          {submitting ? "Sedang masuk..." : "Masuk"}
         </AuthButton>
       </form>
-      <p className="mt-6 text-center text-sm text-gray-500">
-        Don&apos;t have an account?{" "}
-        <a href="/register" className="font-medium text-gray-900 underline dark:text-white">
-          Create one
+      <p className="mt-6 text-center text-sm text-navy-300">
+        Belum punya akun?{" "}
+        <a href="/register" className="font-medium text-white underline">
+          Daftar sekarang
         </a>
       </p>
     </AuthCard>

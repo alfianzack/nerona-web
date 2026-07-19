@@ -23,10 +23,10 @@ export default function RequestResetPage() {
   }
 
   return (
-    <AuthCard title="Reset password" subtitle="We'll email you a reset link.">
+    <AuthCard title="Atur ulang kata sandi" subtitle="Kami akan mengirim tautan lewat email.">
       {submitted ? (
-        <p className="text-center text-sm text-gray-500">
-          If that email exists, we&apos;ve sent a reset link — check your inbox.
+        <p className="text-center text-sm text-navy-300">
+          Jika email itu terdaftar, kami sudah mengirim tautan atur ulang — periksa kotak masuk Anda.
         </p>
       ) : (
         <form onSubmit={handleSubmit}>
@@ -39,7 +39,7 @@ export default function RequestResetPage() {
             autoComplete="email"
           />
           <AuthButton type="submit" disabled={submitting}>
-            {submitting ? "Sending..." : "Send reset link"}
+            {submitting ? "Mengirim..." : "Kirim tautan"}
           </AuthButton>
         </form>
       )}

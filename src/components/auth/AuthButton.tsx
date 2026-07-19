@@ -16,8 +16,8 @@ export function AuthButton({
   const base = "w-full rounded-full py-2.5 text-sm font-medium transition disabled:opacity-50";
   const styles =
     variant === "primary"
-      ? "bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-gray-900"
-      : "border border-gray-300 text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:text-white dark:hover:bg-gray-900";
+      ? "bg-gradient-to-br from-gold-500 to-gold-400 text-navy-900 font-semibold hover:brightness-110"
+      : "bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/20";
 
   return (
     <button type={type} disabled={disabled} onClick={onClick} className={`${base} ${styles}`}>

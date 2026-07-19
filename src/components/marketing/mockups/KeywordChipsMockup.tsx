@@ -1,33 +1,33 @@
 const KEYWORDS = [
-  "skyline",
-  "golden hour",
-  "aerial view",
-  "coastal city",
-  "harbor",
-  "travel",
-  "sunset",
-  "architecture",
-  "waterfront",
-  "cityscape",
+  "cakrawala kota",
+  "jam emas",
+  "pemandangan udara",
+  "kota pesisir",
+  "pelabuhan",
+  "perjalanan",
+  "matahari terbenam",
+  "arsitektur",
+  "tepi laut",
+  "lanskap kota",
 ];
 
 export function KeywordChipsMockup() {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-        30 keywords, ready to edit
+    <div className="rounded-3xl bg-gradient-to-b from-navy-800 to-navy-900 p-7 shadow-lg shadow-black/40 ring-1 ring-white/10">
+      <p className="text-xs font-medium uppercase tracking-wide text-navy-300/70">
+        30 kata kunci, siap disunting
       </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {KEYWORDS.map((word) => (
           <span
             key={word}
-            className="rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700"
+            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-navy-300"
           >
             {word}
           </span>
         ))}
-        <span className="rounded-full border border-dashed border-gray-400 px-3 py-1 text-xs text-gray-500">
-          + add your own
+        <span className="rounded-full border border-dashed border-gold-400/50 px-3.5 py-1.5 text-xs font-medium text-gold-400">
+          + tambah sendiri
         </span>
       </div>
     </div>

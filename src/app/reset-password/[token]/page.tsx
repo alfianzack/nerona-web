@@ -18,7 +18,7 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Kata sandi tidak sama.");
       return;
     }
 
@@ -31,7 +31,7 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.message || "Something went wrong.");
+      setError(data.message || "Terjadi kesalahan.");
       setSubmitting(false);
       return;
     }
@@ -40,10 +40,10 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
   }
 
   return (
-    <AuthCard title="Set new password">
+    <AuthCard title="Kata sandi baru">
       <form onSubmit={handleSubmit}>
         <AuthInput
-          label="New password"
+          label="Kata sandi baru"
           type="password"
           name="password"
           value={password}
@@ -51,7 +51,7 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
           autoComplete="new-password"
         />
         <AuthInput
-          label="Confirm new password"
+          label="Ulangi kata sandi baru"
           type="password"
           name="confirmPassword"
           value={confirmPassword}
@@ -60,7 +60,7 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
           autoComplete="new-password"
         />
         <AuthButton type="submit" disabled={submitting}>
-          {submitting ? "Updating..." : "Update password"}
+          {submitting ? "Menyimpan..." : "Simpan kata sandi"}
         </AuthButton>
       </form>
     </AuthCard>

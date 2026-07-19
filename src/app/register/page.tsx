@@ -19,7 +19,7 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Kata sandi tidak sama.");
       return;
     }
 
@@ -32,7 +32,7 @@ export default function RegisterPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.message || "Something went wrong.");
+      setError(data.message || "Terjadi kesalahan.");
       setSubmitting(false);
       return;
     }
@@ -42,18 +42,18 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Create account" subtitle="Start managing your Nerona license.">
+    <AuthCard title="Buat akun" subtitle="Mulai kelola lisensi Nerona Anda.">
       {submitted ? (
-        <p className="text-center text-sm text-gray-500">
-          Check your inbox for a verification link to finish setting up your account.
+        <p className="text-center text-sm text-navy-300">
+          Periksa kotak masuk Anda — kami mengirim tautan verifikasi untuk menyelesaikan pendaftaran.
         </p>
       ) : (
         <>
           <GoogleButton />
           <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
-            <span className="text-xs text-gray-400">or</span>
-            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-navy-300/70">atau</span>
+            <div className="h-px flex-1 bg-white/10" />
           </div>
           <form onSubmit={handleSubmit}>
             <AuthInput
@@ -65,7 +65,7 @@ export default function RegisterPage() {
               autoComplete="email"
             />
             <AuthInput
-              label="Password"
+              label="Kata sandi"
               type="password"
               name="password"
               value={password}
@@ -73,7 +73,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
             <AuthInput
-              label="Confirm password"
+              label="Ulangi kata sandi"
               type="password"
               name="confirmPassword"
               value={confirmPassword}
@@ -82,13 +82,13 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
             <AuthButton type="submit" disabled={submitting}>
-              {submitting ? "Creating account..." : "Create account"}
+              {submitting ? "Membuat akun..." : "Buat akun"}
             </AuthButton>
           </form>
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{" "}
-            <a href="/login" className="font-medium text-gray-900 underline dark:text-white">
-              Sign in
+          <p className="mt-6 text-center text-sm text-navy-300">
+            Sudah punya akun?{" "}
+            <a href="/login" className="font-medium text-white underline">
+              Masuk
             </a>
           </p>
         </>

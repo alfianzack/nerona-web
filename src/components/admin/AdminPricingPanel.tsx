@@ -16,9 +16,9 @@ interface CourseRow {
 }
 
 const inputClass =
-  "w-44 rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 dark:bg-white/10 dark:text-white dark:focus:bg-gray-900";
+  "w-44 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
 const saveClass =
-  "rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50";
+  "rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50";
 
 export function AdminPricingPanel() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
@@ -68,7 +68,7 @@ export function AdminPricingPanel() {
   function renderRow(type: "plan" | "course", id: string, label: string) {
     return (
       <div key={id} className="flex items-center justify-between gap-3 py-2">
-        <span className="text-sm text-gray-900 dark:text-white">{label}</span>
+        <span className="text-sm text-white">{label}</span>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -87,19 +87,19 @@ export function AdminPricingPanel() {
 
   return (
     <div className="mt-8 max-w-xl">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Harga</h2>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      <h2 className="text-lg font-semibold text-white">Harga</h2>
+      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
 
-      <div className="mt-2 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Paket</p>
-        <div className="mt-1 divide-y divide-gray-100 dark:divide-gray-900">
+      <div className="mt-2 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
+        <p className="text-sm font-medium text-navy-300">Paket</p>
+        <div className="mt-1 divide-y divide-white/10">
           {plans.map((plan) => renderRow("plan", plan.id, plan.name))}
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Kelas</p>
-        <div className="mt-1 divide-y divide-gray-100 dark:divide-gray-900">
+      <div className="mt-4 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
+        <p className="text-sm font-medium text-navy-300">Kelas</p>
+        <div className="mt-1 divide-y divide-white/10">
           {courses.map((course) => renderRow("course", course.id, course.title))}
         </div>
       </div>
