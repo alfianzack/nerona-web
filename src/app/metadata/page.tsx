@@ -4,9 +4,12 @@ import { MarketplaceTabsMockup } from "@/components/marketing/mockups/Marketplac
 import { KeywordChipsMockup } from "@/components/marketing/mockups/KeywordChipsMockup";
 import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgressMockup";
 import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
-import { PricingTeaser } from "@/components/marketing/PricingTeaser";
+import { PricingTiers } from "@/components/marketing/PricingTiers";
+import { metadataTiers } from "@/lib/pricing-tiers";
 
-export default function MetadataPage() {
+export default async function MetadataPage() {
+  const tiers = await metadataTiers();
+
   return (
     <main>
       <Hero />
@@ -32,7 +35,12 @@ export default function MetadataPage() {
         imageSide="left"
       />
       <MarketplaceRow />
-      <PricingTeaser />
+      <PricingTiers
+        id="pricing"
+        heading="Harga Nerona Metadata"
+        subheading="Mulai gratis, upgrade saat volume unggahan Anda naik."
+        tiers={tiers}
+      />
     </main>
   );
 }

@@ -1,15 +1,18 @@
-const MARKETPLACES = ["Adobe Stock", "Freepik", "Vecteezy", "Shutterstock"];
+import { MARKETPLACES } from "@/lib/marketplaces";
 
 export function MarketplaceRow() {
   return (
-    <section className="bg-gray-100 px-6 py-16 text-center">
-      <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
-        Works where you already upload
+    <section className="bg-navy-950 px-6 py-20 text-center">
+      <p className="text-sm font-medium text-navy-300">
+        Bekerja di marketplace tempat Anda mengunggah
       </p>
-      <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
-        {MARKETPLACES.map((name) => (
-          <span key={name} className="text-lg font-semibold text-gray-700">
-            {name}
+      <div className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-x-12 gap-y-5">
+        {MARKETPLACES.map((marketplace) => (
+          <span
+            key={marketplace.key}
+            className="text-lg font-semibold tracking-tight text-navy-300/70 transition hover:text-gold-400"
+          >
+            {marketplace.label}
           </span>
         ))}
       </div>
