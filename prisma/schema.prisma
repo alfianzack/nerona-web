@@ -69,6 +69,7 @@ model User {
   orders                     Order[]
   emailVerificationTokens    EmailVerificationToken[]
   passwordResetTokens        PasswordResetToken[]
+  agentProfile               AgentProfile?
 
   @@map("users")
 }
@@ -179,4 +180,127 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@map("password_reset_tokens")
+}
+
+// --- Nerona Agent (WhatsApp AI business assistant) ---
+
+model AgentProfile {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappPhone       String?   @unique
+  phoneVerifiedAt     DateTime?
+  linkCode            String?
+  linkCodeExpires     DateTime?
+  businessName        String?
+  timezone            String    @default("Asia/Jakarta")
+  status              String    @default("pending") // "pending" | "active" | "disabled"
+  googleRefreshToken  String?   @db.Text
+  googleCalendarEmail String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  notes    AgentNote[]
+  memories AgentMemory[]
+  products AgentProduct[]
+  orders   AgentOrder[]
+  messages AgentMessage[]
+  jobs     AgentJob[]
+
+  @@map("agent_profiles")
+}
+
+model AgentNote {
+  id        String       @id @default(cuid())
+  profileId String
+  profile   AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  content   String       @db.Text
+  createdAt DateTime     @default(now())
+
+  @@map("agent_notes")
+}
+
+model AgentMemory {
+  id        String       @id @default(cuid())
+  profileId String
+  profile   AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  fact      String       @db.Text
+  source    String       // "auto" | "explicit"
+  createdAt DateTime     @default(now())
+
+  @@map("agent_memories")
+}
+
+model AgentProduct {
+  id          String       @id @default(cuid())
+  profileId   String
+  profile     AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Int
+  stock       Int?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  orderItems AgentOrderItem[]
+
+  @@map("agent_products")
+}
+
+model AgentOrder {
+  id           String       @id @default(cuid())
+  profileId    String
+  profile      AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customerName String?
+  status       String       @default("new") // "new" | "paid" | "done" | "cancelled"
+  total        Int
+  note         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  items AgentOrderItem[]
+
+  @@map("agent_orders")
+}
+
+model AgentOrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       AgentOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     AgentProduct? @relation(fields: [productId], references: [id])
+  productName String
+  qty         Int
+  unitPrice   Int
+
+  @@map("agent_order_items")
+}
+
+model AgentMessage {
+  id          String        @id @default(cuid())
+  profileId   String?
+  profile     AgentProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  waMessageId String?       @unique
+  phone       String
+  direction   String        // "in" | "out"
+  body        String        @db.Text
+  createdAt   DateTime      @default(now())
+
+  @@map("agent_messages")
+}
+
+model AgentJob {
+  id          String       @id @default(cuid())
+  waMessageId String       @unique
+  profileId   String
+  profile     AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  payload     String       @db.Text
+  status      String       @default("pending") // "pending" | "processing" | "done" | "failed"
+  attempts    Int          @default(0)
+  lastError   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("agent_jobs")
 }
