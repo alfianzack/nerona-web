@@ -56,6 +56,30 @@ accounts get a verification email on signup (`/verify-email`) and can reset thei
 `/reset-password`. Unverified accounts can still sign in and use `/account`, with a reminder
 banner shown there until verified.
 
+## Nerona Agent (WhatsApp AI assistant)
+
+Additional setup beyond the base site:
+
+1. Add to `.env.local`:
+   - `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` / `WHATSAPP_APP_SECRET` /
+     `WHATSAPP_VERIFY_TOKEN` — from a Meta app with the WhatsApp product added (see
+     `docs/superpowers/plans/2026-07-19-nerona-agent-foundation.md` for the full walkthrough).
+   - `WHATSAPP_DISPLAY_NUMBER` — the human-readable form of that number, shown to owners on
+     `/agent`.
+   - `ANTHROPIC_API_KEY` — from https://console.anthropic.com.
+   - `AGENT_MODEL` — defaults to `claude-sonnet-5`.
+   - `CRON_SECRET` — generate with `openssl rand -base64 32`; also set as a Vercel project env
+     var with the same name so Vercel Cron authenticates automatically.
+2. For local development, expose `http://localhost:3000` with a tunnel (e.g. `ngrok http 3000`)
+   and configure the tunnel's HTTPS URL + `/api/whatsapp/webhook` as the Meta app's webhook
+   callback URL, subscribed to the `messages` field.
+3. Activate a user's agent access from `/admin` ("Agent" section — Aktifkan), then have that
+   user link their WhatsApp number from `/agent`.
+
+Agent-specific unit tests live in `tests/lib/agent/`. The webhook and Claude tool loop are
+verified manually against Meta's test number and test recipients — see the Phase 1 plan's
+"complete when" checklist.
+
 ## Project structure
 
 - `src/app` — Next.js App Router pages and API routes.
