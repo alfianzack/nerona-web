@@ -158,7 +158,7 @@ describe("handleIncomingWebhook", () => {
     );
     expect(sendWhatsAppText).toHaveBeenCalledWith(
       "+15551234567",
-      expect.stringContaining("http://localhost:3000/agent")
+      expect.stringContaining("http://localhost:3000/agent/dashboard")
     );
     expect(createJob).not.toHaveBeenCalled();
   });

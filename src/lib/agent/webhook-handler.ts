@@ -57,7 +57,7 @@ export async function handleIncomingWebhook(
     await replyStatic(
       phone,
       null,
-      `Nomor ini belum terdaftar di Nerona Agent. Daftar dulu di ${baseUrl()}/agent`
+      `Nomor ini belum terdaftar di Nerona Agent. Daftar dulu di ${baseUrl()}/agent/dashboard`
     );
     return { status: 200 };
   }
