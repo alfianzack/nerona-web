@@ -22,7 +22,9 @@ function mockDb(rows: unknown[], total: number) {
 }
 
 describe("listProductsPaged", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("scopes to userId, paginates, and returns rows + total", async () => {
     mockDb([{ id: "p1" }], 1);
