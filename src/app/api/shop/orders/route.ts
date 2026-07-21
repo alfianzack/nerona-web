@@ -28,8 +28,8 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
 
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 20));
+  const page = Math.max(1, Math.floor(Number(searchParams.get("page")) || 1));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(Number(searchParams.get("pageSize")) || 20)));
 
   const sortParam = searchParams.get("sort");
   const sort: OrderQuery["sort"] = (["createdAt", "total", "status"] as const).includes(
