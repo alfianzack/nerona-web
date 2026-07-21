@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatRupiah } from "@/components/shop/ProductManager";
+import { formatRupiah } from "@/lib/format";
 
 interface SalesChartProps {
   data: { date: string; revenue: number }[];

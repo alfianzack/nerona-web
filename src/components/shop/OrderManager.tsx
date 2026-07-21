@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
-import { formatRupiah } from "@/components/shop/ProductManager";
+import { formatRupiah } from "@/lib/format";
 import {
   OrderForm,
   type OrderFormPayload,

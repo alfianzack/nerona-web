@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatRupiah } from "@/components/shop/ProductManager";
+import { formatRupiah } from "@/lib/format";
 
 export interface ProductOption {
   id: string;

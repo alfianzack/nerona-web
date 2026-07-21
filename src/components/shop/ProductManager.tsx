@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm, EMPTY_PRODUCT, type ProductFormValues } from "@/components/shop/ProductForm";
+import { formatRupiah } from "@/lib/format";
 
 interface Product {
   id: string;
@@ -12,10 +13,6 @@ interface Product {
   price: number;
   stock: number | null;
   isActive: boolean;
-}
-
-export function formatRupiah(value: number): string {
-  return `Rp ${value.toLocaleString("id-ID")}`;
 }
 
 const PAGE_SIZE = 20;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { getDashboardSummary, getSalesSeries } from "@/lib/shop-dashboard";
-import { formatRupiah } from "@/components/shop/ProductManager";
+import { formatRupiah } from "@/lib/format";
 import { SalesChart } from "@/components/shop/SalesChart";
 
 export const metadata = { title: "Dashboard — Nerona" };
