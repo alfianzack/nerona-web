@@ -40,6 +40,7 @@ export function ProductManager() {
   const [busy, setBusy] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [formError, setFormError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,11 +79,13 @@ export function ProductManager() {
 
   function openAdd() {
     setEditing(null);
+    setFormError("");
     setModalOpen(true);
   }
 
   function openEdit(product: Product) {
     setEditing(product);
+    setFormError("");
     setModalOpen(true);
   }
 
@@ -105,30 +108,40 @@ export function ProductManager() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+    const data = await res.json().catch(() => null);
     setBusy(false);
-    if (!res.ok) {
-      setError("Gagal menyimpan produk.");
+    if (!res.ok || !data?.ok) {
+      setFormError(data?.message || "Gagal menyimpan produk.");
       return;
     }
+    setFormError("");
     setModalOpen(false);
     await load();
   }
 
   async function toggleActive(product: Product) {
     setBusy(true);
-    await fetch(`/api/shop/products/${product.id}`, {
+    const res = await fetch(`/api/shop/products/${product.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !product.isActive }),
     });
     setBusy(false);
+    if (!res.ok) {
+      setError("Gagal memperbarui produk.");
+      return;
+    }
     await load();
   }
 
   async function remove(id: string) {
     setBusy(true);
-    await fetch(`/api/shop/products/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/shop/products/${id}`, { method: "DELETE" });
     setBusy(false);
+    if (!res.ok) {
+      setError("Gagal menghapus produk.");
+      return;
+    }
     await load();
   }
 
@@ -259,6 +272,7 @@ export function ProductManager() {
           key={editing?.id ?? "new"}
           initial={editInitial}
           submitting={busy}
+          serverError={formError}
           onSubmit={submitForm}
           onCancel={() => setModalOpen(false)}
         />

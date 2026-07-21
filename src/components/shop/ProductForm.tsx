@@ -17,11 +17,12 @@ const inputClass =
 interface ProductFormProps {
   initial: ProductFormValues;
   submitting: boolean;
+  serverError?: string;
   onSubmit: (values: ProductFormValues) => void;
   onCancel: () => void;
 }
 
-export function ProductForm({ initial, submitting, onSubmit, onCancel }: ProductFormProps) {
+export function ProductForm({ initial, submitting, serverError, onSubmit, onCancel }: ProductFormProps) {
   const [values, setValues] = useState<ProductFormValues>(initial);
   const [error, setError] = useState("");
 
@@ -32,6 +33,11 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
   function handleSubmit() {
     if (!values.name.trim() || values.price === "") {
       setError("Nama dan harga wajib diisi.");
+      return;
+    }
+    const priceNum = Number(values.price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      setError("Harga harus berupa angka yang valid.");
       return;
     }
     setError("");
@@ -72,7 +78,9 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
           className={inputClass}
         />
       </div>
-      {error && <p className="text-sm text-rose-500">{error}</p>}
+      {(error || serverError) && (
+        <p className="text-sm text-rose-500">{error || serverError}</p>
+      )}
       <div className="flex justify-end gap-2 pt-2">
         <button
           onClick={onCancel}
