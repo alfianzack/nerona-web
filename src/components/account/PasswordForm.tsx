@@ -15,21 +15,27 @@ export function PasswordForm() {
   async function handleSave() {
     setSaving(true);
     setMessage("");
-    const res = await fetch("/api/profile/password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    const data = await res.json().catch(() => null);
-    setSaving(false);
-    if (res.ok && data?.ok) {
-      setOk(true);
-      setMessage("Password berhasil diubah.");
-      setCurrentPassword("");
-      setNewPassword("");
-    } else {
+    try {
+      const res = await fetch("/api/profile/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setOk(true);
+        setMessage("Password berhasil diubah.");
+        setCurrentPassword("");
+        setNewPassword("");
+      } else {
+        setOk(false);
+        setMessage(data?.message || "Gagal mengubah password.");
+      }
+    } catch {
       setOk(false);
-      setMessage(data?.message || "Gagal mengubah password.");
+      setMessage("Gagal mengubah password. Periksa koneksi Anda.");
+    } finally {
+      setSaving(false);
     }
   }
 

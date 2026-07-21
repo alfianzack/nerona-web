@@ -21,13 +21,18 @@ export function ProfileForm({ initialName, initialPhone, initialBusinessName }: 
   async function handleSave() {
     setSaving(true);
     setMessage("");
-    const res = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, businessName }),
-    });
-    setSaving(false);
-    setMessage(res.ok ? "Tersimpan." : "Gagal menyimpan.");
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, businessName }),
+      });
+      setMessage(res.ok ? "Tersimpan." : "Gagal menyimpan.");
+    } catch {
+      setMessage("Gagal menyimpan. Periksa koneksi Anda.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
