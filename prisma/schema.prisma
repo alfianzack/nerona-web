@@ -55,6 +55,8 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
+  phone         String?
+  businessName  String?
   image         String?
   password      String?
   emailVerified DateTime?
@@ -73,6 +75,8 @@ model User {
   agentProfile               AgentProfile?
   orderRequests              OrderRequest[]   @relation("UserOrderRequests")
   fulfilledOrderRequests     OrderRequest[]   @relation("FulfilledOrderRequests")
+  shopProducts               ShopProduct[]
+  shopOrders                 ShopOrder[]
 
   @@map("users")
 }
@@ -398,5 +402,61 @@ model OrderRequest {
   fulfilledById String?
   fulfilledBy   User?     @relation("FulfilledOrderRequests", fields: [fulfilledById], references: [id])
 
+  // Payment-proof image uploaded by the customer (bank transfer confirmation).
+  proofImage      Bytes?
+  proofMime       String?
+  proofUploadedAt DateTime?
+
   @@map("order_requests")
+}
+
+// A customer's own shop: products and sales they manage themselves. Scoped per
+// user and independent of the WhatsApp Agent's data and of Nerona billing.
+model ShopProduct {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Int      @default(0)
+  stock       Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems ShopOrderItem[]
+
+  @@index([userId])
+  @@map("shop_products")
+}
+
+model ShopOrder {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerName String?
+  status       String   @default("new") // "new" | "paid" | "done" | "cancelled"
+  total        Int      @default(0)
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items ShopOrderItem[]
+
+  @@index([userId])
+  @@map("shop_orders")
+}
+
+model ShopOrderItem {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       ShopOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     ShopProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String
+  qty         Int
+  unitPrice   Int
+
+  @@index([orderId])
+  @@map("shop_order_items")
 }
