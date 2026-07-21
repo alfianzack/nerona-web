@@ -171,3 +171,52 @@ export async function deleteOrder(userId: string, id: string): Promise<boolean> 
   await prisma.shopOrder.delete({ where: { id } });
   return true;
 }
+
+export interface OrderQuery {
+  page: number;
+  pageSize: number;
+  q?: string;
+  sort: "createdAt" | "total" | "status";
+  order: "asc" | "desc";
+  status?: OrderStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+  totalMin?: number;
+  totalMax?: number;
+}
+
+export async function listOrdersPaged(userId: string, query: OrderQuery) {
+  const where: Prisma.ShopOrderWhereInput = { userId };
+
+  if (query.q) {
+    where.customerName = { contains: query.q, mode: "insensitive" };
+  }
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.dateFrom || query.dateTo) {
+    where.createdAt = {
+      ...(query.dateFrom ? { gte: query.dateFrom } : {}),
+      ...(query.dateTo ? { lte: query.dateTo } : {}),
+    };
+  }
+  if (query.totalMin !== undefined || query.totalMax !== undefined) {
+    where.total = {
+      ...(query.totalMin !== undefined ? { gte: query.totalMin } : {}),
+      ...(query.totalMax !== undefined ? { lte: query.totalMax } : {}),
+    };
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.shopOrder.findMany({
+      where,
+      orderBy: { [query.sort]: query.order },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: { items: true },
+    }),
+    prisma.shopOrder.count({ where }),
+  ]);
+
+  return { rows, total };
+}
