@@ -43,10 +43,10 @@ describe("requireAdmin", () => {
     vi.clearAllMocks();
   });
 
-  it("redirects to /account when the user has no admin role", async () => {
+  it("redirects to /profile when the user has no admin role", async () => {
     getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: null } });
 
-    await expect(requireAdmin()).rejects.toThrow("REDIRECT:/account");
+    await expect(requireAdmin()).rejects.toThrow("REDIRECT:/profile");
   });
 
   it("returns the session when the user has an admin role", async () => {
