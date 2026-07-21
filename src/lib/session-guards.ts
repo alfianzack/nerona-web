@@ -13,7 +13,7 @@ export async function requireUser() {
 export async function requireAdmin() {
   const session = await requireUser();
   if (!session.user.role) {
-    redirect("/account");
+    redirect("/profile");
   }
   return session;
 }
