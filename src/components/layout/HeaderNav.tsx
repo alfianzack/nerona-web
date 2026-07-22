@@ -1,14 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 export type NavItem = { href: string; label: string };
 
-const navLink = "text-xs text-ink transition hover:text-brand-blue";
+const navLink = "text-xs transition hover:text-brand-blue";
+
+function matches(pathname: string, href: string): boolean {
+  return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) || href === "/";
+}
+
+// The active item is the longest matching href, so "/admin" doesn't stay
+// highlighted on "/admin/users" and "/" only wins when nothing else matches.
+export function activeHref(pathname: string, items: NavItem[]): string | null {
+  let best: string | null = null;
+  for (const item of items) {
+    if (matches(pathname, item.href) && (best === null || item.href.length > best.length)) {
+      best = item.href;
+    }
+  }
+  return best;
+}
 
 export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn: boolean }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname() ?? "";
+  const active = activeHref(pathname, items);
 
   const authButton = isLoggedIn ? (
     <a
@@ -30,11 +49,23 @@ export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn:
     <>
       {/* Desktop nav */}
       <nav className="hidden items-center gap-7 sm:flex">
-        {items.map((item) => (
-          <Link key={item.href} href={item.href} className={navLink}>
-            {item.label}
-          </Link>
-        ))}
+        {items.map((item) => {
+          const isActive = item.href === active;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`${navLink} ${
+                isActive
+                  ? "-mb-px border-b-2 border-brand-blue pb-px font-semibold text-ink"
+                  : "text-ink"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
         {authButton}
       </nav>
 
@@ -55,16 +86,22 @@ export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn:
       {open && (
         <div className="absolute left-0 right-0 top-12 border-b border-navy-900/10 bg-canvas/95 shadow-lg shadow-navy-900/10 backdrop-blur-xl sm:hidden">
           <nav className="mx-auto flex max-w-5xl flex-col gap-1 px-6 py-3">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-2 text-sm text-ink transition hover:bg-navy-900/5"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {items.map((item) => {
+              const isActive = item.href === active;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`rounded-lg px-2 py-2 text-sm transition hover:bg-navy-900/5 ${
+                    isActive ? "bg-navy-900/5 font-semibold text-ink" : "text-ink"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             <div className="mt-2 border-t border-navy-900/10 pt-3">{authButton}</div>
           </nav>
         </div>
