@@ -27,6 +27,13 @@ vi.mock("@/lib/agent/claude-client", () => ({
 vi.mock("@/lib/agent/whatsapp-client", () => ({
   sendWhatsAppText: vi.fn(),
 }));
+vi.mock("@/lib/points", () => ({
+  getBalance: vi.fn(),
+  spendPoints: vi.fn(),
+}));
+vi.mock("@/lib/agent/pricing", () => ({
+  costForUsage: vi.fn(() => 22),
+}));
 
 import { processJob } from "@/lib/agent/process-job";
 import { prisma } from "@/lib/prisma";
@@ -35,9 +42,12 @@ import { getRecentHistory, logOutbound } from "@/lib/agent/messages";
 import { listRecentFacts } from "@/lib/agent/memory";
 import { generateReply } from "@/lib/agent/claude-client";
 import { sendWhatsAppText } from "@/lib/agent/whatsapp-client";
+import { getBalance, spendPoints } from "@/lib/points";
+import { costForUsage } from "@/lib/agent/pricing";
 
 const profile = {
   id: "profile-1",
+  userId: "user-1",
   whatsappPhone: "+15551234567",
   businessName: "Toko A",
   timezone: "Asia/Jakarta",
@@ -50,7 +60,12 @@ describe("processJob — happy path", () => {
     (prisma.agentProfile.findUnique as any).mockResolvedValue(profile);
     (listRecentFacts as any).mockResolvedValue(["fact 1"]);
     (getRecentHistory as any).mockResolvedValue([{ direction: "in", body: "halo" }]);
-    (generateReply as any).mockResolvedValue("Halo juga!");
+    (getBalance as any).mockResolvedValue(500);
+    (generateReply as any).mockResolvedValue({
+      text: "Halo juga!",
+      model: "gemini-2.0-flash-lite",
+      usage: { promptTokens: 20, completionTokens: 10 },
+    });
   });
 
   it("sends the reply, logs it, and completes the job", async () => {
@@ -62,6 +77,9 @@ describe("processJob — happy path", () => {
       phone: "+15551234567",
       body: "Halo juga!",
     });
+    expect(spendPoints).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-1", cost: 22 })
+    );
     expect(completeJob).toHaveBeenCalledWith("job-1");
     expect(failJob).not.toHaveBeenCalled();
   });
@@ -120,5 +138,24 @@ describe("processJob — permanent failure", () => {
 
     expect(completeJob).not.toHaveBeenCalled();
     expect(sendWhatsAppText).not.toHaveBeenCalled();
+  });
+});
+
+describe("processJob — out of points", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (beginProcessing as any).mockResolvedValue({ id: "job-1", profileId: "profile-1", attempts: 1 });
+    (prisma.agentProfile.findUnique as any).mockResolvedValue(profile);
+    (getBalance as any).mockResolvedValue(0);
+  });
+
+  it("does not call the AI, sends poin-habis, and completes without spending", async () => {
+    await processJob("job-1");
+
+    expect(generateReply).not.toHaveBeenCalled();
+    expect(spendPoints).not.toHaveBeenCalled();
+    expect(sendWhatsAppText).toHaveBeenCalledWith("+15551234567", expect.stringContaining("poin"));
+    expect(completeJob).toHaveBeenCalledWith("job-1");
+    expect(failJob).not.toHaveBeenCalled();
   });
 });
