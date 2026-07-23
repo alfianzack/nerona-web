@@ -1,5 +1,9 @@
 # Nerona Agent — Sistem Poin Pemakaian Model AI: Implementation Plan
 
+> **SUPERSEDED (2026-07-23):** Never executed. Replaced by
+> `docs/superpowers/plans/2026-07-23-tenant-points-finance-tab.md` (prepaid-wallet
+> design). Do NOT implement this plan. Kept for reference only.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ganti kuota "pesan/bulan" agent dengan kuota "poin/bulan" per paket, di mana tiap tenant memilih model AI lintas provider (Sumopod) dan tiap balasan memotong poin sesuai model.

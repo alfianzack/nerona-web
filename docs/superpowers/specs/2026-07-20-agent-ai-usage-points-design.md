@@ -1,7 +1,12 @@
 # Nerona Agent — Sistem Poin Pemakaian Model AI (Design Spec)
 
+> **SUPERSEDED (2026-07-23):** Never implemented. Replaced by the prepaid-wallet
+> design in `docs/superpowers/specs/2026-07-23-tenant-points-finance-tab-design.md`
+> (admin-managed wallet + Finance tab + token×USD metering), chosen over this
+> monthly-reset-quota approach. Kept for reference only.
+
 - **Tanggal:** 2026-07-20
-- **Status:** Disetujui untuk implementasi (menunggu review spec)
+- **Status:** Superseded (lihat catatan di atas)
 - **Ruang lingkup:** `nerona-web` — subsistem Nerona Agent
 
 ## 1. Tujuan
