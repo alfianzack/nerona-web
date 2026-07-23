@@ -99,6 +99,46 @@ describe("grantLicense", () => {
     expect(prisma.license.create).not.toHaveBeenCalled();
   });
 
+  it("honors an explicit validUntil override instead of the month-end default", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue(plan);
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+    const overrideDate = new Date("2026-09-15T00:00:00.000Z");
+
+    const result = await grantLicense("admin-1", "user@example.com", "plan-1", {
+      validUntil: overrideDate,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(prisma.license.update).toHaveBeenCalledWith({
+      where: { id: "license-1" },
+      data: {
+        status: "active",
+        source: "manual_grant",
+        grantedById: "admin-1",
+        notes: undefined,
+        planId: "plan-1",
+        marketplaces: "*",
+        rejectAnalyzer: true,
+        validUntil: overrideDate,
+      },
+    });
+  });
+
+  it("honors an explicit validUntil override on create as well", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue(plan);
+    (prisma.license.findFirst as any).mockResolvedValue(null);
+    (generateLicenseKey as any).mockResolvedValue("NERONA-AAAA-BBBB-CCCC");
+    const overrideDate = new Date("2026-09-15T00:00:00.000Z");
+
+    await grantLicense("admin-1", "user@example.com", "plan-1", { validUntil: overrideDate });
+
+    expect(prisma.license.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ validUntil: overrideDate }),
+    });
+  });
+
   it("creates an Order row when an amount is supplied", async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
     (prisma.plan.findUnique as any).mockResolvedValue(plan);

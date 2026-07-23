@@ -179,6 +179,7 @@ describe("fulfillOrderRequest", () => {
       status: "pending",
       product: "metadata",
       planName: "Pro",
+      isRenewal: false,
       user: { id: "user-1", email: "a@b.c" },
     });
     (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
@@ -189,10 +190,41 @@ describe("fulfillOrderRequest", () => {
     expect(result).toEqual({ ok: true });
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1",
+      validUntil: undefined,
     });
+    expect(prisma.license.findFirst).not.toHaveBeenCalled();
     expect(prisma.orderRequest.update).toHaveBeenCalledWith({
       where: { id: "req-1" },
       data: expect.objectContaining({ status: "fulfilled", fulfilledById: "admin-1" }),
+    });
+  });
+
+  it("renews a metadata license using renewedExpiryFrom the current validUntil", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-1r",
+      status: "pending",
+      product: "metadata",
+      planName: "Pro",
+      isRenewal: true,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (prisma.license.findFirst as any).mockResolvedValue({
+      validUntil: new Date("2026-08-15T00:00:00.000Z"),
+    });
+    (grantLicense as any).mockResolvedValue({ ok: true });
+
+    const result = await fulfillOrderRequest("admin-1", "req-1r");
+
+    expect(result).toEqual({ ok: true });
+    expect(prisma.license.findFirst).toHaveBeenCalledWith({
+      where: { userId: "user-1", status: { in: ["active", "comp"] } },
+      orderBy: { createdAt: "desc" },
+      select: { validUntil: true },
+    });
+    expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
+      note: "Order req-1r",
+      validUntil: expect.any(Date),
     });
   });
 
@@ -202,12 +234,41 @@ describe("fulfillOrderRequest", () => {
       status: "pending",
       product: "agent",
       planName: "Business",
+      isRenewal: false,
       user: { id: "user-1", email: "a@b.c" },
     });
 
     const result = await fulfillOrderRequest("admin-1", "req-2");
 
     expect(result).toEqual({ ok: true });
+    expect(prisma.agentProfile.findUnique).not.toHaveBeenCalled();
+    expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      update: { status: "active", plan: "business", planExpiresAt: expect.any(Date) },
+      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expect.any(Date) },
+    });
+  });
+
+  it("renews the agent profile using renewedExpiryFrom the current planExpiresAt", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-2r",
+      status: "pending",
+      product: "agent",
+      planName: "Business",
+      isRenewal: true,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+    (prisma.agentProfile.findUnique as any).mockResolvedValue({
+      planExpiresAt: new Date("2026-08-15T00:00:00.000Z"),
+    });
+
+    const result = await fulfillOrderRequest("admin-1", "req-2r");
+
+    expect(result).toEqual({ ok: true });
+    expect(prisma.agentProfile.findUnique).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      select: { planExpiresAt: true },
+    });
     expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
       where: { userId: "user-1" },
       update: { status: "active", plan: "business", planExpiresAt: expect.any(Date) },

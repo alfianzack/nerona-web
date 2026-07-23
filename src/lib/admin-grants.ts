@@ -6,6 +6,7 @@ export interface GrantOptions {
   note?: string;
   amount?: number;
   currency?: string;
+  validUntil?: Date;
 }
 
 export type GrantLicenseResult =
@@ -40,7 +41,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
-        validUntil: monthlyExpiryFrom(new Date()),
+        validUntil: options.validUntil ?? monthlyExpiryFrom(new Date()),
       },
     });
   } else {
@@ -56,7 +57,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
-        validUntil: monthlyExpiryFrom(new Date()),
+        validUntil: options.validUntil ?? monthlyExpiryFrom(new Date()),
       },
     });
   }

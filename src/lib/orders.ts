@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
-import { monthlyExpiryFrom } from "@/lib/billing-period";
+import { monthlyExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
 
 export type Product = "metadata" | "agent";
 
@@ -243,15 +243,35 @@ export async function fulfillOrderRequest(
     if (!plan) {
       return { ok: false, reason: "plan_not_found" };
     }
+    let validUntil: Date | undefined;
+    if (order.isRenewal) {
+      const current = await prisma.license.findFirst({
+        where: { userId: order.user.id, status: { in: ["active", "comp"] } },
+        orderBy: { createdAt: "desc" },
+        select: { validUntil: true },
+      });
+      validUntil = renewedExpiryFrom(current?.validUntil ?? null, new Date());
+    }
     const result = await grantLicense(adminId, order.user.email, plan.id, {
       note: `Order ${order.id}`,
+      validUntil,
     });
     if (!result.ok) {
       return { ok: false, reason: "grant_failed" };
     }
   } else {
     const plan = order.planName.toLowerCase();
-    const expiresAt = monthlyExpiryFrom(new Date());
+    const now = new Date();
+    let expiresAt: Date;
+    if (order.isRenewal) {
+      const current = await prisma.agentProfile.findUnique({
+        where: { userId: order.user.id },
+        select: { planExpiresAt: true },
+      });
+      expiresAt = renewedExpiryFrom(current?.planExpiresAt ?? null, now);
+    } else {
+      expiresAt = monthlyExpiryFrom(now);
+    }
     await prisma.agentProfile.upsert({
       where: { userId: order.user.id },
       update: { status: "active", plan, planExpiresAt: expiresAt },
