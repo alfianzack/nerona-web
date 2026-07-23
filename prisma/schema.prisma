@@ -77,6 +77,8 @@ model User {
   fulfilledOrderRequests     OrderRequest[]   @relation("FulfilledOrderRequests")
   shopProducts               ShopProduct[]
   shopOrders                 ShopOrder[]
+  pointTransactions         PointTransaction[] @relation("UserPointTransactions")
+  adjustedPointTransactions PointTransaction[] @relation("PointAdjustedByAdmin")
 
   @@map("users")
 }
@@ -459,4 +461,19 @@ model ShopOrderItem {
 
   @@index([orderId])
   @@map("shop_order_items")
+}
+
+model PointTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserPointTransactions", fields: [userId], references: [id], onDelete: Cascade)
+  delta       Int      // signed: positive = credit, negative = debit
+  reason      String   // "manual_adjust" | "spend" (future: "topup")
+  note        String?
+  createdById String?
+  createdBy   User?    @relation("PointAdjustedByAdmin", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("point_transactions")
 }
