@@ -7,6 +7,7 @@ vi.mock("@/lib/prisma", () => ({
       create: vi.fn(),
       findMany: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -28,6 +29,10 @@ describe("getBalance", () => {
 });
 
 describe("adjustPoints", () => {
+  beforeEach(() => {
+    (prisma.$transaction as any).mockImplementation((cb: any) => cb(prisma));
+  });
+
   it("creates a manual_adjust row and returns the new balance", async () => {
     (prisma.pointTransaction.aggregate as any).mockResolvedValue({ _sum: { delta: 100 } });
     const res = await adjustPoints({ userId: "u1", delta: 50, note: "bonus", createdById: "admin1" });
@@ -43,6 +48,22 @@ describe("adjustPoints", () => {
     expect(res).toEqual({ ok: false, reason: "below_zero" });
     expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
   });
+
+  it("retries once on a Prisma serialization failure (P2034) and returns the success value", async () => {
+    (prisma.pointTransaction.aggregate as any).mockResolvedValue({ _sum: { delta: 100 } });
+    const serializationError = Object.assign(new Error("could not serialize access"), { code: "P2034" });
+    (prisma.$transaction as any)
+      .mockRejectedValueOnce(serializationError)
+      .mockImplementationOnce((cb: any) => cb(prisma));
+
+    const res = await adjustPoints({ userId: "u1", delta: 50, note: "bonus", createdById: "admin1" });
+
+    expect(res).toEqual({ ok: true, balance: 150 });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(prisma.pointTransaction.create).toHaveBeenCalledWith({
+      data: { userId: "u1", delta: 50, reason: "manual_adjust", note: "bonus", createdById: "admin1" },
+    });
+  });
 });
 
 describe("spendPoints", () => {
@@ -53,6 +74,20 @@ describe("spendPoints", () => {
       data: { userId: "u1", delta: -10, reason: "spend", note: "AI reply", createdById: null },
     });
     expect(bal).toBe(-5);
+  });
+
+  it("throws for a zero cost and does not create a row", async () => {
+    await expect(spendPoints({ userId: "u1", cost: 0 })).rejects.toThrow(
+      "spendPoints: cost must be a positive integer",
+    );
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it("throws for a non-integer cost and does not create a row", async () => {
+    await expect(spendPoints({ userId: "u1", cost: 1.5 })).rejects.toThrow(
+      "spendPoints: cost must be a positive integer",
+    );
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
   });
 });
 
