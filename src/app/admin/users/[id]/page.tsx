@@ -24,7 +24,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
     prisma.order.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      select: { id: true, amount: true, currency: true, note: true, courseId: true, createdAt: true },
+      select: { id: true, amount: true, note: true, courseId: true, createdAt: true },
     }),
   ]);
 
@@ -45,7 +45,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
       amount: o.amount,
       date: o.createdAt.toISOString(),
     })),
-  ].sort((a, b) => (a.date < b.date ? 1 : -1));
+  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
   const transactions = txns.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() }));
 

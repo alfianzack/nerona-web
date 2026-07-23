@@ -92,6 +92,7 @@ describe("processJob — failure below MAX_ATTEMPTS", () => {
     (prisma.agentProfile.findUnique as any).mockResolvedValue(profile);
     (listRecentFacts as any).mockResolvedValue([]);
     (getRecentHistory as any).mockResolvedValue([]);
+    (getBalance as any).mockResolvedValue(500);
     (generateReply as any).mockRejectedValue(new Error("Claude API down"));
     (failJob as any).mockResolvedValue({ permanentlyFailed: false });
   });
@@ -111,6 +112,7 @@ describe("processJob — permanent failure", () => {
     (prisma.agentProfile.findUnique as any).mockResolvedValue(profile);
     (listRecentFacts as any).mockResolvedValue([]);
     (getRecentHistory as any).mockResolvedValue([]);
+    (getBalance as any).mockResolvedValue(500);
     (generateReply as any).mockRejectedValue(new Error("Claude API down"));
     (failJob as any).mockResolvedValue({ permanentlyFailed: true });
     (sendWhatsAppText as any).mockResolvedValue(undefined);

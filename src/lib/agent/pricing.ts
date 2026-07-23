@@ -23,6 +23,10 @@ function pointsPerUsd(): number {
 }
 
 export function costForUsage(params: { model: string; usage: TokenUsage | null }): number {
+  // An unknown model falls back to the cheapest entry in MODEL_PRICES rather than
+  // charging 0. This can UNDER-charge if the actual model served is pricier than the
+  // cheap default — it never over-charges. Any model actually served in production
+  // should be added to MODEL_PRICES so it is priced accurately.
   const price = MODEL_PRICES[params.model] ?? DEFAULT_PRICE;
   if (params.model && !MODEL_PRICES[params.model]) {
     console.warn(`[pricing] unknown model "${params.model}", using default price`);

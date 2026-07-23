@@ -89,6 +89,13 @@ describe("spendPoints", () => {
     );
     expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
   });
+
+  it("throws for a negative cost and does not create a row", async () => {
+    await expect(spendPoints({ userId: "u1", cost: -5 })).rejects.toThrow(
+      "spendPoints: cost must be a positive integer",
+    );
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("listTransactions", () => {
