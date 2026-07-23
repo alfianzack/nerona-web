@@ -1,10 +1,16 @@
-const MODEL = process.env.AGENT_MODEL || "claude-sonnet-4-6";
+const MODEL = process.env.AGENT_MODEL || "gemini-2.0-flash-lite";
 const BASE_URL = process.env.SUMOPOD_BASE_URL || "https://ai.sumopod.com/v1";
+
+export interface GenerateReplyResult {
+  text: string;
+  model: string;
+  usage: { promptTokens: number; completionTokens: number } | null;
+}
 
 export async function generateReply(params: {
   systemPrompt: string;
   history: { role: "user" | "assistant"; content: string }[];
-}): Promise<string> {
+}): Promise<GenerateReplyResult> {
   const apiKey = process.env.SUMOPOD_API_KEY;
 
   const response = await fetch(`${BASE_URL}/chat/completions`, {
@@ -26,5 +32,12 @@ export async function generateReply(params: {
   }
 
   const data = await response.json();
-  return data?.choices?.[0]?.message?.content ?? "";
+  const text = data?.choices?.[0]?.message?.content ?? "";
+  const usage = data?.usage
+    ? {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+      }
+    : null;
+  return { text, model: MODEL, usage };
 }

@@ -19,16 +19,19 @@ describe("generateReply", () => {
       ok: true,
       json: async () => ({
         choices: [{ message: { content: "Halo! Ada yang bisa saya bantu?" } }],
+        usage: { prompt_tokens: 12, completion_tokens: 8 },
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const reply = await generateReply({
+    const result = await generateReply({
       systemPrompt: "You are a helpful assistant.",
       history: [{ role: "user", content: "halo" }],
     });
 
-    expect(reply).toBe("Halo! Ada yang bisa saya bantu?");
+    expect(result.text).toBe("Halo! Ada yang bisa saya bantu?");
+    expect(result.usage).toEqual({ promptTokens: 12, completionTokens: 8 });
+    expect(result.model).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("https://ai.sumopod.com/v1/chat/completions");
@@ -49,12 +52,13 @@ describe("generateReply", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ choices: [] }) })
     );
 
-    const reply = await generateReply({
+    const result = await generateReply({
       systemPrompt: "You are a helpful assistant.",
       history: [{ role: "user", content: "halo" }],
     });
 
-    expect(reply).toBe("");
+    expect(result.text).toBe("");
+    expect(result.usage).toBeNull();
   });
 
   it("throws when the API responds with an error", async () => {
