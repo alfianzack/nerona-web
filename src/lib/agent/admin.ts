@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isExpired } from "@/lib/billing-period";
 
 export type AgentAdminResult =
   | { ok: true }
@@ -9,6 +10,15 @@ export type AgentPlan = (typeof AGENT_PLANS)[number];
 
 export function isAgentPlan(value: string): value is AgentPlan {
   return (AGENT_PLANS as readonly string[]).includes(value);
+}
+
+export const PAID_AGENT_PLANS = ["pro", "business"] as const;
+
+export function isAgentPlanExpired(
+  profile: { plan: string; planExpiresAt: Date | null },
+  now: Date = new Date()
+): boolean {
+  return (PAID_AGENT_PLANS as readonly string[]).includes(profile.plan) && isExpired(profile.planExpiresAt, now);
 }
 
 export async function activateAgentProfile(

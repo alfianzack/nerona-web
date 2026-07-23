@@ -277,6 +277,7 @@ model AgentProfile {
   timezone            String    @default("Asia/Jakarta")
   status              String    @default("pending") // "pending" | "active" | "disabled"
   plan                String    @default("free") // "free" | "pro" | "business"
+  planExpiresAt       DateTime? // paid plan valid until this instant; null = free/no expiry
   googleRefreshToken  String?   @db.Text
   googleCalendarEmail String?
   createdAt           DateTime  @default(now())
