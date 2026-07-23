@@ -7,6 +7,7 @@ import { createJob } from "./jobs";
 import { processJob } from "./process-job";
 import { runInBackground } from "./wait-until";
 import { hasExceededMonthlyLimit } from "./limits";
+import { isAgentPlanExpired } from "./admin";
 
 export async function handleWebhookVerification(params: {
   mode: string | null;
@@ -96,6 +97,15 @@ export async function handleIncomingWebhook(
         "Nomor ini belum terverifikasi. Buka dashboard Nerona Agent untuk mendapatkan kode verifikasi."
       );
     }
+    return { status: 200 };
+  }
+
+  if (isAgentPlanExpired(profile)) {
+    await replyStatic(
+      phone,
+      profile.id,
+      `Paket Anda sudah berakhir. Silakan perpanjang di ${baseUrl()}/agent untuk melanjutkan.`
+    );
     return { status: 200 };
   }
 

@@ -231,6 +231,7 @@ describe("handleIncomingWebhook", () => {
       id: "profile-1",
       status: "active",
       plan: "free",
+      planExpiresAt: null,
       phoneVerifiedAt: new Date(),
     });
     (hasExceededMonthlyLimit as any).mockResolvedValue(false);
@@ -257,6 +258,7 @@ describe("handleIncomingWebhook", () => {
       id: "profile-1",
       status: "active",
       plan: "free",
+      planExpiresAt: null,
       phoneVerifiedAt: new Date(),
     });
     (hasExceededMonthlyLimit as any).mockResolvedValue(true);
@@ -271,6 +273,29 @@ describe("handleIncomingWebhook", () => {
       "+15551234567",
       expect.stringContaining("Kuota pesan bulanan")
     );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("replies with a renewal message and creates no job when the paid plan has expired", async () => {
+    (findProfileByPhone as any).mockResolvedValue({
+      id: "profile-1",
+      status: "active",
+      plan: "pro",
+      planExpiresAt: new Date(Date.now() - 60_000),
+      phoneVerifiedAt: new Date(),
+    });
+
+    const result = await handleIncomingWebhook(
+      textPayload("15551234567", "halo"),
+      "sha256=ok"
+    );
+
+    expect(result.status).toBe(200);
+    expect(sendWhatsAppText).toHaveBeenCalledWith(
+      "+15551234567",
+      expect.stringMatching(/berakhir|perpanjang/)
+    );
+    expect(hasExceededMonthlyLimit).not.toHaveBeenCalled();
     expect(createJob).not.toHaveBeenCalled();
   });
 });
