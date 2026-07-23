@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+
 import { generateReply } from "@/lib/agent/claude-client";
+import { getAiSettings } from "@/lib/ai-settings";
 
 describe("generateReply", () => {
-  const originalKey = process.env.SUMOPOD_API_KEY;
-
   beforeEach(() => {
-    process.env.SUMOPOD_API_KEY = "test-key";
+    (getAiSettings as any).mockResolvedValue({ model: "gemini-2.0-flash-lite", apiKey: "test-key" });
   });
 
   afterEach(() => {
-    process.env.SUMOPOD_API_KEY = originalKey;
     vi.unstubAllGlobals();
   });
 
@@ -38,12 +38,14 @@ describe("generateReply", () => {
     expect(init.headers.Authorization).toBe("Bearer test-key");
     expect(JSON.parse(init.body)).toEqual(
       expect.objectContaining({
+        model: "gemini-2.0-flash-lite",
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           { role: "user", content: "halo" },
         ],
       })
     );
+    expect(result.model).toBe("gemini-2.0-flash-lite");
   });
 
   it("returns an empty string when the response has no content", async () => {

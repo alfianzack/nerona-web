@@ -1,4 +1,5 @@
-const MODEL = process.env.AGENT_MODEL || "gemini-2.0-flash-lite";
+import { getAiSettings } from "@/lib/ai-settings";
+
 const BASE_URL = process.env.SUMOPOD_BASE_URL || "https://ai.sumopod.com/v1";
 
 export interface GenerateReplyResult {
@@ -11,7 +12,7 @@ export async function generateReply(params: {
   systemPrompt: string;
   history: { role: "user" | "assistant"; content: string }[];
 }): Promise<GenerateReplyResult> {
-  const apiKey = process.env.SUMOPOD_API_KEY;
+  const { model, apiKey } = await getAiSettings();
 
   const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -20,7 +21,7 @@ export async function generateReply(params: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       max_tokens: 1024,
       messages: [{ role: "system", content: params.systemPrompt }, ...params.history],
     }),
@@ -39,5 +40,5 @@ export async function generateReply(params: {
         completionTokens: data.usage.completion_tokens ?? 0,
       }
     : null;
-  return { text, model: MODEL, usage };
+  return { text, model, usage };
 }
