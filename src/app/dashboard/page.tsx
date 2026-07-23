@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { getDashboardSummary, getSalesSeries } from "@/lib/shop-dashboard";
+import { getBalance, listTransactions } from "@/lib/points";
 import { formatRupiah } from "@/lib/format";
 import { SalesChart } from "@/components/shop/SalesChart";
 
@@ -11,6 +12,12 @@ const STATUS_LABEL: Record<string, string> = {
   paid: "Dibayar",
   done: "Selesai",
   cancelled: "Batal",
+};
+
+const POINT_REASON_LABEL: Record<string, string> = {
+  manual_adjust: "Penyesuaian admin",
+  spend: "Pemakaian AI",
+  topup: "Top-up",
 };
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -24,9 +31,11 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export default async function DashboardPage() {
   const session = await requireUser();
-  const [summary, series] = await Promise.all([
+  const [summary, series, pointsBalance, pointsHistory] = await Promise.all([
     getDashboardSummary(session.user.id),
     getSalesSeries(session.user.id),
+    getBalance(session.user.id),
+    listTransactions(session.user.id, 8),
   ]);
 
   return (
@@ -46,6 +55,48 @@ export default async function DashboardPage() {
           <div className="mt-4 text-ink">
             <SalesChart data={series} />
           </div>
+        </div>
+
+        <div className="mt-8 rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-ink">Poin</p>
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/20 px-2.5 py-1 text-sm font-semibold text-[#9A6B08] ring-1 ring-gold-400/40">
+              {pointsBalance.toLocaleString("id-ID")} poin
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Poin dipakai untuk balasan AI asisten WhatsApp. Hubungi admin untuk isi ulang.
+          </p>
+          <ul className="mt-3 divide-y divide-navy-900/10">
+            {pointsHistory.length === 0 && (
+              <li className="py-2 text-sm text-muted">Belum ada aktivitas poin.</li>
+            )}
+            {pointsHistory.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-ink">
+                    {POINT_REASON_LABEL[t.reason] ?? t.reason}
+                    {t.note ? <span className="text-muted"> · {t.note}</span> : null}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {t.createdAt.toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`whitespace-nowrap text-sm font-semibold tabular-nums ${
+                    t.delta >= 0 ? "text-emerald-600" : "text-rose-500"
+                  }`}
+                >
+                  {t.delta >= 0 ? "+" : ""}
+                  {t.delta.toLocaleString("id-ID")}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

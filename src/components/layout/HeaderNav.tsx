@@ -26,7 +26,15 @@ export function activeHref(pathname: string, items: NavItem[]): string | null {
   return best;
 }
 
-export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn: boolean }) {
+export function HeaderNav({
+  items,
+  isLoggedIn,
+  points,
+}: {
+  items: NavItem[];
+  isLoggedIn: boolean;
+  points?: number | null;
+}) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -37,6 +45,17 @@ export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn:
     setSigningOut(true);
     signOut({ callbackUrl: "/" });
   }
+
+  const pointsChip =
+    points != null ? (
+      <Link
+        href="/dashboard"
+        title="Saldo poin — lihat riwayat di Dashboard"
+        className="inline-flex items-center gap-1 rounded-full bg-gold-400/20 px-2.5 py-1 text-xs font-semibold text-[#9A6B08] ring-1 ring-gold-400/40 transition hover:bg-gold-400/30"
+      >
+        {points.toLocaleString("id-ID")} poin
+      </Link>
+    ) : null;
 
   const authButton = isLoggedIn ? (
     <button
@@ -79,21 +98,25 @@ export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn:
             </Link>
           );
         })}
+        {pointsChip}
         {authButton}
       </nav>
 
-      {/* Mobile hamburger */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Menu"
-        aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/5 sm:hidden"
-      >
-        <span className="text-lg leading-none" aria-hidden="true">
-          {open ? "✕" : "☰"}
-        </span>
-      </button>
+      {/* Mobile: points chip + hamburger */}
+      <div className="flex items-center gap-2 sm:hidden">
+        {pointsChip}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Menu"
+          aria-expanded={open}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/5"
+        >
+          <span className="text-lg leading-none" aria-hidden="true">
+            {open ? "✕" : "☰"}
+          </span>
+        </button>
+      </div>
 
       {/* Mobile dropdown */}
       {open && (

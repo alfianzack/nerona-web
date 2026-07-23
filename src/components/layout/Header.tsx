@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getBalance } from "@/lib/points";
 import { HeaderNav, type NavItem } from "@/components/layout/HeaderNav";
 
 const GUEST_NAV: NavItem[] = [
@@ -30,6 +31,10 @@ export async function Header() {
 
   const items = !isLoggedIn ? GUEST_NAV : isAdmin ? ADMIN_NAV : CUSTOMER_NAV;
 
+  // Show the tenant's own points balance on every page. Admins use the admin
+  // nav and have no personal wallet, so it's tenant-only.
+  const points = isLoggedIn && !isAdmin ? await getBalance(session!.user.id) : null;
+
   return (
     <header className="sticky top-0 z-50 border-b border-navy-900/10 bg-canvas/80 backdrop-blur-xl">
       <div className="mx-auto flex h-12 max-w-5xl items-center justify-between px-6">
@@ -40,7 +45,7 @@ export async function Header() {
           <img src="/logo-nerona.svg" alt="" className="h-5 w-5" />
           Nerona
         </Link>
-        <HeaderNav items={items} isLoggedIn={isLoggedIn} />
+        <HeaderNav items={items} isLoggedIn={isLoggedIn} points={points} />
       </div>
     </header>
   );
