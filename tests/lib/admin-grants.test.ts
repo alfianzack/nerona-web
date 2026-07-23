@@ -69,6 +69,7 @@ describe("grantLicense", () => {
         planId: "plan-1",
         marketplaces: "*",
         rejectAnalyzer: true,
+        validUntil: expect.any(Date),
       },
     });
     expect(prisma.order.create).not.toHaveBeenCalled();
@@ -92,6 +93,7 @@ describe("grantLicense", () => {
         planId: "plan-1",
         marketplaces: "*",
         rejectAnalyzer: true,
+        validUntil: expect.any(Date),
       },
     });
     expect(prisma.license.create).not.toHaveBeenCalled();

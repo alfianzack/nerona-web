@@ -112,7 +112,7 @@ describe("submitOrder — Free agent", () => {
 
     expect(result).toEqual({ ok: true, kind: "free_activated" });
     expect(prisma.agentProfile.create).toHaveBeenCalledWith({
-      data: { userId: "user-1", status: "active", plan: "free" },
+      data: { userId: "user-1", status: "active", plan: "free", planExpiresAt: null },
     });
   });
 });
@@ -210,8 +210,8 @@ describe("fulfillOrderRequest", () => {
     expect(result).toEqual({ ok: true });
     expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      update: { status: "active", plan: "business" },
-      create: { userId: "user-1", status: "active", plan: "business" },
+      update: { status: "active", plan: "business", planExpiresAt: expect.any(Date) },
+      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expect.any(Date) },
     });
   });
 });

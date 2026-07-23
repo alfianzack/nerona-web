@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
+import { monthlyExpiryFrom } from "@/lib/billing-period";
 
 export type Product = "metadata" | "agent";
 
@@ -64,10 +65,12 @@ async function activateFreeAgent(userId: string): Promise<SubmitOrderResult> {
   if (profile) {
     await prisma.agentProfile.update({
       where: { id: profile.id },
-      data: { status: "active", plan: "free" },
+      data: { status: "active", plan: "free", planExpiresAt: null },
     });
   } else {
-    await prisma.agentProfile.create({ data: { userId, status: "active", plan: "free" } });
+    await prisma.agentProfile.create({
+      data: { userId, status: "active", plan: "free", planExpiresAt: null },
+    });
   }
   return { ok: true, kind: "free_activated" };
 }
@@ -248,10 +251,11 @@ export async function fulfillOrderRequest(
     }
   } else {
     const plan = order.planName.toLowerCase();
+    const expiresAt = monthlyExpiryFrom(new Date());
     await prisma.agentProfile.upsert({
       where: { userId: order.user.id },
-      update: { status: "active", plan },
-      create: { userId: order.user.id, status: "active", plan },
+      update: { status: "active", plan, planExpiresAt: expiresAt },
+      create: { userId: order.user.id, status: "active", plan, planExpiresAt: expiresAt },
     });
   }
 

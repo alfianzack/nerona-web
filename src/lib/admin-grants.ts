@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
+import { monthlyExpiryFrom } from "@/lib/billing-period";
 
 export interface GrantOptions {
   note?: string;
@@ -39,6 +40,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
+        validUntil: monthlyExpiryFrom(new Date()),
       },
     });
   } else {
@@ -54,6 +56,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
+        validUntil: monthlyExpiryFrom(new Date()),
       },
     });
   }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isExpired } from "@/lib/billing-period";
+import { isExpired, monthlyExpiryFrom } from "@/lib/billing-period";
 
 export type AgentAdminResult =
   | { ok: true }
@@ -30,10 +30,14 @@ export async function activateAgentProfile(
     return { ok: false, reason: "user_not_found" };
   }
 
+  const paid = plan ? (PAID_AGENT_PLANS as readonly string[]).includes(plan) : false;
+  const expiryData =
+    plan === undefined ? {} : { planExpiresAt: paid ? monthlyExpiryFrom(new Date()) : null };
+
   await prisma.agentProfile.upsert({
     where: { userId: user.id },
-    update: { status: "active", ...(plan ? { plan } : {}) },
-    create: { userId: user.id, status: "active", ...(plan ? { plan } : {}) },
+    update: { status: "active", ...(plan ? { plan } : {}), ...expiryData },
+    create: { userId: user.id, status: "active", ...(plan ? { plan } : {}), ...expiryData },
   });
 
   return { ok: true };
