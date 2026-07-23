@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/session-guards";
 import { prisma } from "@/lib/prisma";
 import { getBalance, listTransactions } from "@/lib/points";
+import { isAgentPlanExpired } from "@/lib/agent/admin";
 
 export const metadata = { title: "Finance — Nerona" };
 
@@ -14,13 +15,17 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function fmtDateOrNull(d: Date | null): string {
+  return d ? fmtDate(d) : "—";
+}
+
 const cardClass =
   "rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10";
 
 export default async function FinancePage() {
   const session = await requireUser();
 
-  const [balance, transactions, orderRequests, orders] = await Promise.all([
+  const [balance, transactions, orderRequests, orders, agentProfile, license] = await Promise.all([
     getBalance(session.user.id),
     listTransactions(session.user.id, 50),
     prisma.orderRequest.findMany({
@@ -32,6 +37,15 @@ export default async function FinancePage() {
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
       select: { id: true, amount: true, note: true, courseId: true, createdAt: true },
+    }),
+    prisma.agentProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { plan: true, status: true, planExpiresAt: true },
+    }),
+    prisma.license.findFirst({
+      where: { userId: session.user.id, status: { in: ["active", "comp"] } },
+      orderBy: { createdAt: "desc" },
+      select: { validUntil: true, status: true, plan: { select: { name: true } } },
     }),
   ]);
 
@@ -63,6 +77,36 @@ export default async function FinancePage() {
         </div>
 
         <section className={`mt-8 ${cardClass}`}>
+          <h2 className="text-sm font-semibold text-ink">Paket</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li className="flex items-center justify-between gap-3">
+              <span className="text-ink">
+                Agent WhatsApp
+                {agentProfile ? <span className="text-muted"> · {agentProfile.plan}</span> : null}
+              </span>
+              <span className="text-xs text-muted">
+                {!agentProfile || agentProfile.plan === "free"
+                  ? "Paket free"
+                  : isAgentPlanExpired(agentProfile)
+                    ? "Berakhir — silakan perpanjang"
+                    : `Berlaku sampai ${fmtDateOrNull(agentProfile.planExpiresAt)}`}
+              </span>
+            </li>
+            {license && (
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-ink">
+                  Metadata
+                  {license.plan?.name ? <span className="text-muted"> · {license.plan.name}</span> : null}
+                </span>
+                <span className="text-xs text-muted">
+                  {license.validUntil ? `Berlaku sampai ${fmtDate(license.validUntil)}` : "Aktif"}
+                </span>
+              </li>
+            )}
+          </ul>
+        </section>
+
+        <section className={`mt-6 ${cardClass}`}>
           <h2 className="text-sm font-semibold text-ink">Poin</h2>
           <p className="mt-1 text-xs text-muted">
             Poin dipakai untuk balasan AI asisten WhatsApp. Hubungi admin untuk isi ulang.
