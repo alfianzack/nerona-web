@@ -14,3 +14,25 @@ export function monthlyExpiryFrom(now: Date): Date {
 export function isExpired(expiresAt: Date | null, now: Date = new Date()): boolean {
   return expiresAt != null && now.getTime() >= expiresAt.getTime();
 }
+
+// One calendar month after `base`, in WIB. JS Date.UTC normalizes month/day overflow.
+export function addOneMonthJakarta(base: Date): Date {
+  const wib = new Date(base.getTime() + WIB_OFFSET_MS);
+  const utcMs =
+    Date.UTC(
+      wib.getUTCFullYear(),
+      wib.getUTCMonth() + 1,
+      wib.getUTCDate(),
+      wib.getUTCHours(),
+      wib.getUTCMinutes(),
+      wib.getUTCSeconds(),
+      wib.getUTCMilliseconds()
+    ) - WIB_OFFSET_MS;
+  return new Date(utcMs);
+}
+
+// Forward-stacking renewal: extend from the remaining time if still active, else from now.
+export function renewedExpiryFrom(currentExpiry: Date | null, now: Date): Date {
+  const base = currentExpiry && currentExpiry.getTime() > now.getTime() ? currentExpiry : now;
+  return addOneMonthJakarta(base);
+}

@@ -400,6 +400,7 @@ model OrderRequest {
   planName      String // "Pro" | "Business"
   contactNote   String?
   status        String    @default("pending") // "pending" | "fulfilled" | "cancelled"
+  isRenewal     Boolean   @default(false) // auto-generated monthly renewal request
   createdAt     DateTime  @default(now())
   fulfilledAt   DateTime?
   fulfilledById String?
