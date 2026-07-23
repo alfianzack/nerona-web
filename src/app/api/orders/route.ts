@@ -7,10 +7,6 @@ const ERROR_MESSAGES: Record<string, { status: number; message: string }> = {
   invalid_product: { status: 400, message: "Produk tidak dikenal." },
   invalid_plan: { status: 400, message: "Paket tidak dikenal." },
   plan_not_found: { status: 500, message: "Paket belum tersedia. Hubungi admin Nerona." },
-  already_pending: {
-    status: 409,
-    message: "Anda sudah punya order yang sedang diproses untuk produk ini.",
-  },
   account_disabled: {
     status: 403,
     message: "Akun agent Anda dinonaktifkan. Hubungi admin Nerona.",
@@ -33,6 +29,11 @@ export async function POST(request: Request) {
 
   const result = await submitOrder(session.user.id, product, planName, contactNote);
   if (!result.ok) {
+    // An existing pending order isn't an error for checkout — point the client
+    // at that order so they can finish paying / upload proof.
+    if (result.reason === "already_pending") {
+      return NextResponse.json({ ok: true, kind: "request_created", orderId: result.orderId });
+    }
     const mapped = ERROR_MESSAGES[result.reason];
     return NextResponse.json(
       { ok: false, reason: result.reason, message: mapped.message },
@@ -40,5 +41,9 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, kind: result.kind });
+  return NextResponse.json({
+    ok: true,
+    kind: result.kind,
+    orderId: result.kind === "request_created" ? result.orderId : undefined,
+  });
 }

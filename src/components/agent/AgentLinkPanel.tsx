@@ -50,9 +50,9 @@ export function AgentLinkPanel({
 
   if (verifiedAt) {
     return (
-      <div className="mt-8 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-6 shadow-lg shadow-black/40 ring-1 ring-white/10">
-        <p className="font-medium text-white">WhatsApp terhubung ✓</p>
-        <p className="mt-1 text-sm text-navy-300">
+      <div className="mt-8 rounded-2xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+        <p className="font-medium text-ink">WhatsApp terhubung ✓</p>
+        <p className="mt-1 text-sm text-muted">
           Nomor: {whatsappPhone}. Anda sekarang bisa chat langsung dengan Nerona Agent di{" "}
           {displayNumber}.
         </p>
@@ -68,7 +68,7 @@ export function AgentLinkPanel({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08123456789"
-          className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
+          className="flex-1 rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
         <button
           onClick={handleSubmit}
@@ -81,21 +81,21 @@ export function AgentLinkPanel({
       {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
 
       {code && (
-        <div className="mt-4 rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10">
-          <p className="text-sm text-navy-300">
+        <div className="mt-4 rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+          <p className="text-sm text-muted">
             Kirim kode berikut ke WhatsApp {displayNumber} untuk menyelesaikan tautan:
           </p>
-          <p className="mt-2 text-2xl font-semibold tracking-widest text-white">
+          <p className="mt-2 text-2xl font-semibold tracking-widest text-ink">
             {code}
           </p>
           {expires && (
-            <p className="mt-1 text-xs text-navy-300">
+            <p className="mt-1 text-xs text-muted">
               Berlaku sampai {new Date(expires).toLocaleTimeString("id-ID")}
             </p>
           )}
           <button
             onClick={handleRefreshStatus}
-            className="mt-4 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20"
+            className="mt-4 rounded-full bg-navy-900/5 px-3.5 py-1.5 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
           >
             Cek status
           </button>

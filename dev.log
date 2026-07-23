@@ -1,0 +1,26 @@
+
+> nerona-web@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.1s
+ ○ Compiling / ...
+(node:14464) Warning: Failed to load the ES module: C:\Users\alfia\Documents\fahmi\project\produk\nerona\nerona-web\tailwind.config.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled / in 4.3s (744 modules)
+ GET / 200 in 4708ms
+ GET / 200 in 47ms
+ ✓ Compiled /agent in 318ms (746 modules)
+ GET /agent 200 in 488ms
+ ✓ Compiled /metadata in 297ms (741 modules)
+ GET /metadata 200 in 392ms
+ ✓ Compiled /learn in 188ms (743 modules)
+ GET /learn 200 in 1498ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 655ms (843 modules)
+ GET /login 200 in 822ms
+ GET /metadata 200 in 55ms

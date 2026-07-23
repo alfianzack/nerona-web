@@ -20,11 +20,11 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   },
   comp: {
     label: "Gratis (comp)",
-    className: "bg-gold-400/10 text-gold-300",
+    className: "bg-gold-400/10 text-brand-blue",
   },
   expired: {
     label: "Kedaluwarsa",
-    className: "bg-white/10 text-navy-300",
+    className: "bg-navy-900/5 text-muted",
   },
 };
 
@@ -39,33 +39,33 @@ export function LicenseSection({ licenseKey, planName, status, validUntil }: Lic
 
   const statusBadge = STATUS_LABELS[status] ?? {
     label: status,
-    className: "bg-white/10 text-navy-300",
+    className: "bg-navy-900/5 text-muted",
   };
 
   return (
-    <div className="mt-6 rounded-3xl bg-gradient-to-b from-navy-800 to-navy-900 p-6 shadow-lg shadow-black/40 ring-1 ring-white/10">
+    <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
       <div className="flex items-center justify-between">
-        <p className="font-semibold tracking-tight text-white">
+        <p className="font-semibold tracking-tight text-ink">
           Lisensi {planName}
         </p>
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadge.className}`}>
           {statusBadge.label}
         </span>
       </div>
-      <p className="mt-4 text-sm text-navy-300">Kunci lisensi</p>
+      <p className="mt-4 text-sm text-muted">Kunci lisensi</p>
       <div className="mt-1 flex items-center gap-2">
-        <code className="rounded-lg bg-white/5 px-2.5 py-1.5 text-sm text-white ring-1 ring-white/10">
+        <code className="rounded-lg bg-navy-900/5 px-2.5 py-1.5 text-sm text-ink ring-1 ring-navy-900/10">
           {licenseKey}
         </code>
         <button
           onClick={handleCopy}
-          className="text-sm font-medium text-gold-400 hover:underline"
+          className="text-sm font-medium text-brand-blue hover:underline"
         >
           {copied ? "Tersalin!" : "Salin"}
         </button>
       </div>
       {validUntil && (
-        <p className="mt-3 text-sm text-navy-300">
+        <p className="mt-3 text-sm text-muted">
           Berlaku sampai: {validUntil}
         </p>
       )}

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { signOut } from "next-auth/react";
+import { Modal } from "@/components/ui/Modal";
 
 export type NavItem = { href: string; label: string };
 
@@ -26,16 +28,27 @@ export function activeHref(pathname: string, items: NavItem[]): string | null {
 
 export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn: boolean }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const pathname = usePathname() ?? "";
   const active = activeHref(pathname, items);
 
+  function handleSignOut() {
+    setSigningOut(true);
+    signOut({ callbackUrl: "/" });
+  }
+
   const authButton = isLoggedIn ? (
-    <a
-      href="/api/auth/signout"
+    <button
+      type="button"
+      onClick={() => {
+        setOpen(false);
+        setConfirmOpen(true);
+      }}
       className="rounded-full bg-navy-900/5 px-3.5 py-1.5 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
     >
       Sign Out
-    </a>
+    </button>
   ) : (
     <Link
       href="/login"
@@ -106,6 +119,31 @@ export function HeaderNav({ items, isLoggedIn }: { items: NavItem[]; isLoggedIn:
           </nav>
         </div>
       )}
+
+      {/* Sign-out confirmation */}
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Keluar dari akun?">
+        <p className="text-sm leading-relaxed text-muted">
+          Anda akan keluar dari akun Nerona di perangkat ini. Anda bisa masuk kembali kapan saja.
+        </p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(false)}
+            disabled={signingOut}
+            className="rounded-full bg-navy-900/5 px-4 py-2 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
+          >
+            {signingOut ? "Keluar..." : "Ya, keluar"}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

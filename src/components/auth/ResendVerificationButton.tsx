@@ -19,7 +19,7 @@ export function ResendVerificationButton() {
     <button
       onClick={handleClick}
       disabled={status === "sending"}
-      className="text-sm font-medium text-gold-400 underline disabled:opacity-50"
+      className="text-sm font-medium text-brand-blue underline disabled:opacity-50"
     >
       {status === "sending" ? "Mengirim..." : "Kirim ulang email verifikasi"}
     </button>

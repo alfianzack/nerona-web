@@ -17,7 +17,7 @@ export function AuthButton({
   const styles =
     variant === "primary"
       ? "bg-gradient-to-br from-gold-500 to-gold-400 text-navy-900 font-semibold hover:brightness-110"
-      : "bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/20";
+      : "bg-navy-900/5 text-ink ring-1 ring-navy-900/10 hover:bg-navy-900/10";
 
   return (
     <button type={type} disabled={disabled} onClick={onClick} className={`${base} ${styles}`}>

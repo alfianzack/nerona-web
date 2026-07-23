@@ -7,25 +7,25 @@ const BATCH_ITEMS = [
 
 export function BatchProgressMockup() {
   return (
-    <div className="rounded-3xl bg-gradient-to-b from-navy-800 to-navy-900 p-7 shadow-lg shadow-black/40 ring-1 ring-white/10">
+    <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-7 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-navy-300/70">Progres batch</p>
-        <span className="text-xs text-navy-300">2/4</span>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted/70">Progres batch</p>
+        <span className="text-xs text-muted">2/4</span>
       </div>
       <div className="mt-4 space-y-1">
         {BATCH_ITEMS.map((item) => (
           <div
             key={item.name}
-            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm odd:bg-white/5"
+            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm odd:bg-navy-900/5"
           >
-            <span className="font-medium text-navy-100">{item.name}</span>
+            <span className="font-medium text-ink">{item.name}</span>
             <span
               className={
                 item.status === "Selesai"
                   ? "text-emerald-400"
                   : item.status === "Menganalisis…"
                     ? "text-amber-400"
-                    : "text-navy-300"
+                    : "text-muted"
               }
             >
               {item.status}
@@ -33,7 +33,7 @@ export function BatchProgressMockup() {
           </div>
         ))}
       </div>
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-navy-900/5">
         <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-gold-500 to-gold-400" />
       </div>
     </div>

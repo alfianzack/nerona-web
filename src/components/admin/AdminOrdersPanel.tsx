@@ -8,6 +8,7 @@ interface OrderRow {
   planName: string;
   contactNote: string | null;
   createdAt: string;
+  proofUploadedAt: string | null;
   user: { email: string; name: string | null };
 }
 
@@ -49,36 +50,48 @@ export function AdminOrdersPanel() {
 
   return (
     <div className="mt-8 max-w-xl">
-      <h2 className="text-lg font-semibold text-white">Order Masuk</h2>
+      <h2 className="text-lg font-semibold text-ink">Order Masuk</h2>
       {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
 
       <div className="mt-2 space-y-3">
         {orders.length === 0 && (
-          <p className="rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 text-sm text-navy-300 shadow-lg shadow-black/40 ring-1 ring-white/10">
+          <p className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 text-sm text-muted shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
             Tidak ada order yang menunggu.
           </p>
         )}
         {orders.map((order) => (
           <div
             key={order.id}
-            className="rounded-2xl bg-gradient-to-b from-navy-800 to-navy-900 p-5 shadow-lg shadow-black/40 ring-1 ring-white/10"
+            className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10"
           >
             <div className="flex items-center justify-between">
-              <p className="font-medium text-white">
+              <p className="font-medium text-ink">
                 {order.product === "metadata" ? "Metadata" : "Agent"} — {order.planName}
               </p>
-              <p className="text-xs text-navy-300/70">
+              <p className="text-xs text-muted/70">
                 {new Date(order.createdAt).toLocaleDateString("id-ID")}
               </p>
             </div>
-            <p className="mt-1 text-sm text-navy-300">
+            <p className="mt-1 text-sm text-muted">
               {order.user.name ? `${order.user.name} — ` : ""}
               {order.user.email}
             </p>
             {order.contactNote && (
-              <p className="mt-1 text-xs text-navy-300">
+              <p className="mt-1 text-xs text-muted">
                 Catatan: {order.contactNote}
               </p>
+            )}
+            {order.proofUploadedAt ? (
+              <a
+                href={`/api/orders/${order.id}/proof`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs font-medium text-brand-blue hover:underline"
+              >
+                Lihat bukti transfer ↗
+              </a>
+            ) : (
+              <p className="mt-2 text-xs text-muted/70">Belum ada bukti transfer</p>
             )}
             <div className="mt-3 flex gap-2">
               <button
@@ -91,7 +104,7 @@ export function AdminOrdersPanel() {
               <button
                 onClick={() => handleAction(order.id, "cancel")}
                 disabled={actionId === order.id}
-                className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20 disabled:opacity-50"
+                className="rounded-full bg-navy-900/5 px-3.5 py-1.5 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
               >
                 Tolak
               </button>

@@ -31,17 +31,11 @@ function LoginForm() {
       return;
     }
 
-    router.push("/account");
+    router.push("/dashboard");
   }
 
   return (
     <AuthCard title="Masuk" subtitle="Kelola lisensi Nerona Anda.">
-      <GoogleButton />
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-xs text-navy-300/70">atau</span>
-        <div className="h-px flex-1 bg-white/10" />
-      </div>
       <form onSubmit={handleSubmit}>
         <AuthInput label="Email" type="email" name="email" value={email} onChange={setEmail} autoComplete="email" />
         <AuthInput
@@ -54,7 +48,7 @@ function LoginForm() {
           autoComplete="current-password"
         />
         <div className="mb-4 text-right">
-          <a href="/reset-password" className="text-sm text-navy-300 underline">
+          <a href="/reset-password" className="text-sm text-muted underline">
             Lupa kata sandi?
           </a>
         </div>
@@ -62,9 +56,15 @@ function LoginForm() {
           {submitting ? "Sedang masuk..." : "Masuk"}
         </AuthButton>
       </form>
-      <p className="mt-6 text-center text-sm text-navy-300">
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-navy-900/5" />
+        <span className="text-xs text-muted/70">atau</span>
+        <div className="h-px flex-1 bg-navy-900/5" />
+      </div>
+      <GoogleButton />
+      <p className="mt-6 text-center text-sm text-muted">
         Belum punya akun?{" "}
-        <a href="/register" className="font-medium text-white underline">
+        <a href="/register" className="font-medium text-ink underline">
           Daftar sekarang
         </a>
       </p>

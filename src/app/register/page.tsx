@@ -7,6 +7,8 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export default function RegisterPage() {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +29,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ name, phone, email, password }),
     });
     const data = await res.json();
 
@@ -44,18 +46,31 @@ export default function RegisterPage() {
   return (
     <AuthCard title="Buat akun" subtitle="Mulai kelola lisensi Nerona Anda.">
       {submitted ? (
-        <p className="text-center text-sm text-navy-300">
+        <p className="text-center text-sm text-muted">
           Periksa kotak masuk Anda — kami mengirim tautan verifikasi untuk menyelesaikan pendaftaran.
         </p>
       ) : (
         <>
-          <GoogleButton />
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-navy-300/70">atau</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
           <form onSubmit={handleSubmit}>
+            <AuthInput
+              label="Nama"
+              type="text"
+              name="name"
+              value={name}
+              onChange={setName}
+              autoComplete="name"
+              required
+            />
+            <AuthInput
+              label="Nomor HP"
+              type="tel"
+              name="phone"
+              value={phone}
+              onChange={setPhone}
+              autoComplete="tel"
+              placeholder="08xxxxxxxxxx"
+              required
+            />
             <AuthInput
               label="Email"
               type="email"
@@ -63,6 +78,7 @@ export default function RegisterPage() {
               value={email}
               onChange={setEmail}
               autoComplete="email"
+              required
             />
             <AuthInput
               label="Kata sandi"
@@ -85,9 +101,15 @@ export default function RegisterPage() {
               {submitting ? "Membuat akun..." : "Buat akun"}
             </AuthButton>
           </form>
-          <p className="mt-6 text-center text-sm text-navy-300">
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-navy-900/5" />
+            <span className="text-xs text-muted/70">atau</span>
+            <div className="h-px flex-1 bg-navy-900/5" />
+          </div>
+          <GoogleButton />
+          <p className="mt-6 text-center text-sm text-muted">
             Sudah punya akun?{" "}
-            <a href="/login" className="font-medium text-white underline">
+            <a href="/login" className="font-medium text-ink underline">
               Masuk
             </a>
           </p>

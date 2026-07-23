@@ -17,10 +17,11 @@ function isKnownPlan(planName: string): boolean {
 
 export type SubmitOrderResult =
   | { ok: true; kind: "free_activated" }
-  | { ok: true; kind: "request_created" }
+  | { ok: true; kind: "request_created"; orderId: string }
+  | { ok: false; reason: "already_pending"; orderId: string }
   | {
       ok: false;
-      reason: "invalid_product" | "invalid_plan" | "plan_not_found" | "already_pending" | "account_disabled";
+      reason: "invalid_product" | "invalid_plan" | "plan_not_found" | "account_disabled";
     };
 
 async function activateFreeMetadata(userId: string): Promise<SubmitOrderResult> {
@@ -99,13 +100,120 @@ export async function submitOrder(
     where: { userId, product, status: "pending" },
   });
   if (pending) {
-    return { ok: false, reason: "already_pending" };
+    return { ok: false, reason: "already_pending", orderId: pending.id };
   }
 
-  await prisma.orderRequest.create({
+  const created = await prisma.orderRequest.create({
     data: { userId, product, planName, contactNote: contactNote || undefined },
   });
-  return { ok: true, kind: "request_created" };
+  return { ok: true, kind: "request_created", orderId: created.id };
+}
+
+const ORDER_LIST_SELECT = {
+  id: true,
+  product: true,
+  planName: true,
+  contactNote: true,
+  status: true,
+  createdAt: true,
+  proofUploadedAt: true,
+} as const;
+
+export async function listUserOrders(userId: string) {
+  return prisma.orderRequest.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: ORDER_LIST_SELECT,
+  });
+}
+
+export async function getUserOrder(userId: string, orderId: string) {
+  const order = await prisma.orderRequest.findUnique({
+    where: { id: orderId },
+    select: { ...ORDER_LIST_SELECT, userId: true },
+  });
+  if (!order || order.userId !== userId) return null;
+  return order;
+}
+
+const MAX_PROOF_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Detect the real image type from the file's magic bytes, ignoring the
+ * client-supplied Content-Type (which is trivially spoofable). Returns the
+ * canonical MIME or null if the content is not an allowed image.
+ */
+export function sniffImageMime(bytes: Buffer): "image/png" | "image/jpeg" | "image/webp" | null {
+  if (bytes.length >= 8 &&
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+    bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  // WEBP: "RIFF" .... "WEBP"
+  if (bytes.length >= 12 &&
+    bytes.toString("ascii", 0, 4) === "RIFF" &&
+    bytes.toString("ascii", 8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  return null;
+}
+
+export type AttachProofResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "not_pending" | "invalid_type" | "too_large" };
+
+export async function attachPaymentProof(
+  userId: string,
+  orderId: string,
+  bytes: Buffer,
+  mime: string
+): Promise<AttachProofResult> {
+  if (bytes.length > MAX_PROOF_BYTES) {
+    return { ok: false, reason: "too_large" };
+  }
+  // Trust the content, not the client's claimed Content-Type. The stored MIME is
+  // the sniffed one, so it is always a safe, known image type when served back.
+  const detected = sniffImageMime(bytes);
+  if (!detected) {
+    return { ok: false, reason: "invalid_type" };
+  }
+  mime = detected;
+
+  const order = await prisma.orderRequest.findUnique({
+    where: { id: orderId },
+    select: { userId: true, status: true },
+  });
+  if (!order || order.userId !== userId) {
+    return { ok: false, reason: "not_found" };
+  }
+  if (order.status !== "pending") {
+    return { ok: false, reason: "not_pending" };
+  }
+
+  await prisma.orderRequest.update({
+    where: { id: orderId },
+    data: { proofImage: bytes, proofMime: mime, proofUploadedAt: new Date() },
+  });
+  return { ok: true };
+}
+
+// Returns the proof image if it exists and the requester (owner or any admin)
+// is allowed to see it.
+export async function getProofImage(
+  orderId: string,
+  requesterId: string,
+  isAdmin: boolean
+): Promise<{ bytes: Buffer; mime: string } | null> {
+  const order = await prisma.orderRequest.findUnique({
+    where: { id: orderId },
+    select: { userId: true, proofImage: true, proofMime: true },
+  });
+  if (!order || !order.proofImage || !order.proofMime) return null;
+  if (!isAdmin && order.userId !== requesterId) return null;
+  return { bytes: Buffer.from(order.proofImage), mime: order.proofMime };
 }
 
 export type FulfillOrderResult =
@@ -172,6 +280,15 @@ export async function listPendingOrderRequests() {
   return prisma.orderRequest.findMany({
     where: { status: "pending" },
     orderBy: { createdAt: "asc" },
-    include: { user: { select: { email: true, name: true } } },
+    // Explicit select so the heavy proofImage blob is never loaded for the list.
+    select: {
+      id: true,
+      product: true,
+      planName: true,
+      contactNote: true,
+      createdAt: true,
+      proofUploadedAt: true,
+      user: { select: { email: true, name: true } },
+    },
   });
 }

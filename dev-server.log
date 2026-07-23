@@ -1,0 +1,19 @@
+
+> nerona-web@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.5s
+ ✓ Compiled /api/reset-password in 427ms (64 modules)
+ POST /api/reset-password 400 in 661ms
+ POST /api/reset-password 400 in 14ms
+ POST /api/reset-password 400 in 1517ms
+ ○ Compiling /reset-password/[token] ...
+(node:39020) Warning: Failed to load the ES module: C:\Users\alfia\Documents\fahmi\project\produk\nerona\nerona-web\tailwind.config.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled /reset-password/[token] in 4.8s (507 modules)
+ GET /reset-password/some-fake-token 200 in 6547ms

@@ -1,5 +1,6 @@
 import { baseUrl } from "@/lib/base-url";
 import { verifyWebhookSignature, sendWhatsAppText } from "./whatsapp-client";
+import { timingSafeEqualStr } from "@/lib/timing-safe";
 import { isDuplicateMessage, logInbound, logOutbound } from "./messages";
 import { findProfileByPhone, matchesLinkCode, markPhoneVerified } from "./profile";
 import { createJob } from "./jobs";
@@ -12,7 +13,13 @@ export async function handleWebhookVerification(params: {
   token: string | null;
   challenge: string | null;
 }): Promise<{ status: number; body: string }> {
-  if (params.mode === "subscribe" && params.token === process.env.WHATSAPP_VERIFY_TOKEN) {
+  const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  if (
+    params.mode === "subscribe" &&
+    expectedToken &&
+    params.token != null &&
+    timingSafeEqualStr(params.token, expectedToken)
+  ) {
     return { status: 200, body: params.challenge ?? "" };
   }
   return { status: 403, body: "Forbidden" };

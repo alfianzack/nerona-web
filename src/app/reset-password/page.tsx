@@ -25,7 +25,7 @@ export default function RequestResetPage() {
   return (
     <AuthCard title="Atur ulang kata sandi" subtitle="Kami akan mengirim tautan lewat email.">
       {submitted ? (
-        <p className="text-center text-sm text-navy-300">
+        <p className="text-center text-sm text-muted">
           Jika email itu terdaftar, kami sudah mengirim tautan atur ulang — periksa kotak masuk Anda.
         </p>
       ) : (

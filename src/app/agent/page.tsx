@@ -17,20 +17,20 @@ const FEATURES = [
 export default function AgentMarketingPage() {
   return (
     <main>
-      <section className="relative overflow-hidden bg-navy-950 px-6 pb-24 pt-20 text-center sm:pt-28">
+      <section className="relative overflow-hidden bg-canvas px-6 pb-24 pt-20 text-center sm:pt-28">
         <div
           className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-gold-400 opacity-[0.08] blur-[110px]"
           aria-hidden="true"
         />
         <div className="relative mx-auto max-w-4xl">
-          <p className="text-sm font-medium text-gold-400">Nerona Agent</p>
-          <h1 className="mt-3 text-5xl font-semibold tracking-tight text-white sm:text-7xl">
+          <p className="text-sm font-medium text-brand-blue">Nerona Agent</p>
+          <h1 className="mt-3 text-5xl font-semibold tracking-tight text-ink sm:text-7xl">
             Asisten AI yang{" "}
-            <span className="bg-gradient-to-r from-gold-600 via-gold-400 to-gold-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
               chat langsung di WhatsApp.
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-navy-300 sm:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
             Nerona Agent membantu pemilik usaha kecil mencatat pesanan, mengingat percakapan, dan
             menjawab pelanggan — semua lewat WhatsApp yang sudah Anda pakai setiap hari.
           </p>
@@ -40,14 +40,14 @@ export default function AgentMarketingPage() {
         </div>
       </section>
 
-      <section className="bg-navy-900/40 px-6 py-24 sm:py-32">
+      <section className="bg-surface2 px-6 py-24 sm:py-32">
         <div className="mx-auto grid max-w-5xl gap-12 sm:grid-cols-2">
           {FEATURES.map((feature) => (
             <div key={feature.title}>
-              <h2 className="text-2xl font-semibold tracking-tight text-white">
+              <h2 className="text-2xl font-semibold tracking-tight text-ink">
                 {feature.title}
               </h2>
-              <p className="mt-3 text-base leading-relaxed text-navy-300">{feature.body}</p>
+              <p className="mt-3 text-base leading-relaxed text-muted">{feature.body}</p>
             </div>
           ))}
         </div>
@@ -60,10 +60,10 @@ export default function AgentMarketingPage() {
         tiers={agentTiers()}
       />
 
-      <section className="bg-navy-950 px-6 py-16 text-center">
-        <p className="text-sm text-navy-300">
+      <section className="bg-canvas px-6 py-16 text-center">
+        <p className="text-sm text-muted">
           Sudah pelanggan?{" "}
-          <Link href="/login" className="font-medium text-gold-400 hover:underline">
+          <Link href="/login" className="font-medium text-brand-blue hover:underline">
             Masuk ke akun Anda
           </Link>
         </p>

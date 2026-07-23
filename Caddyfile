@@ -1,0 +1,11 @@
+# Caddy: reverse proxy + HTTPS otomatis (Let's Encrypt) untuk Nerona.
+# Meta mewajibkan webhook HTTPS -> Caddy mengurus sertifikat TLS otomatis.
+#
+# Pasang Caddy di VPS, taruh file ini di /etc/caddy/Caddyfile, lalu:
+#   sudo systemctl reload caddy
+#
+# Ganti domain-anda.com dengan domain yang sudah diarahkan (A record) ke IP VPS.
+
+domain-anda.com {
+    reverse_proxy localhost:3000
+}

@@ -32,21 +32,21 @@ export default async function CoursePage({ params }: { params: { slug: string } 
   }
 
   return (
-    <main className="bg-navy-950">
+    <main className="bg-canvas">
       <div className="mx-auto max-w-3xl px-6 py-20 sm:py-24">
-        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+        <h1 className="text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
           {course.title}
         </h1>
         {course.description && (
-          <p className="mt-4 text-lg text-navy-300">{course.description}</p>
+          <p className="mt-4 text-lg text-muted">{course.description}</p>
         )}
 
         {!enrolled ? (
-          <div className="mt-10 rounded-3xl bg-gradient-to-b from-navy-800 to-navy-900 p-8 text-center shadow-lg shadow-black/40 ring-1 ring-white/10">
-            <p className="text-4xl font-semibold tracking-tight text-white">
+          <div className="mt-10 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-8 text-center shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+            <p className="text-4xl font-semibold tracking-tight text-ink">
               {course.priceLabel ?? "Hubungi kami"}
             </p>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-navy-300">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
               Hubungi kami untuk mendaftar — setelah pembayaran dikonfirmasi, kelas ini langsung
               terbuka di akun Anda.
             </p>
@@ -56,15 +56,15 @@ export default async function CoursePage({ params }: { params: { slug: string } 
             {course.modules.map((mod) => (
               <div
                 key={mod.id}
-                className="rounded-3xl bg-gradient-to-b from-navy-800 to-navy-900 p-6 shadow-lg shadow-black/40 ring-1 ring-white/10 sm:p-8"
+                className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10 sm:p-8"
               >
-                <h2 className="text-lg font-semibold tracking-tight text-white">
+                <h2 className="text-lg font-semibold tracking-tight text-ink">
                   {mod.title}
                 </h2>
                 <div className="mt-5 space-y-7">
                   {mod.lessons.map((lesson) => (
                     <div key={lesson.id}>
-                      <p className="mb-2 text-sm font-medium text-navy-300">
+                      <p className="mb-2 text-sm font-medium text-muted">
                         {lesson.title ?? lesson.video.title}
                       </p>
                       <LessonPlayer

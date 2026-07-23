@@ -21,24 +21,17 @@ Order and license maintenance platform for the Nerona Metadata Chrome extension.
      verification and password-reset emails. Without a verified sending domain, Resend can
      only deliver to the email address your Resend account was created with.
    - `EMAIL_FROM` — optional, defaults to `"Nerona <onboarding@resend.dev>"`.
-   - `STRIPE_SECRET_KEY` — from https://dashboard.stripe.com (test mode) → Developers → API
-     keys.
-   - `STRIPE_PRICE_ID_MONTHLY` / `STRIPE_PRICE_ID_YEARLY` — create one product ("Nerona Pro")
-     with a monthly and a yearly recurring price in test mode, then copy each price's ID.
-   - `STRIPE_WEBHOOK_SECRET` — run `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
-     (requires the Stripe CLI: https://stripe.com/docs/stripe-cli) and copy the webhook signing
-     secret it prints. This secret is only valid for that `stripe listen` session — a real
-     deployed webhook endpoint gets its own secret from the dashboard later, not needed for
-     local development.
-2. Set up your Stripe test-mode account: create the product and prices, and start
-   `stripe listen` to get a webhook secret, as described above.
-3. Install dependencies: `npm install`
-4. Apply the database schema: `npm run prisma:migrate`
-5. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
+2. Install dependencies: `npm install`
+3. Apply the database schema: `npm run prisma:migrate`
+4. Start the dev server: `npm run dev`, and sign in with Google using the email you set as
    `OWNER_ADMIN_EMAIL` (this creates your `User` + linked `Account` row)
-6. Grant yourself admin access: `npm run prisma:seed`. Sign out and back in afterward — sessions
+5. Grant yourself admin access: `npm run prisma:seed`. Sign out and back in afterward — sessions
    use JWTs, so your existing session's token won't reflect the new role until you get a fresh
    one.
+
+There is no payment processor integration — Pro licenses and course enrollments are granted
+manually from `/admin` (search a user by email, grant/revoke their license or course access).
+Payment happens off-platform; the admin grant is the only step that unlocks access.
 
 Note: Prisma CLI commands always go through the `npm run prisma:*` scripts (not raw
 `npx prisma ...`) because those scripts load secrets from `.env.local` via `dotenv-cli` — the
@@ -46,8 +39,8 @@ Prisma CLI itself only auto-loads a plain `.env` file.
 
 ## Testing
 
-Run `npm test` for the unit test suite (session/role-guard logic). Payment and OAuth flows are
-verified manually against Stripe/Google test modes — see later phase plans.
+Run `npm test` for the unit test suite (session/role-guard logic). OAuth flows are verified
+manually against Google test accounts — see later phase plans.
 
 ## Auth methods
 
@@ -66,8 +59,11 @@ Additional setup beyond the base site:
      `docs/superpowers/plans/2026-07-19-nerona-agent-foundation.md` for the full walkthrough).
    - `WHATSAPP_DISPLAY_NUMBER` — the human-readable form of that number, shown to owners on
      `/agent`.
-   - `ANTHROPIC_API_KEY` — from https://console.anthropic.com.
-   - `AGENT_MODEL` — defaults to `claude-sonnet-5`.
+   - `SUMOPOD_API_KEY` — from https://ai.sumopod.com (AI tab → API Keys → Create key). The
+     agent talks to Sumopod's OpenAI-compatible gateway, not Anthropic directly.
+   - `SUMOPOD_BASE_URL` — defaults to `https://ai.sumopod.com/v1`.
+   - `AGENT_MODEL` — defaults to `claude-sonnet-4-6` (a Sumopod model id). Switch to
+     `claude-haiku-4-5` for cheaper/faster replies without any code change.
    - `CRON_SECRET` — generate with `openssl rand -base64 32`; also set as a Vercel project env
      var with the same name so Vercel Cron authenticates automatically.
 2. For local development, expose `http://localhost:3000` with a tunnel (e.g. `ngrok http 3000`)

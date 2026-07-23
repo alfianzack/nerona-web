@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -25,7 +26,10 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   if (!open) return null;
 
-  return (
+  // Portal to <body>: ancestors with backdrop-filter/transform (e.g. the
+  // sticky blurred header) would otherwise become the containing block for
+  // this fixed overlay and clip it.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -45,6 +49,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         </div>
         <div className="mt-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "./prisma";
 import { verifyPassword } from "./password";
+import { hit, RATE_LIMITS } from "./rate-limit";
 
 export type AdminRoleValue = "owner_admin" | "support";
 
@@ -56,7 +57,9 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      allowDangerousEmailAccountLinking: true,
+      // Do NOT auto-link a Google login to an existing password account by email
+      // alone — that would let anyone controlling a Google address take over a
+      // pre-existing password account with the same email.
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -64,9 +67,16 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           return null;
+        }
+        // Throttle brute-force by IP. `req.headers` is a plain object in NextAuth v4.
+        const forwarded = (req?.headers?.["x-forwarded-for"] as string | undefined) ?? "";
+        const ip = forwarded.split(",")[0]?.trim() || "unknown";
+        const { limit, windowMs } = RATE_LIMITS.login;
+        if (!hit(`login:${ip}`, limit, windowMs).ok) {
+          throw new Error("too_many_requests");
         }
         return authorizeCredentials(credentials.email, credentials.password);
       },

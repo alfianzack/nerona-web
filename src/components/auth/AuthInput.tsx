@@ -6,6 +6,8 @@ interface AuthInputProps {
   onChange: (value: string) => void;
   error?: string;
   autoComplete?: string;
+  required?: boolean;
+  placeholder?: string;
 }
 
 export function AuthInput({
@@ -16,12 +18,14 @@ export function AuthInput({
   onChange,
   error,
   autoComplete,
+  required,
+  placeholder,
 }: AuthInputProps) {
   return (
     <div className="mb-4">
       <label
         htmlFor={name}
-        className="mb-1.5 block text-sm font-medium text-navy-300"
+        className="mb-1.5 block text-sm font-medium text-muted"
       >
         {label}
       </label>
@@ -31,8 +35,10 @@ export function AuthInput({
         type={type}
         value={value}
         autoComplete={autoComplete}
+        required={required}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-xl bg-white/5 px-4 py-2.5 text-white ring-1 ring-white/10 transition placeholder:text-navy-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 ${
+        className={`w-full rounded-xl bg-navy-900/5 px-4 py-2.5 text-ink ring-1 ring-navy-900/10 transition placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400 ${
           error ? "ring-2 ring-rose-400" : ""
         }`}
       />
