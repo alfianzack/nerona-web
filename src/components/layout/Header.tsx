@@ -14,6 +14,7 @@ const CUSTOMER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/produk", label: "Produk" },
   { href: "/transaksi", label: "Transaksi" },
+  { href: "/finance", label: "Finance" },
   { href: "/profile", label: "Profile" },
 ];
 
