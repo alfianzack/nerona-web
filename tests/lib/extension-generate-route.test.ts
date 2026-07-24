@@ -1,0 +1,164 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
+vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
+vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
+vi.mock("@/lib/agent/pricing", () => ({ costForUsage: vi.fn(() => 5) }));
+vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
+vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
+vi.mock("@/lib/extension/prompts", () => ({
+  buildMetadataPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+  buildScoringPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+  buildCommercialIntentPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+  buildKeywordPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+  buildRejectPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+}));
+
+import { POST } from "@/app/api/extension/generate/route";
+import { resolveExtensionToken } from "@/lib/extension-auth";
+import { getExtensionAccountState } from "@/lib/extension-sync";
+import { getAiSettings } from "@/lib/ai-settings";
+import { chatCompletion } from "@/lib/agent/claude-client";
+import { spendPoints } from "@/lib/points";
+import { hit } from "@/lib/rate-limit";
+import {
+  buildMetadataPrompt,
+  buildKeywordPrompt,
+} from "@/lib/extension/prompts";
+
+function req(body: unknown, auth: string | null = "Bearer nrx_ok") {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (auth) headers.authorization = auth;
+  return new Request("http://test/api/extension/generate", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+const metadataBody = {
+  feature: "metadata",
+  marketplace: "adobe_stock",
+  promptMode: "advanced",
+  batchIndex: 0,
+  image: { mime: "image/png", dataBase64: "abc123" },
+};
+
+const keywordBody = {
+  feature: "keyword",
+  marketplace: "adobe_stock",
+  monthsCurrent: "August",
+  monthsNext: "September",
+  referenceDate: "2026-07-24",
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+  (hit as any).mockReturnValue({ ok: true, remaining: 89, retryAfterSeconds: 0 });
+  (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
+  (getAiSettings as any).mockResolvedValue({ model: "gemini-2.0-flash", apiKey: "adminkey" });
+  (chatCompletion as any).mockResolvedValue({
+    text: "meta",
+    model: "gemini-2.0-flash",
+    usage: { promptTokens: 1200, completionTokens: 150 },
+  });
+  (spendPoints as any).mockResolvedValue(95);
+  (buildMetadataPrompt as any).mockReturnValue({ prompt: "P", maxTokens: 1234 });
+  (buildKeywordPrompt as any).mockReturnValue({ prompt: "P", maxTokens: 1234 });
+});
+
+describe("POST /api/extension/generate", () => {
+  it("401 without/with invalid token", async () => {
+    (resolveExtensionToken as any).mockResolvedValue(null);
+    expect((await POST(req(metadataBody, null))).status).toBe(401);
+    expect((await POST(req(metadataBody))).status).toBe(401);
+  });
+
+  it("429 when rate-limited", async () => {
+    (hit as any).mockReturnValue({ ok: false, remaining: 0, retryAfterSeconds: 30 });
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("30");
+  });
+
+  it("403 when license inactive", async () => {
+    (getExtensionAccountState as any).mockResolvedValue({ active: false, pointsBalance: 100 });
+    expect((await POST(req(metadataBody))).status).toBe(403);
+  });
+
+  it("402 when no points", async () => {
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 0 });
+    expect((await POST(req(metadataBody))).status).toBe(402);
+  });
+
+  it("400 on unknown feature", async () => {
+    const res = await POST(req({ ...metadataBody, feature: "not_a_real_feature" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("200 metadata happy path: builder called, image message sent, spendPoints called", async () => {
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({
+      ok: true,
+      content: "meta",
+      usage: { promptTokens: 1200, completionTokens: 150 },
+      pointsBalance: 95,
+    });
+
+    expect(buildMetadataPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({ marketplace: "adobe_stock", promptMode: "advanced", batchIndex: 0 })
+    );
+
+    expect(chatCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "gemini-2.0-flash",
+        apiKey: "adminkey",
+        maxTokens: 1234,
+      })
+    );
+    const call = (chatCompletion as any).mock.calls[0][0];
+    expect(call.messages).toHaveLength(1);
+    expect(call.messages[0].role).toBe("user");
+    expect(Array.isArray(call.messages[0].content)).toBe(true);
+    const parts = call.messages[0].content;
+    expect(parts.find((p: any) => p.type === "text").text).toBe("P");
+    const imagePart = parts.find((p: any) => p.type === "image_url");
+    expect(imagePart.image_url.url).toBe("data:image/png;base64,abc123");
+
+    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", cost: 5 }));
+  });
+
+  it("200 keyword path: text-only messages, no image_url", async () => {
+    const res = await POST(req(keywordBody));
+    expect(res.status).toBe(200);
+    expect(buildKeywordPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        marketplace: "adobe_stock",
+        monthsCurrent: "August",
+        monthsNext: "September",
+        referenceDate: "2026-07-24",
+      })
+    );
+    const call = (chatCompletion as any).mock.calls[0][0];
+    expect(call.messages).toEqual([{ role: "user", content: "P" }]);
+  });
+
+  it("413 when the image data exceeds the cap", async () => {
+    const oversized = { ...metadataBody, image: { mime: "image/png", dataBase64: "x".repeat(12_000_001) } };
+    const res = await POST(req(oversized));
+    expect(res.status).toBe(413);
+    expect(chatCompletion).not.toHaveBeenCalled();
+    expect(spendPoints).not.toHaveBeenCalled();
+  });
+
+  it("502 and no spend when chatCompletion throws", async () => {
+    (chatCompletion as any).mockRejectedValue(new Error("upstream"));
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(502);
+    expect(spendPoints).not.toHaveBeenCalled();
+  });
+});
