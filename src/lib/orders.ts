@@ -320,6 +320,7 @@ export async function listPendingOrderRequests() {
       contactNote: true,
       createdAt: true,
       proofUploadedAt: true,
+      isRenewal: true,
       user: { select: { email: true, name: true } },
     },
   });
