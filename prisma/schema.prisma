@@ -79,6 +79,7 @@ model User {
   shopOrders                 ShopOrder[]
   pointTransactions         PointTransaction[] @relation("UserPointTransactions")
   adjustedPointTransactions PointTransaction[] @relation("PointAdjustedByAdmin")
+  extensionTokens           ExtensionToken[]
 
   @@map("users")
 }
@@ -478,4 +479,17 @@ model PointTransaction {
 
   @@index([userId])
   @@map("point_transactions")
+}
+
+model ExtensionToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String    @unique
+  label      String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+  @@map("extension_tokens")
 }
