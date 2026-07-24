@@ -81,12 +81,21 @@ export default async function FinancePage() {
                   <span className="text-ink">
                     {r.product === "agent" ? "Agent WhatsApp" : "Metadata"} — {r.planName}
                   </span>
-                  <Link
-                    href={`/order/${r.id}`}
-                    className="whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
-                  >
-                    Upload bukti transfer
-                  </Link>
+                  {r.proofUploadedAt ? (
+                    <Link
+                      href={`/order/${r.id}`}
+                      className="whitespace-nowrap text-xs text-muted underline-offset-2 hover:underline"
+                    >
+                      Menunggu verifikasi admin
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/order/${r.id}`}
+                      className="whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
+                    >
+                      Upload bukti transfer
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

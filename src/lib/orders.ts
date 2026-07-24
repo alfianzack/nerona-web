@@ -304,7 +304,7 @@ export async function listPendingRenewals(userId: string) {
   return prisma.orderRequest.findMany({
     where: { userId, status: "pending", isRenewal: true },
     orderBy: { createdAt: "desc" },
-    select: { id: true, product: true, planName: true },
+    select: { id: true, product: true, planName: true, proofUploadedAt: true },
   });
 }
 

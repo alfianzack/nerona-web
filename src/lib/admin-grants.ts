@@ -29,7 +29,10 @@ export async function grantLicense(
     return { ok: false, reason: "plan_not_found" };
   }
 
-  const existingLicense = await prisma.license.findFirst({ where: { userId: user.id } });
+  const existingLicense = await prisma.license.findFirst({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
   if (existingLicense) {
     await prisma.license.update({
       where: { id: existingLicense.id },
