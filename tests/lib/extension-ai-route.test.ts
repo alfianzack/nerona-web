@@ -75,4 +75,11 @@ describe("POST /api/extension/ai", () => {
     (getAiSettings as any).mockResolvedValue({ model: "m", apiKey: "" });
     expect((await POST(req({ messages: okMessages }))).status).toBe(503);
   });
+  it("413 when the payload is too large", async () => {
+    const oversized = [{ role: "user", content: "x".repeat(12_000_001) }];
+    const res = await POST(req({ messages: oversized }));
+    expect(res.status).toBe(413);
+    expect(chatCompletion).not.toHaveBeenCalled();
+    expect(spendPoints).not.toHaveBeenCalled();
+  });
 });

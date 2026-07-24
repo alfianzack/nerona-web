@@ -41,6 +41,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
 
+  const MAX_MESSAGES_BYTES = 12_000_000; // ~12MB: allows one base64 image + prompt, blocks abuse
+  if (JSON.stringify(messages).length > MAX_MESSAGES_BYTES) {
+    return NextResponse.json({ ok: false, error: "payload_too_large" }, { status: 413 });
+  }
+
   const { model, apiKey } = await getAiSettings();
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "ai_not_configured" }, { status: 503 });
