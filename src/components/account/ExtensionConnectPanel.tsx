@@ -43,7 +43,12 @@ export function ExtensionConnectPanel() {
   }
 
   async function revoke(id: string) {
-    await fetch(`/api/extension/tokens/${id}`, { method: "DELETE" });
+    setError("");
+    const res = await fetch(`/api/extension/tokens/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError("Gagal mencabut token. Muat ulang halaman lalu coba lagi.");
+      return;
+    }
     setTokens((prev) => prev.filter((t) => t.id !== id));
   }
 
