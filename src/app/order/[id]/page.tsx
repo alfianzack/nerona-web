@@ -60,6 +60,15 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         {banner.text}
       </div>
 
+      <a
+        href={`/api/orders/${order.id}/invoice`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-block text-sm font-medium text-brand-blue hover:underline"
+      >
+        Unduh invoice (PDF) ↗
+      </a>
+
       {isPending && (
         <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
