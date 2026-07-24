@@ -21,6 +21,7 @@ import { cancelOrderRequest, fulfillOrderRequest, submitOrder } from "@/lib/orde
 import { prisma } from "@/lib/prisma";
 import { generateLicenseKey } from "@/lib/license";
 import { grantLicense } from "@/lib/admin-grants";
+import { renewedExpiryFrom } from "@/lib/billing-period";
 
 describe("submitOrder — validation", () => {
   beforeEach(() => {
@@ -209,10 +210,18 @@ describe("fulfillOrderRequest", () => {
       user: { id: "user-1", email: "a@b.c" },
     });
     (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    const currentValidUntil = new Date("2026-08-31T17:00:00.000Z");
     (prisma.license.findFirst as any).mockResolvedValue({
-      validUntil: new Date("2026-08-15T00:00:00.000Z"),
+      validUntil: currentValidUntil,
     });
     (grantLicense as any).mockResolvedValue({ ok: true });
+    // Fixture is future-dated relative to "now", so renewedExpiryFrom bases off the
+    // fixture regardless of the real `now` used inside fulfillOrderRequest — computed
+    // with the real (unmocked) helper, this pins the exact forward-stacked value and
+    // would fail if the renewal branch regressed to monthlyExpiryFrom(now), a
+    // month-end reset, instead.
+    const expectedValidUntil = renewedExpiryFrom(currentValidUntil, new Date());
+    expect(expectedValidUntil).toEqual(new Date("2026-09-30T17:00:00.000Z"));
 
     const result = await fulfillOrderRequest("admin-1", "req-1r");
 
@@ -224,7 +233,7 @@ describe("fulfillOrderRequest", () => {
     });
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1r",
-      validUntil: expect.any(Date),
+      validUntil: expectedValidUntil,
     });
   });
 
@@ -258,9 +267,17 @@ describe("fulfillOrderRequest", () => {
       isRenewal: true,
       user: { id: "user-1", email: "a@b.c" },
     });
+    const currentExpiry = new Date("2026-08-31T17:00:00.000Z");
     (prisma.agentProfile.findUnique as any).mockResolvedValue({
-      planExpiresAt: new Date("2026-08-15T00:00:00.000Z"),
+      planExpiresAt: currentExpiry,
     });
+    // Fixture is future-dated relative to "now", so renewedExpiryFrom bases off the
+    // fixture regardless of the real `now` used inside fulfillOrderRequest — computed
+    // with the real (unmocked) helper, this pins the exact forward-stacked value and
+    // would fail if the renewal branch regressed to monthlyExpiryFrom(now), a
+    // month-end reset, instead.
+    const expectedExpiresAt = renewedExpiryFrom(currentExpiry, new Date());
+    expect(expectedExpiresAt).toEqual(new Date("2026-09-30T17:00:00.000Z"));
 
     const result = await fulfillOrderRequest("admin-1", "req-2r");
 
@@ -271,8 +288,8 @@ describe("fulfillOrderRequest", () => {
     });
     expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      update: { status: "active", plan: "business", planExpiresAt: expect.any(Date) },
-      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expect.any(Date) },
+      update: { status: "active", plan: "business", planExpiresAt: expectedExpiresAt },
+      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expectedExpiresAt },
     });
   });
 });
