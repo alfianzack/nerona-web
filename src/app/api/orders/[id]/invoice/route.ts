@@ -8,7 +8,7 @@ import { buildInvoicePdf, invoiceNumberFor, priceLabelFor } from "@/lib/billing/
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user?.id) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -45,6 +45,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="invoice-${invoiceNumber}.pdf"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }
