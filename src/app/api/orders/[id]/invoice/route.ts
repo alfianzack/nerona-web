@@ -41,7 +41,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     bank,
   });
 
-  return new NextResponse(pdf, {
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="invoice-${invoiceNumber}.pdf"`,
