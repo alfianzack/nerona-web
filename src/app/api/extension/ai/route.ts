@@ -24,7 +24,10 @@ export async function POST(request: Request) {
 
   const rl = hit(`extai:${resolved.userId}`, 30, 60_000);
   if (!rl.ok) {
-    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
   }
 
   const state = await getExtensionAccountState(resolved.userId);

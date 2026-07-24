@@ -43,7 +43,9 @@ describe("POST /api/extension/ai", () => {
   });
   it("429 when rate-limited", async () => {
     (hit as any).mockReturnValue({ ok: false, remaining: 0, retryAfterSeconds: 30 });
-    expect((await POST(req({ messages: okMessages }))).status).toBe(429);
+    const res = await POST(req({ messages: okMessages }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("30");
   });
   it("403 when license inactive", async () => {
     (getExtensionAccountState as any).mockResolvedValue({ active: false, pointsBalance: 100 });
