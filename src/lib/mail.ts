@@ -32,3 +32,30 @@ export async function sendLicenseEmail(email: string, licenseKey: string): Promi
     html: `<p>Thanks for subscribing to Nerona Pro! Your license key is:</p><p><code>${licenseKey}</code></p><p>Paste it into the extension popup to activate it. You can view it any time from your <a href="${baseUrl()}/account">account page</a>.</p>`,
   });
 }
+
+export async function sendRenewalInvoiceEmail(
+  email: string,
+  params: {
+    tenantName: string;
+    productLabel: string;
+    planName: string;
+    priceLabel: string;
+    invoiceNumber: string;
+    pdf: Buffer;
+  }
+): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: "Perpanjangan paket Anda jatuh tempo — invoice terlampir",
+    html: `
+      <p>Halo ${params.tenantName},</p>
+      <p>Paket <b>${params.productLabel} — ${params.planName}</b> (${params.priceLabel}) Anda akan segera berakhir.
+      Invoice <b>${params.invoiceNumber}</b> terlampir pada email ini.</p>
+      <p>Silakan lakukan transfer sesuai invoice, lalu unggah bukti transfer di
+      <a href="${baseUrl()}/finance">dashboard Nerona</a> agar paket diperpanjang.</p>
+      <p>Terima kasih.</p>
+    `,
+    attachments: [{ filename: `invoice-${params.invoiceNumber}.pdf`, content: params.pdf }],
+  });
+}
