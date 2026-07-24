@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session-guards";
 import { prisma } from "@/lib/prisma";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { LicenseSection } from "@/components/account/LicenseSection";
+import { ExtensionConnectPanel } from "@/components/account/ExtensionConnectPanel";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { PasswordForm } from "@/components/account/PasswordForm";
 
@@ -72,6 +73,8 @@ export default async function ProfilePage() {
             </Link>
           </div>
         )}
+
+        <ExtensionConnectPanel />
       </div>
     </main>
   );
