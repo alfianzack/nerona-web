@@ -300,6 +300,14 @@ export async function cancelOrderRequest(orderId: string): Promise<CancelOrderRe
   return { ok: true };
 }
 
+export async function listPendingRenewals(userId: string) {
+  return prisma.orderRequest.findMany({
+    where: { userId, status: "pending", isRenewal: true },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, product: true, planName: true },
+  });
+}
+
 export async function listPendingOrderRequests() {
   return prisma.orderRequest.findMany({
     where: { status: "pending" },

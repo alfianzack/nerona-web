@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { prisma } from "@/lib/prisma";
 import { getBalance, listTransactions } from "@/lib/points";
+import { listPendingRenewals } from "@/lib/orders";
 import { isAgentPlanExpired } from "@/lib/agent/admin";
 
 export const metadata = { title: "Finance — Nerona" };
@@ -25,9 +27,10 @@ const cardClass =
 export default async function FinancePage() {
   const session = await requireUser();
 
-  const [balance, transactions, orderRequests, orders, agentProfile, license] = await Promise.all([
+  const [balance, transactions, renewals, orderRequests, orders, agentProfile, license] = await Promise.all([
     getBalance(session.user.id),
     listTransactions(session.user.id, 50),
+    listPendingRenewals(session.user.id),
     prisma.orderRequest.findMany({
       where: { userId: session.user.id, status: "fulfilled" },
       orderBy: { fulfilledAt: "desc" },
@@ -69,6 +72,26 @@ export default async function FinancePage() {
   return (
     <main className="bg-canvas">
       <div className="mx-auto max-w-3xl px-6 py-14 sm:py-16">
+        {renewals.length > 0 && (
+          <div className="mb-6 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
+            <p className="text-sm font-semibold text-ink">Perpanjangan paket jatuh tempo</p>
+            <ul className="mt-2 space-y-1">
+              {renewals.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-ink">
+                    {r.product === "agent" ? "Agent WhatsApp" : "Metadata"} — {r.planName}
+                  </span>
+                  <Link
+                    href={`/order/${r.id}`}
+                    className="whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
+                  >
+                    Upload bukti transfer
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-semibold tracking-tight text-ink">Finance</h1>
           <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/20 px-3.5 py-1.5 text-sm font-semibold text-[#9A6B08] ring-1 ring-gold-400/40">
