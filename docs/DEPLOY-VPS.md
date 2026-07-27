@@ -1,4 +1,10 @@
-# Deploy Nerona ke VPS (Ubuntu)
+# Deploy Nerona ke VPS (Ubuntu) — USANG
+
+> **Dokumen ini digantikan oleh `docs/production.md`. Jangan diikuti lagi.**
+>
+> Yang kurang di sini: cron `/api/billing/renewals` tidak disebut sama sekali (kalau
+> hanya mengikuti panduan ini, **auto-renew paket bulanan tidak akan pernah jalan**),
+> env var `POINTS_PER_USD` belum didaftar, dan langkah seed owner admin belum ada.
 
 Panduan menjalankan Nerona Agent di VPS agar online 24 jam tanpa bergantung laptop.
 File bantu yang dipakai: `ecosystem.config.js` (PM2), `Caddyfile` (HTTPS), `deploy.sh`.

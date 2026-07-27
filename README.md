@@ -83,3 +83,10 @@ verified manually against Meta's test number and test recipients — see the Pha
 - `prisma/schema.prisma` — database schema.
 - `docs/superpowers/specs/` — design specs.
 - `docs/superpowers/plans/` — implementation plans, one per phase.
+
+## Deployment
+
+- `docs/production.md` — deploy to your own VPS (PM2 + Caddy). No request-size or cron
+  limits; you own TLS, backups, and monitoring.
+- `docs/vercel.md` — deploy to Vercel. Note the ~4.5 MB request body limit (the extension
+  AI proxy allows 12 MB) and that the `*/5` cron requires a Pro plan.
