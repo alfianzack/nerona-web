@@ -12,6 +12,7 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(),
       findMany: vi.fn(),
     },
+    pointTransaction: { create: vi.fn() },
   },
 }));
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
@@ -172,6 +173,50 @@ describe("fulfillOrderRequest", () => {
       ok: false,
       reason: "not_pending",
     });
+  });
+
+  it("credits the plan's points when an agent order is fulfilled", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-a",
+      status: "pending",
+      product: "agent",
+      planName: "Pro",
+      isRenewal: false,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    const result = await fulfillOrderRequest("admin-1", "req-a");
+
+    expect(result).toEqual({ ok: true });
+    expect(prisma.pointTransaction.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        delta: 11_000,
+        reason: "plan_grant",
+        note: "Bonus paket Pro",
+        createdById: "admin-1",
+      },
+    });
+  });
+
+  it("labels the credit as a renewal when renewing an agent plan", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-b",
+      status: "pending",
+      product: "agent",
+      planName: "Pro",
+      isRenewal: true,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+    (prisma.agentProfile.findUnique as any).mockResolvedValue({ planExpiresAt: null });
+
+    await fulfillOrderRequest("admin-1", "req-b");
+
+    expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ delta: 11_000, note: "Perpanjangan paket Pro" }),
+      })
+    );
   });
 
   it("grants a metadata license via the admin-grant path and marks fulfilled", async () => {

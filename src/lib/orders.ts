@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
 import { monthlyExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
+import { creditAgentPlanPoints } from "@/lib/agent/plan-points";
 
 export type Product = "metadata" | "agent";
 
@@ -72,6 +73,9 @@ async function activateFreeAgent(userId: string): Promise<SubmitOrderResult> {
       data: { userId, status: "active", plan: "free", planExpiresAt: null },
     });
   }
+  // Only reached on a fresh activation — an already-active profile returns
+  // above, so this cannot be farmed by re-submitting.
+  await creditAgentPlanPoints({ userId, plan: "free" });
   return { ok: true, kind: "free_activated" };
 }
 
@@ -276,6 +280,14 @@ export async function fulfillOrderRequest(
       where: { userId: order.user.id },
       update: { status: "active", plan, planExpiresAt: expiresAt },
       create: { userId: order.user.id, status: "active", plan, planExpiresAt: expiresAt },
+    });
+    // Without this the tenant has an active plan and an empty wallet, so the
+    // agent answers "poin habis" to their very first message.
+    await creditAgentPlanPoints({
+      userId: order.user.id,
+      plan,
+      createdById: adminId,
+      isRenewal: Boolean(order.isRenewal),
     });
   }
 
