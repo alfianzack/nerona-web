@@ -13,6 +13,7 @@ vi.mock("@/lib/prisma", () => ({
 import {
   getRecentHistory,
   isDuplicateMessage,
+  listChatHistory,
   logInbound,
   logOutbound,
 } from "@/lib/agent/messages";
@@ -52,6 +53,7 @@ describe("logInbound", () => {
         profileId: "profile-1",
         waMessageId: "wamid.1",
         phone: "+15551234567",
+        channel: "whatsapp",
         direction: "in",
         body: "hello",
       },
@@ -71,8 +73,50 @@ describe("logInbound", () => {
         profileId: null,
         waMessageId: "wamid.2",
         phone: "+15551234567",
+        channel: "whatsapp",
         direction: "in",
         body: "hi",
+      },
+    });
+  });
+});
+
+describe("logInbound — channels", () => {
+  beforeEach((): void => {
+    vi.clearAllMocks();
+  });
+
+  it("records a web message with no phone", async () => {
+    await logInbound({ profileId: "profile-1", body: "halo", channel: "web" });
+
+    expect(prisma.agentMessage.create).toHaveBeenCalledWith({
+      data: {
+        profileId: "profile-1",
+        waMessageId: null,
+        phone: null,
+        channel: "web",
+        direction: "in",
+        body: "halo",
+      },
+    });
+  });
+});
+
+describe("logOutbound — channels", () => {
+  beforeEach((): void => {
+    vi.clearAllMocks();
+  });
+
+  it("records a web reply with no phone", async () => {
+    await logOutbound({ profileId: "profile-1", body: "balasan", channel: "web" });
+
+    expect(prisma.agentMessage.create).toHaveBeenCalledWith({
+      data: {
+        profileId: "profile-1",
+        phone: null,
+        channel: "web",
+        direction: "out",
+        body: "balasan",
       },
     });
   });
@@ -90,10 +134,39 @@ describe("logOutbound", () => {
       data: {
         profileId: "profile-1",
         phone: "+15551234567",
+        channel: "whatsapp",
         direction: "out",
         body: "reply",
       },
     });
+  });
+});
+
+describe("listChatHistory", () => {
+  beforeEach((): void => {
+    vi.clearAllMocks();
+  });
+
+  it("returns rows oldest-first with the channel and timestamp for display", async () => {
+    const t1 = new Date("2026-07-27T01:00:00Z");
+    const t2 = new Date("2026-07-27T02:00:00Z");
+    (prisma.agentMessage.findMany as any).mockResolvedValue([
+      { direction: "out", body: "balasan", channel: "web", createdAt: t2 },
+      { direction: "in", body: "halo", channel: "whatsapp", createdAt: t1 },
+    ]);
+
+    const result = await listChatHistory("profile-1", 50);
+
+    expect(prisma.agentMessage.findMany).toHaveBeenCalledWith({
+      where: { profileId: "profile-1" },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { direction: true, body: true, channel: true, createdAt: true },
+    });
+    expect(result).toEqual([
+      { direction: "in", body: "halo", channel: "whatsapp", createdAt: t1 },
+      { direction: "out", body: "balasan", channel: "web", createdAt: t2 },
+    ]);
   });
 });
 

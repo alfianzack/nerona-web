@@ -6,8 +6,7 @@ import { findProfileByPhone, matchesLinkCode, markPhoneVerified } from "./profil
 import { createJob } from "./jobs";
 import { processJob } from "./process-job";
 import { runInBackground } from "./wait-until";
-import { hasExceededMonthlyLimit } from "./limits";
-import { isAgentPlanExpired } from "./admin";
+import { checkAgentGates } from "./gates";
 
 export async function handleWebhookVerification(params: {
   mode: string | null;
@@ -100,21 +99,11 @@ export async function handleIncomingWebhook(
     return { status: 200 };
   }
 
-  if (isAgentPlanExpired(profile)) {
-    await replyStatic(
-      phone,
-      profile.id,
-      `Paket Anda sudah berakhir. Silakan perpanjang di ${baseUrl()}/agent untuk melanjutkan.`
-    );
-    return { status: 200 };
-  }
-
-  if (await hasExceededMonthlyLimit(profile.id, profile.plan)) {
-    await replyStatic(
-      phone,
-      profile.id,
-      `Kuota pesan bulanan paket Anda sudah habis. Upgrade paket di ${baseUrl()}/agent untuk melanjutkan.`
-    );
+  // Plan / quota / points are shared with the web channel so a channel cannot
+  // skip one. Checked here so a blocked message never creates a job.
+  const gate = await checkAgentGates(profile);
+  if (gate) {
+    await replyStatic(phone, profile.id, gate.message);
     return { status: 200 };
   }
 

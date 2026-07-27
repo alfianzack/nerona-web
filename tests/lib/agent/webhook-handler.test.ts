@@ -29,6 +29,9 @@ vi.mock("@/lib/base-url", () => ({
 vi.mock("@/lib/agent/limits", () => ({
   hasExceededMonthlyLimit: vi.fn(),
 }));
+vi.mock("@/lib/points", () => ({
+  getBalance: vi.fn(),
+}));
 
 import {
   handleIncomingWebhook,
@@ -41,6 +44,7 @@ import { createJob } from "@/lib/agent/jobs";
 import { processJob } from "@/lib/agent/process-job";
 import { runInBackground } from "@/lib/agent/wait-until";
 import { hasExceededMonthlyLimit } from "@/lib/agent/limits";
+import { getBalance } from "@/lib/points";
 
 function textPayload(from: string, body: string, id = "wamid.1") {
   return JSON.stringify({
@@ -93,6 +97,7 @@ describe("handleIncomingWebhook", () => {
     vi.clearAllMocks();
     (verifyWebhookSignature as any).mockReturnValue(true);
     (isDuplicateMessage as any).mockResolvedValue(false);
+    (getBalance as any).mockResolvedValue(500);
   });
 
   it("returns 401 and does nothing else when the signature is invalid", async () => {
@@ -272,6 +277,31 @@ describe("handleIncomingWebhook", () => {
     expect(sendWhatsAppText).toHaveBeenCalledWith(
       "+15551234567",
       expect.stringContaining("Kuota pesan bulanan")
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("replies with a top-up message and creates no job when the wallet is empty", async () => {
+    (findProfileByPhone as any).mockResolvedValue({
+      id: "profile-1",
+      userId: "user-1",
+      status: "active",
+      plan: "free",
+      planExpiresAt: null,
+      phoneVerifiedAt: new Date(),
+    });
+    (hasExceededMonthlyLimit as any).mockResolvedValue(false);
+    (getBalance as any).mockResolvedValue(0);
+
+    const result = await handleIncomingWebhook(
+      textPayload("15551234567", "halo"),
+      "sha256=ok"
+    );
+
+    expect(result.status).toBe(200);
+    expect(sendWhatsAppText).toHaveBeenCalledWith(
+      "+15551234567",
+      expect.stringContaining("poin")
     );
     expect(createJob).not.toHaveBeenCalled();
   });

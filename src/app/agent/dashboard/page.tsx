@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { getOwnProfile } from "@/lib/agent/profile";
 import { AgentLinkPanel } from "@/components/agent/AgentLinkPanel";
@@ -21,6 +22,13 @@ export default async function AgentDashboardPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="text-2xl font-semibold text-ink">Nerona Agent</h1>
+      <p className="mt-2 text-sm text-muted">
+        Sudah bisa dipakai sekarang lewat{" "}
+        <Link href="/agent/chat" className="text-gold-500 hover:underline">
+          Chat Asisten
+        </Link>{" "}
+        — menghubungkan WhatsApp bersifat opsional.
+      </p>
       <AgentLinkPanel
         displayNumber={process.env.WHATSAPP_DISPLAY_NUMBER ?? ""}
         whatsappPhone={profile.whatsappPhone}

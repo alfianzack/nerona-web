@@ -34,6 +34,9 @@ vi.mock("@/lib/points", () => ({
 vi.mock("@/lib/agent/pricing", () => ({
   costForUsage: vi.fn(() => 22),
 }));
+vi.mock("@/lib/agent/gates", () => ({
+  checkAgentGates: vi.fn(),
+}));
 
 import { processJob } from "@/lib/agent/process-job";
 import { prisma } from "@/lib/prisma";
@@ -44,6 +47,7 @@ import { generateReply } from "@/lib/agent/claude-client";
 import { sendWhatsAppText } from "@/lib/agent/whatsapp-client";
 import { getBalance, spendPoints } from "@/lib/points";
 import { costForUsage } from "@/lib/agent/pricing";
+import { checkAgentGates } from "@/lib/agent/gates";
 
 const profile = {
   id: "profile-1",
@@ -61,6 +65,7 @@ describe("processJob — happy path", () => {
     (listRecentFacts as any).mockResolvedValue(["fact 1"]);
     (getRecentHistory as any).mockResolvedValue([{ direction: "in", body: "halo" }]);
     (getBalance as any).mockResolvedValue(500);
+    (checkAgentGates as any).mockResolvedValue(null);
     (generateReply as any).mockResolvedValue({
       text: "Halo juga!",
       model: "gemini-2.0-flash-lite",
@@ -76,6 +81,7 @@ describe("processJob — happy path", () => {
       profileId: "profile-1",
       phone: "+15551234567",
       body: "Halo juga!",
+      channel: "whatsapp",
     });
     expect(spendPoints).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "user-1", cost: 22 })
@@ -149,6 +155,10 @@ describe("processJob — out of points", () => {
     (beginProcessing as any).mockResolvedValue({ id: "job-1", profileId: "profile-1", attempts: 1 });
     (prisma.agentProfile.findUnique as any).mockResolvedValue(profile);
     (getBalance as any).mockResolvedValue(0);
+    (checkAgentGates as any).mockResolvedValue({
+      blocked: "no_points",
+      message: "Maaf, poin kamu sudah habis. Silakan isi ulang poin untuk melanjutkan pakai asisten AI.",
+    });
   });
 
   it("does not call the AI, sends poin-habis, and completes without spending", async () => {

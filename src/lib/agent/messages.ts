@@ -10,17 +10,22 @@ export async function isDuplicateMessage(waMessageId: string): Promise<boolean> 
   return existing !== null;
 }
 
+/** Where a message came from. Web chat has no phone number attached. */
+export type AgentChannel = "whatsapp" | "web";
+
 export async function logInbound(params: {
   profileId: string | null;
-  waMessageId: string;
-  phone: string;
+  waMessageId?: string | null;
+  phone?: string | null;
   body: string;
+  channel?: AgentChannel;
 }): Promise<void> {
   await prisma.agentMessage.create({
     data: {
       profileId: params.profileId,
-      waMessageId: params.waMessageId,
-      phone: params.phone,
+      waMessageId: params.waMessageId ?? null,
+      phone: params.phone ?? null,
+      channel: params.channel ?? "whatsapp",
       direction: "in",
       body: params.body,
     },
@@ -29,17 +34,48 @@ export async function logInbound(params: {
 
 export async function logOutbound(params: {
   profileId: string | null;
-  phone: string;
+  phone?: string | null;
   body: string;
+  channel?: AgentChannel;
 }): Promise<void> {
   await prisma.agentMessage.create({
     data: {
       profileId: params.profileId,
-      phone: params.phone,
+      phone: params.phone ?? null,
+      channel: params.channel ?? "whatsapp",
       direction: "out",
       body: params.body,
     },
   });
+}
+
+export interface ChatHistoryEntry {
+  direction: "in" | "out";
+  body: string;
+  channel: string;
+  createdAt: Date;
+}
+
+/**
+ * History for display in the web chat. Separate from getRecentHistory, which
+ * deliberately selects only what the model needs.
+ */
+export async function listChatHistory(
+  profileId: string,
+  limit = 50
+): Promise<ChatHistoryEntry[]> {
+  const rows = await prisma.agentMessage.findMany({
+    where: { profileId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { direction: true, body: true, channel: true, createdAt: true },
+  });
+  return rows.reverse().map((row) => ({
+    direction: row.direction as "in" | "out",
+    body: row.body,
+    channel: row.channel,
+    createdAt: row.createdAt,
+  }));
 }
 
 export async function getRecentHistory(

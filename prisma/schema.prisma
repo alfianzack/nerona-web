@@ -366,7 +366,8 @@ model AgentMessage {
   profileId   String?
   profile     AgentProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
   waMessageId String?       @unique
-  phone       String
+  phone       String? // null for channels without a phone number (web chat)
+  channel     String        @default("whatsapp") // "whatsapp" | "web"
   direction   String        // "in" | "out"
   body        String        @db.Text
   createdAt   DateTime      @default(now())
