@@ -171,14 +171,12 @@ Klik **Deploy**. Setelah selesai, cek:
 
 Berlaku di Vercel maupun VPS:
 
-- **CORS dari content script** — `access/nerona-web-client.js` memanggil
-  `/api/extension/generate` dan `/api/extension/me` dengan `fetch` langsung dari content
-  script. Sejak Chrome 85 content script tunduk pada CORS biasa, dan tidak ada header
-  CORS di server. Kemungkinan besar gagal cross-origin di production.
-  Perbaikan: lewatkan panggilan itu ke background service worker (router
-  `NERONA_PROXY_FETCH` sudah ada dan sudah dipakai `content.js`), atau kirim header CORS.
 - **Belum ada smoke test browser** — alur connect token + generate belum pernah
   dijalankan sungguhan di browser.
+- **Ukuran pesan `sendMessage`** — sejak perbaikan CORS, request generate (termasuk
+  gambar base64) melewati `chrome.runtime.sendMessage` menuju service worker. Jalur ini
+  sudah dipakai untuk mengambil gambar, tapi payload besar belum pernah diuji ke arah
+  ini. Di Vercel batas 4,5 MB tetap yang mengikat lebih dulu.
 - **API key tersimpan plaintext** di tabel `Setting`.
 - **Kegagalan `spendPoints` ditelan** (`generate/route.ts`) — call AI langka bisa gratis.
 - **Dua test `orders.test.ts` merah** sejak sebelum pekerjaan ini; `npm test` = 304 lulus, 2 gagal.

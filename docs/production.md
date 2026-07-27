@@ -234,13 +234,11 @@ sudo journalctl -u caddy -f  # log Caddy/HTTPS
 
 Berlaku di VPS maupun Vercel:
 
-- **CORS dari content script** — `access/nerona-web-client.js` memanggil
-  `/api/extension/generate` dan `/api/extension/me` dengan `fetch` langsung dari
-  content script. Sejak Chrome 85 content script tunduk pada CORS biasa, dan tidak ada
-  header CORS di server. Kemungkinan besar gagal cross-origin di production.
-  Perbaikan: lewatkan panggilan itu ke background service worker (router
-  `NERONA_PROXY_FETCH` sudah ada dan sudah dipakai `content.js`), atau kirim header CORS.
 - **Belum ada smoke test browser** — alur connect token + generate belum pernah
   dijalankan sungguhan di browser.
+- **Ukuran pesan `sendMessage`** — sejak perbaikan CORS, request generate (termasuk
+  gambar base64) melewati `chrome.runtime.sendMessage` menuju service worker. Jalur ini
+  sudah dipakai untuk mengambil gambar, tapi payload besar (mendekati 12 MB) belum
+  pernah diuji ke arah ini. Perkecil gambar di sisi extension kalau bermasalah.
 - **API key tersimpan plaintext** di tabel `Setting`.
 - **Kegagalan `spendPoints` ditelan** (`generate/route.ts`) — call AI langka bisa gratis.
