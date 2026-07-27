@@ -23,11 +23,11 @@ export default async function OrderPage({
       <main className="mx-auto max-w-xl px-6 py-20 text-center">
         <h1 className="text-2xl font-semibold text-ink">Pilih paket dulu</h1>
         <p className="mt-3 text-sm text-muted">
-          Buka halaman Produk dan pilih paket yang ingin Anda aktifkan.
+          Buka halaman Harga dan pilih paket yang ingin Anda aktifkan.
         </p>
         <div className="mt-6">
-          <Link href="/produk" className="text-brand-blue hover:underline">
-            Buka Produk ›
+          <Link href="/pricing" className="text-brand-blue hover:underline">
+            Lihat Harga ›
           </Link>
         </div>
       </main>
@@ -38,8 +38,8 @@ export default async function OrderPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-14 sm:py-16">
-      <Link href="/produk" className="text-sm text-brand-blue hover:underline">
-        ‹ Kembali ke Produk
+      <Link href="/pricing" className="text-sm text-brand-blue hover:underline">
+        ‹ Kembali ke Harga
       </Link>
       <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">
         {isFree ? "Aktifkan paket" : "Configure your plan"}

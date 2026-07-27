@@ -10,11 +10,15 @@ const GUEST_NAV: NavItem[] = [
   { href: "/metadata", label: "Metadata" },
 ];
 
+// "Produk" and "Transaksi" are the tenant's OWN shop; "Harga" is where they buy
+// Nerona Agent / Metadata. Without it a signed-in tenant has no route to /pricing
+// at all, since the guest nav (with the marketing pages) is swapped out on login.
 const CUSTOMER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/produk", label: "Produk" },
   { href: "/transaksi", label: "Transaksi" },
   { href: "/finance", label: "Finance" },
+  { href: "/pricing", label: "Harga" },
   { href: "/profile", label: "Profile" },
 ];
 
