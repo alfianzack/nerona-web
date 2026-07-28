@@ -444,12 +444,17 @@ model ShopOrder {
   status       String   @default("new") // "new" | "paid" | "done" | "cancelled"
   total        Int      @default(0)
   note         String?
+  // Tanggal transaksi menurut pemilik — boleh mundur (mis. dicatat lewat agen untuk
+  // penjualan kemarin). SEMUA laporan memfilter & mengurutkan kolom ini.
+  occurredAt   DateTime @default(now())
+  // Jejak: kapan baris ini benar-benar dicatat. Jangan dipakai untuk laporan.
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   items ShopOrderItem[]
 
   @@index([userId])
+  @@index([userId, occurredAt])
   @@map("shop_orders")
 }
 

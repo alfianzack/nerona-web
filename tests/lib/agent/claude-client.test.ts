@@ -1,79 +1,72 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { chatCompletion } from "@/lib/agent/claude-client";
 
-vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+// `generateReply` sudah dihapus — turn agen sekarang lewat `runToolLoop`
+// (lihat tool-loop.test.ts). Yang diuji di sini khusus bagian tool-calling dari
+// transport; dasar-dasar chatCompletion ada di chat-completion.test.ts.
 
-import { generateReply } from "@/lib/agent/claude-client";
-import { getAiSettings } from "@/lib/ai-settings";
+afterEach(() => vi.unstubAllGlobals());
 
-describe("generateReply", () => {
-  beforeEach(() => {
-    (getAiSettings as any).mockResolvedValue({ model: "gemini-2.0-flash-lite", apiKey: "test-key" });
+const base = { model: "gemini-2.0-flash-lite", apiKey: "test-key" };
+
+function stubResponse(message: unknown) {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ choices: [{ message }] }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("chatCompletion — tool calling", () => {
+  it("omits the tools key entirely when no tools are passed", async () => {
+    const fetchMock = stubResponse({ content: "halo" });
+    await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }] });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tools).toBeUndefined();
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it("omits the tools key when an empty array is passed", async () => {
+    const fetchMock = stubResponse({ content: "halo" });
+    await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }], tools: [] });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tools).toBeUndefined();
   });
 
-  it("POSTs to the Sumopod chat completions endpoint and returns the reply", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: "Halo! Ada yang bisa saya bantu?" } }],
-        usage: { prompt_tokens: 12, completion_tokens: 8 },
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await generateReply({
-      systemPrompt: "You are a helpful assistant.",
-      history: [{ role: "user", content: "halo" }],
-    });
-
-    expect(result.text).toBe("Halo! Ada yang bisa saya bantu?");
-    expect(result.usage).toEqual({ promptTokens: 12, completionTokens: 8 });
-    expect(result.model).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://ai.sumopod.com/v1/chat/completions");
-    expect(init.headers.Authorization).toBe("Bearer test-key");
-    expect(JSON.parse(init.body)).toEqual(
-      expect.objectContaining({
-        model: "gemini-2.0-flash-lite",
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: "halo" },
-        ],
-      })
-    );
-    expect(result.model).toBe("gemini-2.0-flash-lite");
+  it("forwards tool definitions when given", async () => {
+    const fetchMock = stubResponse({ content: "halo" });
+    const tools = [{ type: "function", function: { name: "record_sale" } }];
+    await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }], tools });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tools).toEqual(tools);
   });
 
-  it("returns an empty string when the response has no content", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ choices: [] }) })
-    );
+  it("returns an empty toolCalls array for a plain text reply", async () => {
+    stubResponse({ content: "halo" });
+    const res = await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }] });
+    expect(res.toolCalls).toEqual([]);
+  });
 
-    const result = await generateReply({
-      systemPrompt: "You are a helpful assistant.",
-      history: [{ role: "user", content: "halo" }],
+  it("parses tool calls into id / name / arguments", async () => {
+    stubResponse({
+      content: null,
+      tool_calls: [
+        {
+          id: "call_1",
+          type: "function",
+          function: { name: "record_sale", arguments: '{"items":[]}' },
+        },
+      ],
     });
 
-    expect(result.text).toBe("");
-    expect(result.usage).toBeNull();
+    const res = await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }] });
+
+    expect(res.toolCalls).toEqual([
+      { id: "call_1", name: "record_sale", arguments: '{"items":[]}' },
+    ]);
+    expect(res.text).toBe("");
   });
 
-  it("throws when the API responds with an error", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 401, text: async () => "invalid key" })
-    );
-
-    await expect(
-      generateReply({
-        systemPrompt: "You are a helpful assistant.",
-        history: [{ role: "user", content: "hi" }],
-      })
-    ).rejects.toThrow(/401/);
+  it("tolerates a malformed tool call instead of throwing", async () => {
+    stubResponse({ content: null, tool_calls: [{ id: "call_1" }] });
+    const res = await chatCompletion({ ...base, messages: [{ role: "user", content: "hi" }] });
+    expect(res.toolCalls).toEqual([{ id: "call_1", name: "", arguments: "" }]);
   });
 });

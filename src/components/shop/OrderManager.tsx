@@ -23,6 +23,7 @@ interface Order {
   status: string;
   total: number;
   note: string | null;
+  occurredAt: string;
   createdAt: string;
   items: OrderItem[];
 }
@@ -51,7 +52,7 @@ export function OrderManager() {
   const [rows, setRows] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState("createdAt");
+  const [sort, setSort] = useState("occurredAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -170,11 +171,11 @@ export function OrderManager() {
 
   const columns: Column<Order>[] = [
     {
-      key: "createdAt",
+      key: "occurredAt",
       header: "Tanggal",
       sortable: true,
       render: (o) =>
-        new Date(o.createdAt).toLocaleString("id-ID", {
+        new Date(o.occurredAt).toLocaleString("id-ID", {
           day: "numeric",
           month: "short",
           year: "numeric",
@@ -307,8 +308,14 @@ export function OrderManager() {
           <div className="space-y-3 text-sm">
             <p className="text-muted">
               {detail.customerName || "Tanpa nama"} ·{" "}
-              {new Date(detail.createdAt).toLocaleString("id-ID")}
+              {new Date(detail.occurredAt).toLocaleString("id-ID")}
             </p>
+            {new Date(detail.createdAt).getTime() - new Date(detail.occurredAt).getTime() >
+              60_000 && (
+              <p className="text-xs text-muted/70">
+                Dicatat pada {new Date(detail.createdAt).toLocaleString("id-ID")}
+              </p>
+            )}
             <ul className="space-y-1">
               {detail.items.map((item) => (
                 <li key={item.id} className="flex justify-between gap-4 text-ink">

@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 const baseQuery = {
   page: 1,
   pageSize: 20,
-  sort: "createdAt" as const,
+  sort: "occurredAt" as const,
   order: "desc" as const,
 };
 
@@ -34,7 +34,7 @@ describe("listOrdersPaged", () => {
     expect(result).toEqual({ rows: [{ id: "o1", items: [] }], total: 1 });
     expect(prisma.shopOrder.findMany).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
       skip: 0,
       take: 20,
       include: { items: true },
@@ -68,14 +68,14 @@ describe("listOrdersPaged", () => {
     );
   });
 
-  it("applies an inclusive date range on createdAt", async () => {
+  it("applies an inclusive date range on occurredAt (tanggal transaksi, bukan waktu catat)", async () => {
     mockDb([], 0);
     const dateFrom = new Date("2026-07-01T00:00:00");
     const dateTo = new Date("2026-07-31T23:59:59.999");
     await listOrdersPaged("user-1", { ...baseQuery, dateFrom, dateTo });
     expect(prisma.shopOrder.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: "user-1", createdAt: { gte: dateFrom, lte: dateTo } },
+        where: { userId: "user-1", occurredAt: { gte: dateFrom, lte: dateTo } },
       })
     );
   });

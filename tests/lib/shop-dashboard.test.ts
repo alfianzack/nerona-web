@@ -18,7 +18,7 @@ describe("getDashboardSummary", () => {
     (prisma.shopOrder.count as any).mockResolvedValue(3);
     (prisma.shopProduct.count as any).mockResolvedValue(7);
     (prisma.shopOrder.findMany as any).mockResolvedValue([
-      { id: "o1", customerName: "A", total: 50000, status: "paid", createdAt: new Date() },
+      { id: "o1", customerName: "A", total: 50000, status: "paid", occurredAt: new Date() },
     ]);
     (prisma.shopOrderItem.groupBy as any).mockResolvedValue([
       { productName: "Kopi", _sum: { qty: 12 } },
@@ -35,7 +35,7 @@ describe("getDashboardSummary", () => {
     expect(aggArg._sum).toEqual({ total: true });
     expect(aggArg.where.userId).toBe("user-1");
     expect(aggArg.where.status).toEqual({ in: ["paid", "done"] });
-    expect(aggArg.where.createdAt).toEqual({ gte: new Date(2026, 6, 1) });
+    expect(aggArg.where.occurredAt).toEqual({ gte: new Date(2026, 6, 1) });
   });
 
   it("maps counts, top products, and low stock into the summary shape", async () => {
@@ -76,9 +76,9 @@ describe("getSalesSeries", () => {
 
   it("buckets order totals into their day", async () => {
     (prisma.shopOrder.findMany as any).mockResolvedValue([
-      { total: 20000, createdAt: new Date("2026-07-19T08:00:00") },
-      { total: 5000, createdAt: new Date("2026-07-19T20:00:00") },
-      { total: 9000, createdAt: new Date("2026-07-18T12:00:00") },
+      { total: 20000, occurredAt: new Date("2026-07-19T08:00:00") },
+      { total: 5000, occurredAt: new Date("2026-07-19T20:00:00") },
+      { total: 9000, occurredAt: new Date("2026-07-18T12:00:00") },
     ]);
     const now = new Date("2026-07-19T10:00:00");
 

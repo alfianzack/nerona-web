@@ -14,8 +14,8 @@ vi.mock("@/lib/agent/context", () => ({
   buildSystemPrompt: vi.fn(() => "system prompt"),
   toClaudeHistory: vi.fn((history) => history),
 }));
-vi.mock("@/lib/agent/claude-client", () => ({
-  generateReply: vi.fn(),
+vi.mock("@/lib/agent/tool-loop", () => ({
+  runToolLoop: vi.fn(),
 }));
 vi.mock("@/lib/points", () => ({
   getBalance: vi.fn(),
@@ -29,7 +29,7 @@ import { checkAgentGates } from "@/lib/agent/gates";
 import { getRecentHistory, logOutbound } from "@/lib/agent/messages";
 import { listRecentFacts } from "@/lib/agent/memory";
 import { buildSystemPrompt } from "@/lib/agent/context";
-import { generateReply } from "@/lib/agent/claude-client";
+import { runToolLoop } from "@/lib/agent/tool-loop";
 import { spendPoints } from "@/lib/points";
 
 const profile = {
@@ -48,7 +48,7 @@ describe("runAgentTurn", () => {
     (checkAgentGates as any).mockResolvedValue(null);
     (listRecentFacts as any).mockResolvedValue(["fact 1"]);
     (getRecentHistory as any).mockResolvedValue([{ direction: "in", body: "halo" }]);
-    (generateReply as any).mockResolvedValue({
+    (runToolLoop as any).mockResolvedValue({
       text: "Halo juga!",
       model: "gemini-2.0-flash-lite",
       usage: { promptTokens: 20, completionTokens: 10 },
@@ -71,9 +71,11 @@ describe("runAgentTurn", () => {
       timezone: "Asia/Jakarta",
       facts: ["fact 1"],
     });
-    expect(generateReply).toHaveBeenCalledWith({
+    expect(runToolLoop).toHaveBeenCalledWith({
       systemPrompt: "system prompt",
       history: [{ direction: "in", body: "halo" }],
+      userId: "user-1",
+      timezone: "Asia/Jakarta",
     });
   });
 
@@ -109,7 +111,7 @@ describe("runAgentTurn", () => {
   });
 
   it("follows a rate change instead of a hardcoded model price", async () => {
-    (generateReply as any).mockResolvedValue({
+    (runToolLoop as any).mockResolvedValue({
       text: "Halo juga!",
       model: "gemini-2.0-flash-lite",
       usage: { promptTokens: 20, completionTokens: 10 },
@@ -139,7 +141,7 @@ describe("runAgentTurn", () => {
     const result = await runAgentTurn({ profile, channel: "web" });
 
     expect(result).toEqual({ ok: false, blocked: "no_points", reply: "poin habis" });
-    expect(generateReply).not.toHaveBeenCalled();
+    expect(runToolLoop).not.toHaveBeenCalled();
     expect(spendPoints).not.toHaveBeenCalled();
   });
 
@@ -160,7 +162,7 @@ describe("runAgentTurn", () => {
   });
 
   it("propagates an AI failure to the caller", async () => {
-    (generateReply as any).mockRejectedValue(new Error("upstream 502"));
+    (runToolLoop as any).mockRejectedValue(new Error("upstream 502"));
 
     await expect(runAgentTurn({ profile, channel: "web" })).rejects.toThrow("upstream 502");
     expect(logOutbound).not.toHaveBeenCalled();

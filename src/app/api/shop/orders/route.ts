@@ -32,11 +32,13 @@ export async function GET(request: Request) {
   const pageSize = Math.min(100, Math.max(1, Math.floor(Number(searchParams.get("pageSize")) || 20)));
 
   const sortParam = searchParams.get("sort");
-  const sort: OrderQuery["sort"] = (["createdAt", "total", "status"] as const).includes(
+  // "createdAt" masih diterima sebagai alias supaya URL/bookmark lama tetap jalan;
+  // keduanya mengurutkan tanggal transaksi.
+  const sort: OrderQuery["sort"] = (["occurredAt", "total", "status"] as const).includes(
     sortParam as OrderQuery["sort"]
   )
     ? (sortParam as OrderQuery["sort"])
-    : "createdAt";
+    : "occurredAt";
   const order: OrderQuery["order"] = searchParams.get("order") === "asc" ? "asc" : "desc";
 
   const statusParam = searchParams.get("status");

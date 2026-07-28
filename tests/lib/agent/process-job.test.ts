@@ -21,8 +21,8 @@ vi.mock("@/lib/agent/context", () => ({
   buildSystemPrompt: vi.fn(() => "system prompt"),
   toClaudeHistory: vi.fn((history) => history),
 }));
-vi.mock("@/lib/agent/claude-client", () => ({
-  generateReply: vi.fn(),
+vi.mock("@/lib/agent/tool-loop", () => ({
+  runToolLoop: vi.fn(),
 }));
 vi.mock("@/lib/agent/whatsapp-client", () => ({
   sendWhatsAppText: vi.fn(),
@@ -43,7 +43,7 @@ import { prisma } from "@/lib/prisma";
 import { beginProcessing, completeJob, failJob } from "@/lib/agent/jobs";
 import { getRecentHistory, logOutbound } from "@/lib/agent/messages";
 import { listRecentFacts } from "@/lib/agent/memory";
-import { generateReply } from "@/lib/agent/claude-client";
+import { runToolLoop } from "@/lib/agent/tool-loop";
 import { sendWhatsAppText } from "@/lib/agent/whatsapp-client";
 import { getBalance, spendPoints } from "@/lib/points";
 import { costForUsage } from "@/lib/agent/pricing";
@@ -66,7 +66,7 @@ describe("processJob — happy path", () => {
     (getRecentHistory as any).mockResolvedValue([{ direction: "in", body: "halo" }]);
     (getBalance as any).mockResolvedValue(500);
     (checkAgentGates as any).mockResolvedValue(null);
-    (generateReply as any).mockResolvedValue({
+    (runToolLoop as any).mockResolvedValue({
       text: "Halo juga!",
       model: "gemini-2.0-flash-lite",
       usage: { promptTokens: 20, completionTokens: 10 },
@@ -99,7 +99,7 @@ describe("processJob — failure below MAX_ATTEMPTS", () => {
     (listRecentFacts as any).mockResolvedValue([]);
     (getRecentHistory as any).mockResolvedValue([]);
     (getBalance as any).mockResolvedValue(500);
-    (generateReply as any).mockRejectedValue(new Error("Claude API down"));
+    (runToolLoop as any).mockRejectedValue(new Error("Claude API down"));
     (failJob as any).mockResolvedValue({ permanentlyFailed: false });
   });
 
@@ -119,7 +119,7 @@ describe("processJob — permanent failure", () => {
     (listRecentFacts as any).mockResolvedValue([]);
     (getRecentHistory as any).mockResolvedValue([]);
     (getBalance as any).mockResolvedValue(500);
-    (generateReply as any).mockRejectedValue(new Error("Claude API down"));
+    (runToolLoop as any).mockRejectedValue(new Error("Claude API down"));
     (failJob as any).mockResolvedValue({ permanentlyFailed: true });
     (sendWhatsAppText as any).mockResolvedValue(undefined);
     (logOutbound as any).mockResolvedValue(undefined);
@@ -164,7 +164,7 @@ describe("processJob — out of points", () => {
   it("does not call the AI, sends poin-habis, and completes without spending", async () => {
     await processJob("job-1");
 
-    expect(generateReply).not.toHaveBeenCalled();
+    expect(runToolLoop).not.toHaveBeenCalled();
     expect(spendPoints).not.toHaveBeenCalled();
     expect(sendWhatsAppText).toHaveBeenCalledWith("+15551234567", expect.stringContaining("poin"));
     expect(completeJob).toHaveBeenCalledWith("job-1");

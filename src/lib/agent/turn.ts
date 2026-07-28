@@ -1,7 +1,7 @@
 import { getRecentHistory, logOutbound, type AgentChannel } from "./messages";
 import { listRecentFacts } from "./memory";
 import { buildSystemPrompt, toClaudeHistory } from "./context";
-import { generateReply } from "./claude-client";
+import { runToolLoop } from "./tool-loop";
 import { checkAgentGates, type AgentBlockReason } from "./gates";
 import { spendPoints } from "@/lib/points";
 import { costForUsage } from "./pricing";
@@ -45,13 +45,15 @@ export async function runAgentTurn(params: {
     getRecentHistory(profile.id, 20),
   ]);
 
-  const result = await generateReply({
+  const result = await runToolLoop({
     systemPrompt: buildSystemPrompt({
       businessName: profile.businessName,
       timezone: profile.timezone,
       facts,
     }),
     history: toClaudeHistory(history),
+    userId: profile.userId,
+    timezone: profile.timezone,
   });
 
   await logOutbound({ profileId: profile.id, phone, body: result.text, channel });

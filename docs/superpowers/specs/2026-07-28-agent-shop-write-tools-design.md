@@ -174,8 +174,13 @@ Inventaris lengkap (bukan perkiraan):
   terbaru (:27,:29), bucket grafik (:60,:61,:70)
 - `src/components/shop/OrderManager.tsx` — tipe (:26), state sort (:54), kolom
   tabel (:173-177), detail (:310)
-- `src/app/dashboard/page.tsx` — tampilan tanggal (:82)
+- `src/app/api/shop/orders/route.ts` — kunci sort yang diterima (:35-39)
 - Test: `tests/lib/shop-dashboard.test.ts`, `tests/lib/shop-orders-paged.test.ts`
+
+Koreksi saat implementasi: `src/app/dashboard/page.tsx:82` yang sebelumnya tercatat di
+sini sebagai "tampilan tanggal order" ternyata riwayat **poin** (`PointTransactionView`),
+bukan order — ditangkap `tsc`. Daftar "order terbaru" di dashboard tidak menampilkan
+tanggal sama sekali, jadi tidak ada perubahan UI di sana.
 
 Kunci sort di API/URL berubah dari `createdAt` menjadi `occurredAt`; nilai lama yang
 masih tersimpan di URL pengguna jatuh ke default sort, bukan error.

@@ -123,12 +123,16 @@ export interface OrderInput {
   customerName?: string | null;
   note?: string | null;
   items: OrderItemInput[];
+  /** Default tetap "new"; agen mengirim "paid" saat mencatat penjualan. */
+  status?: OrderStatus;
+  /** Tanggal transaksi. Kosong = default database (sekarang). */
+  occurredAt?: Date;
 }
 
 export function listOrders(userId: string) {
   return prisma.shopOrder.findMany({
     where: { userId },
-    orderBy: { createdAt: "desc" },
+    orderBy: { occurredAt: "desc" },
     include: { items: true },
   });
 }
@@ -146,6 +150,10 @@ export async function createOrder(userId: string, input: OrderInput) {
       customerName: input.customerName ?? null,
       note: input.note ?? null,
       total,
+      // Keduanya dibiarkan undefined kalau tidak dikirim, supaya default schema yang
+      // berlaku ("new" / now()) dan pemanggil dari web tidak berubah perilakunya.
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
       items: {
         create: items.map((item) => ({
           productId: item.productId ?? null,
@@ -176,7 +184,7 @@ export interface OrderQuery {
   page: number;
   pageSize: number;
   q?: string;
-  sort: "createdAt" | "total" | "status";
+  sort: "occurredAt" | "total" | "status";
   order: "asc" | "desc";
   status?: OrderStatus;
   dateFrom?: Date;
@@ -195,7 +203,7 @@ export async function listOrdersPaged(userId: string, query: OrderQuery) {
     where.status = query.status;
   }
   if (query.dateFrom || query.dateTo) {
-    where.createdAt = {
+    where.occurredAt = {
       ...(query.dateFrom ? { gte: query.dateFrom } : {}),
       ...(query.dateTo ? { lte: query.dateTo } : {}),
     };

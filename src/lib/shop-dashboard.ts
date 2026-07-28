@@ -17,16 +17,16 @@ export async function getDashboardSummary(userId: string, now: Date = new Date()
     await Promise.all([
       prisma.shopOrder.aggregate({
         _sum: { total: true },
-        where: { userId, status: { in: REVENUE_STATUSES }, createdAt: { gte: monthStart } },
+        where: { userId, status: { in: REVENUE_STATUSES }, occurredAt: { gte: monthStart } },
       }),
-      prisma.shopOrder.count({ where: { userId, createdAt: { gte: monthStart } } }),
+      prisma.shopOrder.count({ where: { userId, occurredAt: { gte: monthStart } } }),
       prisma.shopProduct.count({ where: { userId, isActive: true } }),
       prisma.shopOrder.count({ where: { userId, status: "new" } }),
       prisma.shopOrder.findMany({
         where: { userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { occurredAt: "desc" },
         take: 8,
-        select: { id: true, customerName: true, total: true, status: true, createdAt: true },
+        select: { id: true, customerName: true, total: true, status: true, occurredAt: true },
       }),
       prisma.shopOrderItem.groupBy({
         by: ["productName"],
@@ -57,8 +57,8 @@ export async function getDashboardSummary(userId: string, now: Date = new Date()
 export async function getSalesSeries(userId: string, days = 30, now: Date = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
   const orders = await prisma.shopOrder.findMany({
-    where: { userId, status: { in: REVENUE_STATUSES }, createdAt: { gte: start } },
-    select: { total: true, createdAt: true },
+    where: { userId, status: { in: REVENUE_STATUSES }, occurredAt: { gte: start } },
+    select: { total: true, occurredAt: true },
   });
 
   const buckets = new Map<string, number>();
@@ -67,7 +67,7 @@ export async function getSalesSeries(userId: string, days = 30, now: Date = new 
     buckets.set(dateKey(d), 0);
   }
   for (const order of orders) {
-    const key = dateKey(order.createdAt);
+    const key = dateKey(order.occurredAt);
     if (buckets.has(key)) {
       buckets.set(key, (buckets.get(key) ?? 0) + order.total);
     }
