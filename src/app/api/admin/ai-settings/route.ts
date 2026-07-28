@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAiSettingsView, updateAiSettings } from "@/lib/ai-settings";
 
+const LABELS = {
+  priceIn: "Harga input",
+  priceOut: "Harga output",
+  pointsPerUsd: "Poin per USD",
+} as const;
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.role) {
@@ -25,7 +31,37 @@ export async function POST(request: Request) {
 
   const model = typeof body.model === "string" ? body.model.trim() : "";
   const apiKey = typeof body.apiKey === "string" ? body.apiKey : undefined;
-  await updateAiSettings({ model, apiKey });
+
+  const rates: Record<string, string | undefined> = {};
+  for (const field of ["priceIn", "priceOut", "pointsPerUsd"] as const) {
+    const raw = body[field];
+    if (raw === undefined) continue; // absent = leave the stored value alone
+    if (typeof raw !== "string") {
+      return NextResponse.json({ ok: false, message: LABELS[field] + " tidak valid." }, { status: 400 });
+    }
+    const trimmed = raw.trim();
+    if (trimmed === "") {
+      rates[field] = ""; // blank = clear back to the env/default fallback
+      continue;
+    }
+    const n = Number(trimmed);
+    const min = field === "pointsPerUsd" ? Number.MIN_VALUE : 0;
+    if (!Number.isFinite(n) || n < min) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            field === "pointsPerUsd"
+              ? "Poin per USD harus angka lebih besar dari 0."
+              : `${LABELS[field]} harus angka 0 atau lebih.`,
+        },
+        { status: 400 }
+      );
+    }
+    rates[field] = trimmed;
+  }
+
+  await updateAiSettings({ model, apiKey, ...rates });
 
   return NextResponse.json({ ok: true });
 }

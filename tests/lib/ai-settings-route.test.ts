@@ -52,3 +52,55 @@ describe("POST /api/admin/ai-settings", () => {
     expect(call.apiKey === "" || call.apiKey === undefined).toBe(true);
   });
 });
+
+describe("POST /api/admin/ai-settings rates", () => {
+  beforeEach(() => {
+    (getServerSession as any).mockResolvedValue({ user: { id: "a1", role: "owner_admin" } });
+  });
+
+  function lastCall() {
+    return (updateAiSettings as any).mock.calls[0][0];
+  }
+
+  it("passes the three rates through", async () => {
+    const res = await POST(
+      postReq({ model: "gpt-5", priceIn: "3", priceOut: "15", pointsPerUsd: "50000" })
+    );
+    expect(res.status).toBe(200);
+    expect(lastCall()).toEqual(
+      expect.objectContaining({ priceIn: "3", priceOut: "15", pointsPerUsd: "50000" })
+    );
+  });
+
+  it("passes a blank rate through so it clears back to the fallback", async () => {
+    await POST(postReq({ model: "gpt-5", priceIn: "" }));
+    expect(lastCall().priceIn).toBe("");
+  });
+
+  it("leaves a rate out of the update when the field is absent", async () => {
+    await POST(postReq({ model: "gpt-5", priceIn: "3" }));
+    expect(lastCall().priceOut).toBeUndefined();
+    expect(lastCall().pointsPerUsd).toBeUndefined();
+  });
+
+  it("400 on a non-numeric rate, without writing anything", async () => {
+    const res = await POST(postReq({ model: "gpt-5", priceIn: "gratis" }));
+    expect(res.status).toBe(400);
+    expect(updateAiSettings).not.toHaveBeenCalled();
+    expect((await res.json()).message).toBeTruthy();
+  });
+
+  it("400 on a negative rate", async () => {
+    expect((await POST(postReq({ model: "gpt-5", priceOut: "-1" }))).status).toBe(400);
+    expect(updateAiSettings).not.toHaveBeenCalled();
+  });
+
+  it("400 on a zero pointsPerUsd, which would make every call free", async () => {
+    expect((await POST(postReq({ model: "gpt-5", pointsPerUsd: "0" }))).status).toBe(400);
+    expect(updateAiSettings).not.toHaveBeenCalled();
+  });
+
+  it("accepts a zero price (a free model)", async () => {
+    expect((await POST(postReq({ model: "gpt-5", priceIn: "0" }))).status).toBe(200);
+  });
+});

@@ -86,7 +86,13 @@ Buat `.env.local` di server. Daftar lengkap (diambil dari kode, bukan perkiraan)
 | `SUMOPOD_API_KEY` | Fallback kalau key belum diisi lewat `/admin/pengaturan`. Key di DB menang |
 | `SUMOPOD_BASE_URL` | Default `https://ai.sumopod.com/v1` kalau kosong |
 | `AGENT_MODEL` | Model default kalau belum diset di `/admin/pengaturan`. Fallback kode: `gemini-2.0-flash-lite` |
-| `POINTS_PER_USD` | Kurs poin. **Belum ada di `.env.example`** — default kode: `100000` |
+| `POINTS_PER_USD` | Kurs poin. Fallback kalau belum diset di `/admin/pengaturan`. **Belum ada di `.env.example`** — default kode: `100000` |
+| `AI_PRICE_IN` | Harga USD per 1jt token input. Fallback `/admin/pengaturan`; default kode: `0.075` |
+| `AI_PRICE_OUT` | Harga USD per 1jt token output. Fallback `/admin/pengaturan`; default kode: `0.3` |
+
+Tarif poin (`AI_PRICE_IN`/`AI_PRICE_OUT`/`POINTS_PER_USD`) sekarang diatur dari
+`/admin/pengaturan` → Koneksi AI. Urutan: nilai di DB → env → default kode. Ketiga env
+var di atas hanya dipakai kalau kolomnya dikosongkan di admin.
 
 ### WhatsApp (Meta Cloud API)
 

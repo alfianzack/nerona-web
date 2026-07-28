@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  DEFAULT_AI_PRICING,
+  costForUsage,
+  pricingFromInput,
+  type AiPricing,
+} from "@/lib/agent/pricing";
 
 const inputClass =
   "w-full rounded-xl bg-surface px-3 py-2 text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
@@ -24,6 +30,10 @@ export function AdminAiSettingsPanel() {
   const [apiKey, setApiKey] = useState("");
   const [apiKeyMasked, setApiKeyMasked] = useState("");
   const [apiKeySet, setApiKeySet] = useState(false);
+  const [priceIn, setPriceIn] = useState("");
+  const [priceOut, setPriceOut] = useState("");
+  const [pointsPerUsd, setPointsPerUsd] = useState("");
+  const [effective, setEffective] = useState<AiPricing>(DEFAULT_AI_PRICING);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +50,10 @@ export function AdminAiSettingsPanel() {
     setModel(data.settings.model ?? "");
     setApiKeyMasked(data.settings.apiKeyMasked ?? "");
     setApiKeySet(Boolean(data.settings.apiKeySet));
+    setPriceIn(data.settings.priceIn ?? "");
+    setPriceOut(data.settings.priceOut ?? "");
+    setPointsPerUsd(data.settings.pointsPerUsd ?? "");
+    setEffective(data.settings.effective ?? DEFAULT_AI_PRICING);
   }
 
   useEffect(() => {
@@ -53,11 +67,12 @@ export function AdminAiSettingsPanel() {
     const res = await fetch("/api/admin/ai-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, apiKey }),
+      body: JSON.stringify({ model, apiKey, priceIn, priceOut, pointsPerUsd }),
     });
+    const data = await res.json().catch(() => null);
     setSaving(false);
     if (!res.ok) {
-      setError("Gagal menyimpan pengaturan AI.");
+      setError(data?.message || "Gagal menyimpan pengaturan AI.");
       return;
     }
     setSaved(true);
@@ -88,6 +103,13 @@ export function AdminAiSettingsPanel() {
     ? `Tersimpan (${apiKeyMasked}) — biarkan kosong untuk tetap`
     : "Tempel API key Sumopod";
 
+  // Preview at the values being typed, falling back to what is in force right now.
+  const previewPricing = pricingFromInput({ priceIn, priceOut, pointsPerUsd }, effective);
+  const previewCost = costForUsage({
+    usage: { promptTokens: 1500, completionTokens: 400 },
+    pricing: previewPricing,
+  });
+
   return (
     <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
       <div className="flex items-center gap-3">
@@ -107,7 +129,7 @@ export function AdminAiSettingsPanel() {
         </span>
         <div>
           <h2 className="text-lg font-semibold text-ink">Koneksi AI (Sumopod)</h2>
-          <p className="text-xs text-muted">Model & API key untuk balasan agen WhatsApp</p>
+          <p className="text-xs text-muted">Model, API key & tarif poin untuk agen dan extension</p>
         </div>
       </div>
 
@@ -143,6 +165,44 @@ export function AdminAiSettingsPanel() {
             className={`mt-1.5 ${inputClass}`}
           />
         </div>
+
+        <div className="rounded-xl bg-navy-900/[.03] p-3 ring-1 ring-navy-900/[.06]">
+          <p className="text-xs font-semibold text-ink">Tarif poin</p>
+          <p className="mt-0.5 text-[11px] text-muted/80">
+            Dipakai untuk menghitung poin yang dipotong tiap panggilan AI (agen &
+            extension). Kosongkan untuk pakai default.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <RateField
+              id="ai-price-in"
+              label="Harga input"
+              hint="USD / 1jt token"
+              value={priceIn}
+              placeholder={String(effective.inPerMTok)}
+              onChange={setPriceIn}
+            />
+            <RateField
+              id="ai-price-out"
+              label="Harga output"
+              hint="USD / 1jt token"
+              value={priceOut}
+              placeholder={String(effective.outPerMTok)}
+              onChange={setPriceOut}
+            />
+            <RateField
+              id="ai-points-per-usd"
+              label="Poin per USD"
+              hint="1 USD = ? poin"
+              value={pointsPerUsd}
+              placeholder={String(effective.pointsPerUsd)}
+              onChange={setPointsPerUsd}
+            />
+          </div>
+          <p className="mt-3 text-[11px] text-muted">
+            Estimasi: 1.500 token input + 400 token output ≈{" "}
+            <span className="font-semibold text-ink">{previewCost} poin</span>
+          </p>
+        </div>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -164,6 +224,42 @@ export function AdminAiSettingsPanel() {
       </div>
 
       {testResult && <ConnectionTestReport result={testResult} />}
+    </div>
+  );
+}
+
+function RateField({
+  id,
+  label,
+  hint,
+  value,
+  placeholder,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="text-[11px] font-semibold text-ink">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="number"
+        min="0"
+        step="any"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`mt-1 ${inputClass}`}
+      />
+      <p className="mt-1 text-[10px] text-muted/80">{hint}</p>
     </div>
   );
 }

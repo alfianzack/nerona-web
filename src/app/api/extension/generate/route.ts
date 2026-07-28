@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   }
   const messages = [{ role: "user", content: content_ }];
 
-  const { model, apiKey } = await getAiSettings();
+  const { model, apiKey, pricing } = await getAiSettings();
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "ai_not_configured" }, { status: 503 });
   }
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "ai_error" }, { status: 502 });
   }
 
-  const cost = costForUsage({ model: result.model, usage: result.usage });
+  const cost = costForUsage({ usage: result.usage, pricing });
   let pointsBalance = state.pointsBalance;
   try {
     pointsBalance = await spendPoints({ userId: resolved.userId, cost, note: `Extension ${feature}` });

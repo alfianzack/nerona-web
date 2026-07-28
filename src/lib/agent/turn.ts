@@ -61,7 +61,7 @@ export async function runAgentTurn(params: {
   try {
     pointsBalance = await spendPoints({
       userId: profile.userId,
-      cost: costForUsage({ model: result.model, usage: result.usage }),
+      cost: costForUsage({ usage: result.usage, pricing: result.pricing }),
       note: `AI reply · ${channel} · ${result.model} · ${result.usage?.promptTokens ?? 0}+${result.usage?.completionTokens ?? 0} tok`,
     });
   } catch (err) {

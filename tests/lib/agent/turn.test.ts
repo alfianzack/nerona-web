@@ -21,9 +21,8 @@ vi.mock("@/lib/points", () => ({
   getBalance: vi.fn(),
   spendPoints: vi.fn(),
 }));
-vi.mock("@/lib/agent/pricing", () => ({
-  costForUsage: vi.fn(() => 22),
-}));
+// `pricing` is left REAL: it is pure, and the point of this test is that the rates
+// resolved alongside the model actually reach the wallet.
 
 import { runAgentTurn } from "@/lib/agent/turn";
 import { checkAgentGates } from "@/lib/agent/gates";
@@ -53,6 +52,7 @@ describe("runAgentTurn", () => {
       text: "Halo juga!",
       model: "gemini-2.0-flash-lite",
       usage: { promptTokens: 20, completionTokens: 10 },
+      pricing: { inPerMTok: 3, outPerMTok: 15, pointsPerUsd: 100_000 },
     });
     (spendPoints as any).mockResolvedValue(478);
   });
@@ -99,12 +99,26 @@ describe("runAgentTurn", () => {
     });
   });
 
-  it("meters the call against the wallet", async () => {
+  it("meters the call against the wallet at the configured rates", async () => {
     await runAgentTurn({ profile, channel: "web" });
 
+    // 20/1e6*3 + 10/1e6*15 = 0.00021 USD × 100000 = 21 poin
     expect(spendPoints).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "user-1", cost: 22 })
+      expect.objectContaining({ userId: "user-1", cost: 21 })
     );
+  });
+
+  it("follows a rate change instead of a hardcoded model price", async () => {
+    (generateReply as any).mockResolvedValue({
+      text: "Halo juga!",
+      model: "gemini-2.0-flash-lite",
+      usage: { promptTokens: 20, completionTokens: 10 },
+      pricing: { inPerMTok: 30, outPerMTok: 150, pointsPerUsd: 100_000 },
+    });
+
+    await runAgentTurn({ profile, channel: "web" });
+
+    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ cost: 210 }));
   });
 
   it("returns the reply even when metering fails", async () => {

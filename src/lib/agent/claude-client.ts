@@ -1,4 +1,5 @@
 import { getAiSettings } from "@/lib/ai-settings";
+import type { AiPricing } from "@/lib/agent/pricing";
 
 const BASE_URL = process.env.SUMOPOD_BASE_URL || "https://ai.sumopod.com/v1";
 
@@ -6,13 +7,16 @@ export interface GenerateReplyResult {
   text: string;
   model: string;
   usage: { promptTokens: number; completionTokens: number } | null;
+  /** The rates this call was made under — returned so the caller meters at the same
+   *  rates without a second settings read. */
+  pricing: AiPricing;
 }
 
 export async function generateReply(params: {
   systemPrompt: string;
   history: { role: "user" | "assistant"; content: string }[];
 }): Promise<GenerateReplyResult> {
-  const { model, apiKey } = await getAiSettings();
+  const { model, apiKey, pricing } = await getAiSettings();
 
   const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -40,7 +44,7 @@ export async function generateReply(params: {
         completionTokens: data.usage.completion_tokens ?? 0,
       }
     : null;
-  return { text, model, usage };
+  return { text, model, usage, pricing };
 }
 
 export interface ChatCompletionResult {

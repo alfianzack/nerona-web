@@ -95,7 +95,11 @@ Daftar ini diambil dari kode, bukan perkiraan.
 | `SUMOPOD_API_KEY` | Fallback bila key belum diisi di `/admin/pengaturan` (key di DB menang) |
 | `SUMOPOD_BASE_URL` | Default `https://ai.sumopod.com/v1` |
 | `AGENT_MODEL` | Fallback kode: `gemini-2.0-flash-lite` |
-| `POINTS_PER_USD` | **Belum ada di `.env.example`** — default kode: `100000` |
+| `POINTS_PER_USD` | Fallback bila kosong di `/admin/pengaturan`. **Belum ada di `.env.example`** — default kode: `100000` |
+| `AI_PRICE_IN` | USD / 1jt token input. Fallback `/admin/pengaturan`; default kode: `0.075` |
+| `AI_PRICE_OUT` | USD / 1jt token output. Fallback `/admin/pengaturan`; default kode: `0.3` |
+
+Tarif poin diatur dari `/admin/pengaturan` → Koneksi AI (DB → env → default kode).
 
 ### WhatsApp
 

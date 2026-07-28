@@ -4,7 +4,8 @@ vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
 vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
 vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
-vi.mock("@/lib/agent/pricing", () => ({ costForUsage: vi.fn(() => 5) }));
+// `pricing` is left REAL (it is pure) so the charge asserted below is the one the
+// configured rates actually produce.
 vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
 vi.mock("@/lib/extension/prompts", () => ({
@@ -58,7 +59,11 @@ beforeEach(() => {
   (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
   (hit as any).mockReturnValue({ ok: true, remaining: 89, retryAfterSeconds: 0 });
   (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
-  (getAiSettings as any).mockResolvedValue({ model: "gemini-2.0-flash", apiKey: "adminkey" });
+  (getAiSettings as any).mockResolvedValue({
+    model: "gemini-2.0-flash",
+    apiKey: "adminkey",
+    pricing: { inPerMTok: 0.1, outPerMTok: 0.4, pointsPerUsd: 100_000 },
+  });
   (chatCompletion as any).mockResolvedValue({
     text: "meta",
     model: "gemini-2.0-flash",
@@ -129,7 +134,21 @@ describe("POST /api/extension/generate", () => {
     const imagePart = parts.find((p: any) => p.type === "image_url");
     expect(imagePart.image_url.url).toBe("data:image/png;base64,abc123");
 
-    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", cost: 5 }));
+    // 1200/1e6*0.10 + 150/1e6*0.40 = 0.00018 USD × 100000 = 18 poin
+    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", cost: 18 }));
+  });
+
+  it("charges at the rates configured in admin settings", async () => {
+    (getAiSettings as any).mockResolvedValue({
+      model: "gemini-2.0-flash",
+      apiKey: "adminkey",
+      pricing: { inPerMTok: 3, outPerMTok: 15, pointsPerUsd: 100_000 },
+    });
+
+    await POST(req(metadataBody));
+
+    // 1200/1e6*3 + 150/1e6*15 = 0.00585 USD × 100000 = 585 poin
+    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ cost: 585 }));
   });
 
   it("200 keyword path: text-only messages, no image_url", async () => {
