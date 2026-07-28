@@ -35,8 +35,10 @@ masih ada, `context.ts` masih menyatakan agen tidak punya tool). Spec ini:
 pembaruan system prompt, metering poin lintas putaran, pembaruan UI yang menampilkan
 tanggal order.
 
-**Tidak masuk:** `get_sales_summary`, `update_order_status`, recap harian, pengurangan
-stok otomatis saat penjualan, tool hapus/undo, konfirmasi sebelum simpan.
+**Tidak masuk:** recap harian, tool hapus permanen, konfirmasi sebelum simpan.
+
+`get_sales_summary`, `update_order_status`, dan pengurangan stok otomatis semula di luar
+cakupan, lalu **dimasukkan pada hari yang sama** — lihat §12.
 
 ## 4. Keputusan yang sudah diambil
 
@@ -233,3 +235,91 @@ sedikit — perilaku yang sama seperti sekarang.
   default `"new"` + `now()`; query laporan memakai `occurredAt`.
 - Komponen/route seperti konvensi repo: `tsc` + `npm run build` + pemeriksaan manual
   (repo ini tidak punya harness test React).
+
+---
+
+## 12. Perluasan cakupan (disetujui 2026-07-28, sesi lanjutan)
+
+Tiga hal yang tadinya ditunda dimasukkan atas permintaan pemilik. Yang **tetap** di luar
+cakupan: recap harian dan tool hapus permanen.
+
+### 12.1 Pengurangan stok di `createOrder`
+
+Dipasang di `src/lib/shop.ts`, **bukan** di tool agen, supaya mencatat lewat chat dan
+lewat `/transaksi` memberi hasil yang sama. Kalau hanya agen yang mengurangi stok, angka
+stok bergantung pada lewat mana transaksi dicatat — sumber kebingungan yang sulit
+dilacak.
+
+Semua dalam satu `prisma.$transaction`: buat order, lalu kurangi stok setiap item.
+
+- Hanya item dengan `productId` (produk terdaftar) **dan** `stock !== null`. Item bebas
+  dan produk yang stoknya tidak dilacak dilewati.
+- Stok berhenti di **0**, tidak pernah minus.
+- Penjualan **tidak pernah gagal** karena stok kurang — data stok warung sering basi, dan
+  transaksi yang sudah terjadi lebih penting daripada akurasi stok.
+
+`createOrder` mengembalikan objek order seperti sebelumnya **ditambah**
+`stockWarnings: { productName, requested, remaining }[]`, hanya berisi item yang stoknya
+tidak cukup. Bentuk lama tetap utuh sehingga `/api/shop/orders` hanya mendapat satu key
+tambahan yang tidak dipakai UI. Agen memakainya untuk memperingatkan pemilik.
+
+**Perubahan perilaku di luar agen:** halaman `/transaksi` yang tadinya tidak menyentuh
+stok kini mengurangi stok. Ini konsekuensi yang diterima, bukan efek samping.
+
+**Stok TIDAK dikembalikan** saat order dibatalkan atau dihapus (keputusan eksplisit:
+opsi dengan pemulihan stok ditolak karena rumit — status lama→baru harus dilacak agar
+tidak dikurangi/dikembalikan dua kali). Koreksi stok setelah pembatalan dilakukan manual
+di `/produk`.
+
+### 12.2 `get_sales_summary`
+
+Fungsi baru `getSalesSummaryForRange(userId, { from, to })` di `shop-dashboard.ts` —
+diletakkan di sana, bukan di `tools.ts`, supaya bisa diuji sendiri dan dipakai ulang oleh
+recap harian nanti. Mengembalikan omzet (`paid` + `done`), jumlah transaksi, dan produk
+terlaris pada rentang itu, semuanya difilter `occurredAt`.
+
+Tool `get_sales_summary` menerima `period`: `today` | `week` | `month`, dihitung dalam
+**zona waktu profil** memakai helper zona waktu di `tools.ts` yang dinaikkan menjadi
+`zonedTime(dateStr, hour, timeZone)`:
+
+- `today` = sejak tengah malam lokal sampai sekarang
+- `week` = 7 hari lokal terakhir termasuk hari ini
+- `month` = sejak tanggal 1 bulan ini (lokal)
+
+Aritmetika "7 hari" memakai selisih 24 jam dari awal hari lokal. Untuk zona tanpa DST
+(termasuk `Asia/Jakarta`) ini tepat; di zona dengan DST batasnya bisa bergeser satu jam.
+Diterima — ini ringkasan penjualan, bukan pembukuan pajak.
+
+### 12.3 `update_order_status`
+
+Argumen `order_id` + `status`. Menumpang `updateOrderStatus` yang sudah ada; fungsi itu
+sudah men-scope `userId` dan mengembalikan `null` kalau order bukan milik pemilik →
+menjadi `{ ok: false, error }`.
+
+Alur "ubah order tadi jadi lunas": model memanggil `list_recent_orders` untuk mendapat
+id, lalu `update_order_status`. Anggaran 5 putaran cukup.
+
+**"Hapus order itu" dilayani sebagai pembatalan** (`status: cancelled`), bukan hapus
+permanen. Alasannya: agen menyimpan langsung tanpa konfirmasi, jadi tool hapus permanen
+berarti satu salah baca model bisa menghilangkan transaksi tanpa bisa dibatalkan. Hapus
+permanen tetap lewat `/transaksi`.
+
+### 12.4 Prompt dan jumlah tool
+
+`SHOP_TOOLS` menjadi **6**. Dua baris panduan ditambahkan: pakai `get_sales_summary`
+untuk pertanyaan omzet (jangan menjumlahkan sendiri dari daftar order), dan "hapus"
+berarti membatalkan — bukan menghapus permanen.
+
+Konsekuensi poin: definisi 6 tool terkirim setiap putaran, jadi satu turn agak lebih
+mahal daripada 4 tool.
+
+### 12.5 Testing tambahan
+
+- `tests/lib/shop-create-order.test.ts` — stok berkurang untuk produk terdaftar, produk
+  `stock: null` tidak disentuh, item bebas dilewati, clamp di 0 dengan `stockWarnings`
+  terisi, dan semuanya terjadi dalam satu transaksi.
+- `tests/lib/shop-dashboard.test.ts` — `getSalesSummaryForRange`: omzet hanya dari
+  `paid`+`done`, jumlah transaksi, produk terlaris.
+- `tests/lib/agent/tools.test.ts` — batas periode `today`/`week`/`month` di
+  `Asia/Jakarta`; `update_order_status` untuk kasus sukses, bukan milik pemilik, dan
+  status tidak valid; daftar tool menjadi 6.
