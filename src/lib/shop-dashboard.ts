@@ -54,6 +54,48 @@ export async function getDashboardSummary(userId: string, now: Date = new Date()
   };
 }
 
+export interface SalesSummary {
+  revenue: number;
+  /** Hanya transaksi yang menghasilkan omzet (paid/done) — order dibatalkan tidak dihitung. */
+  orderCount: number;
+  topProducts: { productName: string; qtySold: number }[];
+}
+
+/**
+ * Ringkasan penjualan untuk rentang tanggal bebas, difilter `occurredAt` (tanggal
+ * transaksi menurut pemilik, bukan waktu pencatatan).
+ *
+ * Dipakai tool `get_sales_summary` milik agen, dan disiapkan untuk recap harian nanti.
+ */
+export async function getSalesSummaryForRange(
+  userId: string,
+  range: { from: Date; to: Date }
+): Promise<SalesSummary> {
+  const where = {
+    userId,
+    status: { in: REVENUE_STATUSES },
+    occurredAt: { gte: range.from, lte: range.to },
+  };
+
+  const [revenueAgg, orderCount, topItems] = await Promise.all([
+    prisma.shopOrder.aggregate({ _sum: { total: true }, where }),
+    prisma.shopOrder.count({ where }),
+    prisma.shopOrderItem.groupBy({
+      by: ["productName"],
+      where: { order: where },
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: "desc" } },
+      take: 5,
+    }),
+  ]);
+
+  return {
+    revenue: revenueAgg._sum.total ?? 0,
+    orderCount,
+    topProducts: topItems.map((t) => ({ productName: t.productName, qtySold: t._sum.qty ?? 0 })),
+  };
+}
+
 export async function getSalesSeries(userId: string, days = 30, now: Date = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
   const orders = await prisma.shopOrder.findMany({

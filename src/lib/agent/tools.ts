@@ -4,10 +4,12 @@ import {
   updateProduct,
   listProductsPaged,
   listOrdersPaged,
+  updateOrderStatus,
   isOrderStatus,
   type OrderItemInput,
   type OrderStatus,
 } from "@/lib/shop";
+import { getSalesSummaryForRange } from "@/lib/shop-dashboard";
 
 /**
  * Tool toko untuk agen. Dua aturan yang tidak boleh dilanggar:
@@ -129,6 +131,39 @@ export const SHOP_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_sales_summary",
+      description:
+        "Ringkasan penjualan: omzet, jumlah transaksi, dan produk terlaris. Pakai ini untuk pertanyaan omzet/penjualan — jangan menjumlahkan sendiri dari daftar order.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: {
+            type: "string",
+            description: "today (default) | week (7 hari terakhir) | month (sejak tanggal 1)",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_order_status",
+      description:
+        "Ubah status order, mis. menandai lunas (paid) atau membatalkan (cancelled). Ambil order_id lewat list_recent_orders lebih dulu. Permintaan 'hapus order' dilayani dengan status cancelled — hapus permanen hanya bisa lewat web.",
+      parameters: {
+        type: "object",
+        properties: {
+          order_id: { type: "string", description: "Id order dari list_recent_orders" },
+          status: { type: "string", description: "new | paid | done | cancelled" },
+        },
+        required: ["order_id", "status"],
+      },
+    },
+  },
 ];
 
 type ToolResult = Record<string, unknown>;
@@ -160,11 +195,13 @@ function formatDateInZone(date: Date, timeZone: string): string {
 }
 
 /**
- * Instant yang jam lokalnya (di `timeZone`) jatuh pada `dateStr` pukul 12:00.
- * Tengah hari dipilih supaya konversi ke UTC tidak pernah menggeser tanggalnya.
+ * Instant yang jam lokalnya (di `timeZone`) jatuh pada `dateStr` pukul `hour`.
+ *
+ * Untuk tanggal transaksi dipakai jam 12:00, supaya konversi ke UTC tidak pernah
+ * menggeser tanggalnya. Untuk batas periode dipakai jam 0 (tengah malam lokal).
  */
-function noonInZone(dateStr: string, timeZone: string): Date {
-  const guess = new Date(`${dateStr}T12:00:00Z`);
+function zonedTime(dateStr: string, hour: number, timeZone: string): Date {
+  const guess = new Date(`${dateStr}T${String(hour).padStart(2, "0")}:00:00Z`);
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     hour12: false,
@@ -194,7 +231,7 @@ function parseOccurredAt(dateStr: string, ctx: ToolContext): DateResult {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return { ok: false, error: "Format tanggal harus YYYY-MM-DD, contoh 2026-06-15." };
   }
-  const occurredAt = noonInZone(dateStr, ctx.timezone);
+  const occurredAt = zonedTime(dateStr, 12, ctx.timezone);
   if (Number.isNaN(occurredAt.getTime())) {
     return { ok: false, error: `Tanggal ${dateStr} tidak valid.` };
   }
@@ -374,6 +411,10 @@ async function toolRecordSale(ctx: ToolContext, args: any): Promise<ToolResult> 
     ...(occurredAt ? { occurredAt } : {}),
   });
 
+  // Hanya disertakan kalau ada yang kurang, supaya model tidak menyinggung stok pada
+  // penjualan normal.
+  const warnings = order.stockWarnings ?? [];
+
   return {
     ok: true,
     order: {
@@ -389,6 +430,15 @@ async function toolRecordSale(ctx: ToolContext, args: any): Promise<ToolResult> 
         subtotal: i.qty * i.unitPrice,
       })),
     },
+    ...(warnings.length > 0
+      ? {
+          stock_warnings: warnings.map((w) => ({
+            product_name: w.productName,
+            requested: w.requested,
+            available: w.available,
+          })),
+        }
+      : {}),
   };
 }
 
@@ -418,11 +468,69 @@ async function toolListRecentOrders(ctx: ToolContext, args: any): Promise<ToolRe
   };
 }
 
+const PERIODS = ["today", "week", "month"] as const;
+type Period = (typeof PERIODS)[number];
+
+/**
+ * Batas periode dihitung di zona waktu pemilik, bukan zona server: "hari ini" harus
+ * berarti hari ini menurut pemilik.
+ *
+ * Aritmetika "7 hari" memakai selisih 24 jam dari tengah malam lokal. Untuk zona tanpa
+ * DST (termasuk Asia/Jakarta) ini tepat; di zona dengan DST batasnya bisa bergeser satu
+ * jam — diterima, ini ringkasan penjualan.
+ */
+function periodRange(period: Period, ctx: ToolContext): { from: Date; to: Date } {
+  const now = ctx.now ?? new Date();
+  const todayStr = formatDateInZone(now, ctx.timezone);
+  const startOfToday = zonedTime(todayStr, 0, ctx.timezone);
+
+  if (period === "today") return { from: startOfToday, to: now };
+  if (period === "week") {
+    return { from: new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000), to: now };
+  }
+  const firstOfMonth = `${todayStr.slice(0, 7)}-01`;
+  return { from: zonedTime(firstOfMonth, 0, ctx.timezone), to: now };
+}
+
+async function toolGetSalesSummary(ctx: ToolContext, args: any): Promise<ToolResult> {
+  const period = (args.period ?? "today") as Period;
+  if (!PERIODS.includes(period)) {
+    return fail("Periode harus salah satu dari: today, week, month.");
+  }
+
+  const summary = await getSalesSummaryForRange(ctx.userId, periodRange(period, ctx));
+  return {
+    ok: true,
+    period,
+    revenue: summary.revenue,
+    order_count: summary.orderCount,
+    top_products: summary.topProducts.map((p) => ({ name: p.productName, qty_sold: p.qtySold })),
+  };
+}
+
+async function toolUpdateOrderStatus(ctx: ToolContext, args: any): Promise<ToolResult> {
+  const orderId = String(args.order_id ?? "").trim();
+  if (!orderId) {
+    return fail("order_id wajib diisi — ambil dulu lewat list_recent_orders.");
+  }
+  if (!isOrderStatus(args.status)) {
+    return fail("Status harus salah satu dari: new, paid, done, cancelled.");
+  }
+
+  const updated = await updateOrderStatus(ctx.userId, orderId, args.status);
+  if (!updated) {
+    return fail("Order tidak ditemukan. Cek lagi lewat list_recent_orders.");
+  }
+  return { ok: true, order: { id: updated.id, status: updated.status } };
+}
+
 const HANDLERS: Record<string, (ctx: ToolContext, args: any) => Promise<ToolResult>> = {
   list_products: toolListProducts,
   add_product: toolAddProduct,
   record_sale: toolRecordSale,
   list_recent_orders: toolListRecentOrders,
+  get_sales_summary: toolGetSalesSummary,
+  update_order_status: toolUpdateOrderStatus,
 };
 
 export async function executeTool(

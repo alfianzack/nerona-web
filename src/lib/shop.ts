@@ -141,29 +141,87 @@ function computeTotal(items: OrderItemInput[]): number {
   return items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
 }
 
+export interface StockWarning {
+  productName: string;
+  requested: number;
+  /** Stok yang tersedia SEBELUM penjualan ini dicatat. */
+  available: number;
+}
+
+/**
+ * Mengurangi stok produk terdaftar untuk satu penjualan.
+ *
+ * Aturan yang disengaja: penjualan TIDAK PERNAH gagal karena stok kurang — data stok
+ * warung sering basi, dan transaksi yang sudah terjadi lebih penting daripada akurasi
+ * stok. Stok berhenti di 0, dan kekurangannya dilaporkan sebagai peringatan supaya
+ * pemilik bisa membetulkan.
+ *
+ * Produk dengan `stock: null` (tidak dilacak) dan item bebas (tanpa productId)
+ * dilewati. Pencarian ber-scope `userId`, jadi productId milik tenant lain diabaikan.
+ */
+async function applyStockForSale(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  items: OrderItemInput[]
+): Promise<StockWarning[]> {
+  const wanted = new Map<string, number>();
+  for (const item of items) {
+    if (!item.productId) continue;
+    wanted.set(item.productId, (wanted.get(item.productId) ?? 0) + item.qty);
+  }
+  if (wanted.size === 0) return [];
+
+  const products = await tx.shopProduct.findMany({
+    where: { userId, id: { in: [...wanted.keys()] } },
+    select: { id: true, name: true, stock: true },
+  });
+
+  const warnings: StockWarning[] = [];
+  for (const product of products) {
+    if (product.stock === null) continue; // stok tidak dilacak
+    const requested = wanted.get(product.id) ?? 0;
+    if (product.stock < requested) {
+      warnings.push({ productName: product.name, requested, available: product.stock });
+    }
+    await tx.shopProduct.update({
+      where: { id: product.id },
+      data: { stock: Math.max(0, product.stock - requested) },
+    });
+  }
+  return warnings;
+}
+
 export async function createOrder(userId: string, input: OrderInput) {
   const items = input.items.filter((item) => item.productName && item.qty > 0);
   const total = computeTotal(items);
-  return prisma.shopOrder.create({
-    data: {
-      userId,
-      customerName: input.customerName ?? null,
-      note: input.note ?? null,
-      total,
-      // Keduanya dibiarkan undefined kalau tidak dikirim, supaya default schema yang
-      // berlaku ("new" / now()) dan pemanggil dari web tidak berubah perilakunya.
-      ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
-      items: {
-        create: items.map((item) => ({
-          productId: item.productId ?? null,
-          productName: item.productName,
-          qty: item.qty,
-          unitPrice: item.unitPrice,
-        })),
+
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.shopOrder.create({
+      data: {
+        userId,
+        customerName: input.customerName ?? null,
+        note: input.note ?? null,
+        total,
+        // Keduanya dibiarkan undefined kalau tidak dikirim, supaya default schema yang
+        // berlaku ("new" / now()) dan pemanggil dari web tidak berubah perilakunya.
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
+        items: {
+          create: items.map((item) => ({
+            productId: item.productId ?? null,
+            productName: item.productName,
+            qty: item.qty,
+            unitPrice: item.unitPrice,
+          })),
+        },
       },
-    },
-    include: { items: true },
+      include: { items: true },
+    });
+
+    // Bentuk lama tetap utuh; `stockWarnings` hanya key tambahan, jadi pemanggil web
+    // (dan respons /api/shop/orders) tidak rusak.
+    const stockWarnings = await applyStockForSale(tx, userId, items);
+    return { ...order, stockWarnings };
   });
 }
 

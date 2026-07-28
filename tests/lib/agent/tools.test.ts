@@ -9,8 +9,11 @@ vi.mock("@/lib/shop", async (importOriginal) => {
     updateProduct: vi.fn(),
     createOrder: vi.fn(),
     listOrdersPaged: vi.fn(),
+    updateOrderStatus: vi.fn(),
   };
 });
+
+vi.mock("@/lib/shop-dashboard", () => ({ getSalesSummaryForRange: vi.fn() }));
 
 import { executeTool, SHOP_TOOLS } from "@/lib/agent/tools";
 import {
@@ -19,7 +22,9 @@ import {
   updateProduct,
   createOrder,
   listOrdersPaged,
+  updateOrderStatus,
 } from "@/lib/shop";
+import { getSalesSummaryForRange } from "@/lib/shop-dashboard";
 
 const ctx = {
   userId: "user-1",
@@ -54,15 +59,23 @@ beforeEach(() => {
     })
   );
   (listOrdersPaged as any).mockResolvedValue({ rows: [], total: 0 });
+  (updateOrderStatus as any).mockResolvedValue({ id: "o1", status: "paid", total: 20_000 });
+  (getSalesSummaryForRange as any).mockResolvedValue({
+    revenue: 32_000,
+    orderCount: 2,
+    topProducts: [{ productName: "Nasi Goreng", qtySold: 5 }],
+  });
 });
 
 describe("SHOP_TOOLS", () => {
-  it("exposes exactly the four tools in OpenAI function format", () => {
+  it("exposes exactly the six tools in OpenAI function format", () => {
     expect(SHOP_TOOLS.map((t) => t.function.name)).toEqual([
       "list_products",
       "add_product",
       "record_sale",
       "list_recent_orders",
+      "get_sales_summary",
+      "update_order_status",
     ]);
     for (const tool of SHOP_TOOLS) {
       expect(tool.type).toBe("function");
@@ -377,5 +390,109 @@ describe("list_recent_orders", () => {
 
   it("rejects an invalid status filter", async () => {
     expect((await call("list_recent_orders", { status: "lunas" })).ok).toBe(false);
+  });
+});
+
+describe("record_sale — peringatan stok", () => {
+  it("passes the stock warning through so the agent can tell the owner", async () => {
+    productsMatching([{ id: "p1", name: "Nasi Goreng", price: 10_000, stock: 1 }]);
+    (createOrder as any).mockResolvedValue({
+      id: "o1",
+      customerName: null,
+      status: "paid",
+      total: 30_000,
+      occurredAt: ctx.now,
+      items: [{ productName: "Nasi Goreng", qty: 3, unitPrice: 10_000 }],
+      stockWarnings: [{ productName: "Nasi Goreng", requested: 3, available: 1 }],
+    });
+
+    const result = await call("record_sale", { items: [{ product_name: "Nasi Goreng", qty: 3 }] });
+
+    expect(result.ok).toBe(true);
+    expect(result.stock_warnings).toEqual([
+      { product_name: "Nasi Goreng", requested: 3, available: 1 },
+    ]);
+  });
+
+  it("omits the key entirely when no stock ran short", async () => {
+    productsMatching([{ id: "p1", name: "Nasi Goreng", price: 10_000, stock: 10 }]);
+    const result = await call("record_sale", { items: [{ product_name: "Nasi Goreng", qty: 1 }] });
+    expect(result.stock_warnings).toBeUndefined();
+  });
+});
+
+describe("get_sales_summary", () => {
+  function rangeArg() {
+    return (getSalesSummaryForRange as any).mock.calls[0][1];
+  }
+
+  it("returns revenue, transaction count, and best sellers", async () => {
+    const result = await call("get_sales_summary", { period: "today" });
+
+    expect(result).toEqual({
+      ok: true,
+      period: "today",
+      revenue: 32_000,
+      order_count: 2,
+      top_products: [{ name: "Nasi Goreng", qty_sold: 5 }],
+    });
+    expect(getSalesSummaryForRange).toHaveBeenCalledWith("user-1", expect.any(Object));
+  });
+
+  it("starts today at local midnight in the profile timezone", async () => {
+    // ctx.now = 2026-07-28T03:00:00Z = 10:00 WIB, jadi tengah malam lokal = 27 Jul 17:00Z
+    await call("get_sales_summary", { period: "today" });
+    expect(rangeArg().from.toISOString()).toBe("2026-07-27T17:00:00.000Z");
+    expect(rangeArg().to.getTime()).toBe(ctx.now.getTime());
+  });
+
+  it("covers the last 7 local days for week, including today", async () => {
+    await call("get_sales_summary", { period: "week" });
+    // tengah malam lokal 22 Juli = 21 Jul 17:00Z
+    expect(rangeArg().from.toISOString()).toBe("2026-07-21T17:00:00.000Z");
+  });
+
+  it("starts month at the 1st of the current local month", async () => {
+    await call("get_sales_summary", { period: "month" });
+    // tengah malam lokal 1 Juli = 30 Jun 17:00Z
+    expect(rangeArg().from.toISOString()).toBe("2026-06-30T17:00:00.000Z");
+  });
+
+  it("defaults to today when no period is given", async () => {
+    const result = await call("get_sales_summary", {});
+    expect(result.period).toBe("today");
+  });
+
+  it("rejects an unknown period", async () => {
+    const result = await call("get_sales_summary", { period: "tahun" });
+    expect(result.ok).toBe(false);
+    expect(getSalesSummaryForRange).not.toHaveBeenCalled();
+  });
+});
+
+describe("update_order_status", () => {
+  it("updates an order the owner owns", async () => {
+    const result = await call("update_order_status", { order_id: "o1", status: "paid" });
+
+    expect(updateOrderStatus).toHaveBeenCalledWith("user-1", "o1", "paid");
+    expect(result).toEqual({ ok: true, order: { id: "o1", status: "paid" } });
+  });
+
+  it("treats cancelled as the way to \"delete\" from chat", async () => {
+    (updateOrderStatus as any).mockResolvedValue({ id: "o1", status: "cancelled" });
+    const result = await call("update_order_status", { order_id: "o1", status: "cancelled" });
+    expect(result.order.status).toBe("cancelled");
+  });
+
+  it("fails when the order is not the owner's", async () => {
+    (updateOrderStatus as any).mockResolvedValue(null);
+    const result = await call("update_order_status", { order_id: "punya-orang-lain", status: "paid" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects a missing order_id or an invalid status", async () => {
+    expect((await call("update_order_status", { status: "paid" })).ok).toBe(false);
+    expect((await call("update_order_status", { order_id: "o1", status: "lunas" })).ok).toBe(false);
+    expect(updateOrderStatus).not.toHaveBeenCalled();
   });
 });

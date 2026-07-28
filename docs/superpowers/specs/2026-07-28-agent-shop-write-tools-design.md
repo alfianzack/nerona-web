@@ -259,7 +259,7 @@ Semua dalam satu `prisma.$transaction`: buat order, lalu kurangi stok setiap ite
   transaksi yang sudah terjadi lebih penting daripada akurasi stok.
 
 `createOrder` mengembalikan objek order seperti sebelumnya **ditambah**
-`stockWarnings: { productName, requested, remaining }[]`, hanya berisi item yang stoknya
+`stockWarnings: { productName, requested, available }[]`, hanya berisi item yang stoknya
 tidak cukup. Bentuk lama tetap utuh sehingga `/api/shop/orders` hanya mendapat satu key
 tambahan yang tidak dipakai UI. Agen memakainya untuk memperingatkan pemilik.
 

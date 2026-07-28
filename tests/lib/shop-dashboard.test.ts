@@ -8,7 +8,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { getDashboardSummary, getSalesSeries } from "@/lib/shop-dashboard";
+import { getDashboardSummary, getSalesSeries, getSalesSummaryForRange } from "@/lib/shop-dashboard";
 import { prisma } from "@/lib/prisma";
 
 describe("getDashboardSummary", () => {
@@ -87,5 +87,85 @@ describe("getSalesSeries", () => {
     const byDate = Object.fromEntries(series.map((d) => [d.date, d.revenue]));
     expect(byDate["2026-07-19"]).toBe(25000);
     expect(byDate["2026-07-18"]).toBe(9000);
+  });
+});
+
+describe("getSalesSummaryForRange", () => {
+  const from = new Date("2026-07-28T00:00:00.000Z");
+  const to = new Date("2026-07-28T23:59:59.999Z");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (prisma.shopOrder.aggregate as any).mockResolvedValue({ _sum: { total: 32_000 } });
+    (prisma.shopOrder.count as any).mockResolvedValue(2);
+    (prisma.shopOrderItem.groupBy as any).mockResolvedValue([
+      { productName: "Nasi Goreng", _sum: { qty: 5 } },
+      { productName: "Mie Goreng", _sum: { qty: 2 } },
+    ]);
+  });
+
+  it("returns revenue, transaction count, and best sellers for the range", async () => {
+    const summary = await getSalesSummaryForRange("user-1", { from, to });
+
+    expect(summary).toEqual({
+      revenue: 32_000,
+      orderCount: 2,
+      topProducts: [
+        { productName: "Nasi Goreng", qtySold: 5 },
+        { productName: "Mie Goreng", qtySold: 2 },
+      ],
+    });
+  });
+
+  it("counts revenue only from paid/done orders, filtered on occurredAt", async () => {
+    await getSalesSummaryForRange("user-1", { from, to });
+
+    expect(prisma.shopOrder.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: "user-1",
+          status: { in: ["paid", "done"] },
+          occurredAt: { gte: from, lte: to },
+        },
+      })
+    );
+  });
+
+  it("counts only the transactions that produced the revenue, not cancelled ones", async () => {
+    await getSalesSummaryForRange("user-1", { from, to });
+
+    expect(prisma.shopOrder.count).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1",
+        status: { in: ["paid", "done"] },
+        occurredAt: { gte: from, lte: to },
+      },
+    });
+  });
+
+  it("scopes best sellers to the same owner, statuses, and range", async () => {
+    await getSalesSummaryForRange("user-1", { from, to });
+
+    expect(prisma.shopOrderItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          order: {
+            userId: "user-1",
+            status: { in: ["paid", "done"] },
+            occurredAt: { gte: from, lte: to },
+          },
+        },
+      })
+    );
+  });
+
+  it("reports zero revenue rather than null when there are no sales", async () => {
+    (prisma.shopOrder.aggregate as any).mockResolvedValue({ _sum: { total: null } });
+    (prisma.shopOrder.count as any).mockResolvedValue(0);
+    (prisma.shopOrderItem.groupBy as any).mockResolvedValue([]);
+
+    const summary = await getSalesSummaryForRange("user-1", { from, to });
+
+    expect(summary).toEqual({ revenue: 0, orderCount: 0, topProducts: [] });
   });
 });
