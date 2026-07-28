@@ -186,9 +186,11 @@ curl -i -H "Authorization: Bearer ISI_CRON_SECRET" https://domain-anda.com/api/a
 1. **Isi AI settings** di `/admin/pengaturan`: model + API key Sumopod.
    Pastikan modelnya **vision-capable** — extension mengirim gambar. Model non-vision
    akan gagal di semua fitur metadata.
-2. **Tambahkan harga model** ke `MODEL_PRICES` di `src/lib/agent/pricing.ts` kalau
-   memakai model di luar 3 entri yang ada. Model tak dikenal ditagih memakai tarif
-   **termurah**, jadi poin tenant kurang terpotong.
+2. **Isi tarif poin** di `/admin/pengaturan` → Koneksi AI: harga input & output (USD per
+   1jt token, sesuai harga model yang dipakai) dan poin per USD. Kalau dikosongkan,
+   yang dipakai adalah env (`AI_PRICE_IN`/`AI_PRICE_OUT`/`POINTS_PER_USD`), lalu default
+   kode (tarif `gemini-2.0-flash-lite`) — jadi memakai model mahal tanpa mengisi tarif
+   berarti poin tenant **kurang terpotong**.
 3. **Update extension** (`nerona_medata`):
    - `access/access-config.js` → `neronaWebBaseUrl: "https://domain-anda.com"`
    - `manifest.json` → hapus `http://localhost/*` dan `http://127.0.0.1/*`
