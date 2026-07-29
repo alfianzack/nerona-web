@@ -13,7 +13,7 @@
  *   npm run backfill:metadata-points -- --write  # applies
  */
 import { prisma } from "../src/lib/prisma";
-import { creditPlanPoints, normalizePlan } from "../src/lib/plan-points";
+import { creditPlanPoints, normalizePlan, planGrantFilter } from "../src/lib/plan-points";
 
 const WRITE = process.argv.includes("--write");
 
@@ -45,12 +45,13 @@ async function main() {
     return;
   }
 
+  // planGrantFilter is shared with the lifetime guard in orders.ts, so the
+  // dependency on note wording lives in one place. It matches renewals too,
+  // which is the correct reading of "has this account ever been granted" — the
+  // earlier startsWith("Bonus …") missed an account whose only grant was a
+  // renewal and would have credited it again.
   const alreadyGranted = await prisma.pointTransaction.findMany({
-    where: {
-      userId: { in: [...byUser.keys()] },
-      reason: "plan_grant",
-      note: { startsWith: "Bonus paket Metadata" },
-    },
+    where: { userId: { in: [...byUser.keys()] }, ...planGrantFilter("metadata") },
     select: { userId: true },
   });
   const skip = new Set(alreadyGranted.map((row) => row.userId));

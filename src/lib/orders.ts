@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
 import { monthlyExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
-import { creditPlanPoints } from "@/lib/plan-points";
+import { creditPlanPoints, hasEverReceivedPlanGrant } from "@/lib/plan-points";
 
 export type Product = "metadata" | "agent";
 
@@ -52,6 +52,16 @@ async function activateFreeMetadata(userId: string): Promise<SubmitOrderResult> 
       data: { ...data, userId, licenseKey: await generateLicenseKey() },
     });
   }
+
+  // This path writes the license directly rather than through grantLicense, so
+  // it never picked up the crediting added there — a Free metadata user had an
+  // active license and an empty wallet while api/extension/generate charges per
+  // call. The trial is LIFETIME, so the ledger decides: the early return above
+  // stops a repeat submit, but only this stops revoke-then-reactivate.
+  if (!(await hasEverReceivedPlanGrant(userId, "metadata"))) {
+    await creditPlanPoints({ userId, product: "metadata", plan: "free" });
+  }
+
   return { ok: true, kind: "free_activated" };
 }
 
@@ -73,9 +83,12 @@ async function activateFreeAgent(userId: string): Promise<SubmitOrderResult> {
       data: { userId, status: "active", plan: "free", planExpiresAt: null },
     });
   }
-  // Only reached on a fresh activation — an already-active profile returns
-  // above, so this cannot be farmed by re-submitting.
-  await creditPlanPoints({ userId, product: "agent", plan: "free" });
+  // The trial is LIFETIME. The early return above stops a repeat submit, but a
+  // disabled-then-reactivated profile would fall through to here and collect a
+  // second allowance, so the ledger is what decides "ever".
+  if (!(await hasEverReceivedPlanGrant(userId, "agent"))) {
+    await creditPlanPoints({ userId, product: "agent", plan: "free" });
+  }
   return { ok: true, kind: "free_activated" };
 }
 

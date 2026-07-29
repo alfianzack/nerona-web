@@ -12,7 +12,7 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(),
       findMany: vi.fn(),
     },
-    pointTransaction: { create: vi.fn() },
+    pointTransaction: { create: vi.fn(), findFirst: vi.fn(async () => null) },
     // creditPlanPoints reads the configured allowance; null means the code
     // default applies, which is what these expectations are written against.
     setting: { findUnique: vi.fn(async () => null) },
@@ -196,7 +196,7 @@ describe("fulfillOrderRequest", () => {
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith({
       data: {
         userId: "user-1",
-        delta: 11_000,
+        delta: 600,
         reason: "plan_grant",
         note: "Bonus paket Agent Pro",
         createdById: "admin-1",
@@ -219,7 +219,7 @@ describe("fulfillOrderRequest", () => {
 
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ delta: 11_000, note: "Perpanjangan paket Agent Pro" }),
+        data: expect.objectContaining({ delta: 600, note: "Perpanjangan paket Agent Pro" }),
       })
     );
   });
@@ -396,5 +396,73 @@ describe("fulfillOrderRequest — metadata points", () => {
       "plan-pro",
       expect.objectContaining({ isRenewal: false })
     );
+  });
+});
+
+describe("free activation — lifetime allowance", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue(null);
+  });
+
+  it("credits the metadata trial on a first free activation", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({
+      id: "plan-free",
+      marketplaces: "adobe",
+      rejectAnalyzer: false,
+    });
+    (prisma.license.findFirst as any).mockResolvedValue(null);
+    (generateLicenseKey as any).mockResolvedValue("KEY-FREE");
+
+    const result = await submitOrder("user-1", "metadata", "Free");
+
+    expect(result).toEqual({ ok: true, kind: "free_activated" });
+    expect(prisma.pointTransaction.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        delta: 10,
+        reason: "plan_grant",
+        note: "Bonus paket Metadata Free",
+        createdById: null,
+      },
+    });
+  });
+
+  it("never credits the metadata trial twice, even after a revoke", async () => {
+    // A prior grant exists, so this is a re-activation of a revoked license —
+    // the path the old "already active" guard let through.
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue({ id: "pt-old" });
+    (prisma.plan.findFirst as any).mockResolvedValue({
+      id: "plan-free",
+      marketplaces: "adobe",
+      rejectAnalyzer: false,
+    });
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "lic-1", status: "revoked" });
+
+    await submitOrder("user-1", "metadata", "Free");
+
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it("credits the agent trial on a first free activation", async () => {
+    (prisma.agentProfile.findUnique as any).mockResolvedValue(null);
+
+    const result = await submitOrder("user-1", "agent", "Free");
+
+    expect(result).toEqual({ ok: true, kind: "free_activated" });
+    expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ delta: 15, note: "Bonus paket Agent Free" }),
+      })
+    );
+  });
+
+  it("never credits the agent trial twice", async () => {
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue({ id: "pt-old" });
+    (prisma.agentProfile.findUnique as any).mockResolvedValue(null);
+
+    await submitOrder("user-1", "agent", "Free");
+
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
   });
 });

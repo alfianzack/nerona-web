@@ -3,27 +3,23 @@ import { prisma } from "@/lib/prisma";
 export type PlanProduct = "metadata" | "agent";
 
 /**
- * Points granted when a plan is activated or renewed.
+ * Points granted when a plan is activated or renewed. Set by the owner.
  *
- * Agent figures cover each plan's monthly message cap in agent/limits.ts
- * (free 50, pro 500) at roughly 21 points per reply. Business has no message
- * cap, so its allowance is a deliberate ceiling (~1,400 replies) that still
- * meters runaway use.
+ * Free is a LIFETIME trial, not a monthly allowance: an account receives it
+ * once and never again — see hasEverReceivedPlanGrant and the free activation
+ * paths in orders.ts. When it runs out the user upgrades. Paid plans are the
+ * opposite: credited on every activation and every renewal.
  *
- * Metadata figures answer the same monthly quotas in prisma/seed.ts (free 50,
- * pro 500 generates, business unlimited), but an extension generate costs far
- * less than an agent reply — roughly 1-5 points against ~21 — so the
- * allowances are correspondingly smaller.
- *
- * Both gates stay independent by design: a tenant must be under their quota
- * AND hold points.
+ * Free is deliberately far below Pro. It has to be — a Free allowance that
+ * matches or beats Pro makes paying pointless, which is what the earlier
+ * figures did once these paid numbers were chosen.
  *
  * These are defaults only. The owner overrides them per plan in Pengaturan;
  * see pointsForPlan for the resolution order.
  */
 export const DEFAULT_PLAN_POINTS: Record<PlanProduct, Record<string, number>> = {
-  metadata: { free: 500, pro: 5_000, business: 15_000 },
-  agent: { free: 1_000, pro: 11_000, business: 30_000 },
+  metadata: { free: 10, pro: 500, business: 1_000 },
+  agent: { free: 15, pro: 600, business: 1_500 },
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -115,6 +111,40 @@ export async function creditPlanPoints(params: {
   });
 
   return amount;
+}
+
+/**
+ * Prisma filter matching every plan grant for one product — initial and renewal
+ * alike, since both notes contain "paket <Product>".
+ *
+ * This is the ONE place that depends on the note wording built in
+ * creditPlanPoints a few lines above. The lifetime guard in orders.ts and
+ * scripts/backfill-metadata-plan-points.ts both go through here, so changing
+ * that wording means changing this and nothing else. Get it wrong and the
+ * lifetime guard stops recognising past grants, handing Free points a second
+ * time to accounts that already spent theirs.
+ */
+export function planGrantFilter(product: PlanProduct): {
+  reason: string;
+  note: { contains: string };
+} {
+  return { reason: "plan_grant", note: { contains: `paket ${PRODUCT_LABELS[product]}` } };
+}
+
+/**
+ * Has this account ever been credited for this product? Backs the lifetime Free
+ * allowance: "already active" only stops a repeat submit, not revoke-then-
+ * reactivate, so the ledger is the only honest source for "ever".
+ */
+export async function hasEverReceivedPlanGrant(
+  userId: string,
+  product: PlanProduct
+): Promise<boolean> {
+  const row = await prisma.pointTransaction.findFirst({
+    where: { userId, ...planGrantFilter(product) },
+    select: { id: true },
+  });
+  return row !== null;
 }
 
 export interface PlanPointsRow {

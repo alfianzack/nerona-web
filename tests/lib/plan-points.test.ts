@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     setting: { findUnique: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
-    pointTransaction: { create: vi.fn() },
+    pointTransaction: { create: vi.fn(), findFirst: vi.fn() },
     $transaction: vi.fn(async (ops: unknown[]) => ops),
   },
 }));
@@ -12,7 +12,9 @@ import {
   DEFAULT_PLAN_POINTS,
   creditPlanPoints,
   getPlanPointsView,
+  hasEverReceivedPlanGrant,
   normalizePlan,
+  planGrantFilter,
   pointsForPlan,
   settingKey,
   updatePlanPoints,
@@ -45,12 +47,12 @@ describe("settingKey", () => {
 });
 
 describe("DEFAULT_PLAN_POINTS", () => {
-  it("keeps the agent allowances that are already in production", () => {
-    expect(DEFAULT_PLAN_POINTS.agent).toEqual({ free: 1_000, pro: 11_000, business: 30_000 });
+  it("uses the owner's agent figures", () => {
+    expect(DEFAULT_PLAN_POINTS.agent).toEqual({ free: 15, pro: 600, business: 1_500 });
   });
 
-  it("sizes metadata to real cost, below agent's per-call price", () => {
-    expect(DEFAULT_PLAN_POINTS.metadata).toEqual({ free: 500, pro: 5_000, business: 15_000 });
+  it("uses the owner's metadata figures, with Free as a lifetime trial", () => {
+    expect(DEFAULT_PLAN_POINTS.metadata).toEqual({ free: 10, pro: 500, business: 1_000 });
   });
 
   it("never ships a negative or fractional allowance", () => {
@@ -71,14 +73,14 @@ describe("pointsForPlan", () => {
 
   it("falls back to the code default when nothing is stored", async () => {
     noStoredValue();
-    expect(await pointsForPlan("metadata", "pro")).toBe(5_000);
-    expect(await pointsForPlan("agent", "free")).toBe(1_000);
+    expect(await pointsForPlan("metadata", "pro")).toBe(500);
+    expect(await pointsForPlan("agent", "free")).toBe(15);
   });
 
   it("accepts the metadata table's capitalisation", async () => {
     noStoredValue();
-    expect(await pointsForPlan("metadata", "Pro")).toBe(5_000);
-    expect(await pointsForPlan("metadata", "Business")).toBe(15_000);
+    expect(await pointsForPlan("metadata", "Pro")).toBe(500);
+    expect(await pointsForPlan("metadata", "Business")).toBe(1_000);
   });
 
   it("prefers a stored value over the default", async () => {
@@ -100,7 +102,7 @@ describe("pointsForPlan", () => {
   it("ignores stored junk rather than granting a broken amount", async () => {
     for (const junk of ["", "   ", "-5", "abc", "1.5"]) {
       storedValue(junk);
-      expect(await pointsForPlan("metadata", "pro")).toBe(5_000);
+      expect(await pointsForPlan("metadata", "pro")).toBe(500);
     }
   });
 
@@ -132,11 +134,11 @@ describe("creditPlanPoints", () => {
       createdById: "admin-1",
     });
 
-    expect(credited).toBe(11_000);
+    expect(credited).toBe(600);
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith({
       data: {
         userId: "user-1",
-        delta: 11_000,
+        delta: 600,
         reason: "plan_grant",
         note: "Bonus paket Agent Pro",
         createdById: "admin-1",
@@ -156,7 +158,7 @@ describe("creditPlanPoints", () => {
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          delta: 15_000,
+          delta: 1_000,
           note: "Perpanjangan paket Metadata Business",
         }),
       })
@@ -168,7 +170,7 @@ describe("creditPlanPoints", () => {
 
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ delta: 1_000, createdById: null }),
+        data: expect.objectContaining({ delta: 15, createdById: null }),
       })
     );
   });
@@ -207,7 +209,7 @@ describe("getPlanPointsView", () => {
       plan: "pro",
       label: "Pro",
       stored: "",
-      effective: 5_000,
+      effective: 500,
     });
   });
 
@@ -262,5 +264,52 @@ describe("updatePlanPoints", () => {
     await updatePlanPoints([{ product: "agent", plan: "enterprise", value: "10" }]);
 
     expect(prisma.setting.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("planGrantFilter", () => {
+  it("matches every grant for one product, initial and renewal alike", () => {
+    // Notes read "Bonus paket Metadata Pro" / "Perpanjangan paket Metadata Pro",
+    // so the shared phrase is "paket <Product>".
+    expect(planGrantFilter("metadata")).toEqual({
+      reason: "plan_grant",
+      note: { contains: "paket Metadata" },
+    });
+    expect(planGrantFilter("agent")).toEqual({
+      reason: "plan_grant",
+      note: { contains: "paket Agent" },
+    });
+  });
+});
+
+describe("hasEverReceivedPlanGrant", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("is true when a matching grant exists", async () => {
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue({ id: "pt-1" });
+
+    expect(await hasEverReceivedPlanGrant("user-1", "metadata")).toBe(true);
+    expect(prisma.pointTransaction.findFirst).toHaveBeenCalledWith({
+      where: { userId: "user-1", ...planGrantFilter("metadata") },
+      select: { id: true },
+    });
+  });
+
+  it("is false when the account has no such grant", async () => {
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue(null);
+
+    expect(await hasEverReceivedPlanGrant("user-1", "agent")).toBe(false);
+  });
+
+  it("scopes the query per product so one does not mask the other", async () => {
+    (prisma.pointTransaction.findFirst as any).mockResolvedValue(null);
+
+    await hasEverReceivedPlanGrant("user-1", "agent");
+
+    expect(prisma.pointTransaction.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ note: { contains: "paket Agent" } }),
+      })
+    );
   });
 });
