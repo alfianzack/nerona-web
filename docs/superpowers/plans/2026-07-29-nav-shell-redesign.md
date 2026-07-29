@@ -21,6 +21,8 @@
 - **Tailwind tokens only** (from `tailwind.config.ts`): `canvas`, `surface`, `surface2`, `ink`, `muted`, `navy-900`, `brand-blue`, `brand-orange`, `gold-400`, `gold-500`. No raw hex except the two already in the codebase: `#9A6B08` (points chip text) and `#C25717`/`#3B65C4` (pricing tabs).
 - **Do not change a single grid class.** Six declarations (`dashboard/page.tsx:46,102`, `admin/page.tsx:206,248,337`, `admin/pengaturan/page.tsx:7`) use `lg:` breakpoints tuned for a full-width page. The sidebar's collapsed 56px strip is sized precisely so they all keep working — at 1024px a stat card is 218px wide with 178px of text room, and `Stat`'s `text-2xl font-bold` "Rp 4.250.000" needs ~165px. A fixed 224px sidebar would give 176px/136px and break it. If a grid looks wrong, the sidebar width is the bug, not the grid.
 - **Leave the per-page `requireUser()` calls alone.** All nine tenant pages call it for the `session` object they need to fetch data; the new `(app)/layout.tsx` guard is defense in depth, mirroring how `src/middleware.ts:43-56` already duplicates the admin check. Do not "de-duplicate" them.
+- **There is no lint gate.** `package.json` has a `lint` script but ESLint is neither installed nor configured, so `next lint` only opens an interactive setup wizard and cannot run in CI or a non-interactive shell. `npm run build` is the type gate — Next runs `tsc` as part of it. Installing and configuring ESLint would flag pre-existing issues across the whole codebase and is out of scope here.
+- **Vitest needs `esbuild: { jsx: "automatic" }`.** `tsconfig.json` sets `"jsx": "preserve"` because Next does its own transform, which left esbuild defaulting to the classic `React.createElement` runtime. Nothing in this codebase imports React, so importing any `.tsx` whose JSX sits outside a function body — like the `ICONS` map — throws `React is not defined` at module load. Added to `vitest.config.ts` in Task 2.
 - **Commit after every task.** The working tree is clean on `master` at the start.
 
 ---
@@ -522,9 +524,9 @@ function IconChip({ tone, icon }: { tone: keyof typeof CHIP_TONES; icon: IconNam
 
 `StatTile`'s prop type at line 67 is `icon: keyof typeof ICONS` — change it to `icon: IconName`. The four call sites (`users`, `key`, `chat`, `clock`) need no edits because those glyphs kept their names.
 
-- [ ] **Step 7: Run the whole suite and lint**
+- [ ] **Step 7: Run the whole suite**
 
-Run: `cd nerona-web && npm test && npm run lint`
+Run: `cd nerona-web && npm test`
 Expected: all pass. `Header.tsx` still exports `CUSTOMER_NAV` and `HeaderNav.tsx` still exports `activeHref`; nothing imports them from the test any more, but they remain valid until Task 5 deletes them.
 
 - [ ] **Step 8: Commit**
@@ -684,7 +686,7 @@ that a startsWith('/') check would let through as an open redirect."
 - Consumes: `MARKETING_NAV`, `NavItem`, `activeHref` from `@/lib/nav` (Task 2); `homeForRole` from `@/lib/auth-redirect` (Task 3).
 - Produces: `MarketingHeader` (async server component, no props) — used only by `(marketing)/layout.tsx`.
 
-Because the root layout still renders `Header` in this task, marketing pages will briefly show **two** headers. That is expected and is resolved in Task 5. Verify this task by build + lint, not by eyeballing the page.
+Because the root layout still renders `Header` in this task, marketing pages will briefly show **two** headers. That is expected and is resolved in Task 5. Verify this task by build, not by eyeballing the page.
 
 - [ ] **Step 1: Create `src/components/layout/MarketingNavLinks.tsx`**
 
@@ -874,9 +876,9 @@ Then change the `.map` at line 32 to iterate `links` instead of `FOOTER_LINKS`, 
 import { homeForRole } from "@/lib/auth-redirect";
 ```
 
-- [ ] **Step 5: Build and lint**
+- [ ] **Step 5: Build**
 
-Run: `cd nerona-web && npm run build && npm run lint`
+Run: `cd nerona-web && npm run build`
 Expected: both pass. Marketing pages now render two headers (root `Header` plus `MarketingHeader`) — correct for this intermediate state.
 
 - [ ] **Step 6: Commit**
@@ -1328,9 +1330,9 @@ git rm src/components/layout/Header.tsx src/components/layout/HeaderNav.tsx
 Run: `cd nerona-web && grep -rn "layout/Header\|CUSTOMER_NAV\|HeaderNav" src tests`
 Expected: no matches. If `tests/lib/tenant-nav.test.ts` still appears, Task 2 Step 1 was not applied.
 
-- [ ] **Step 9: Build, test, lint**
+- [ ] **Step 9: Build and test**
 
-Run: `cd nerona-web && npm run build && npm test && npm run lint`
+Run: `cd nerona-web && npm run build && npm test`
 Expected: all pass. `(auth)` pages render bare — no header at all — which is correct; Task 6 adds their layout guard.
 
 - [ ] **Step 10: Commit**
@@ -1605,9 +1607,9 @@ Check whether `GoogleButton` is used anywhere else and leave those call sites al
 
 Run: `cd nerona-web && grep -rn "GoogleButton" src`
 
-- [ ] **Step 10: Build, test, lint**
+- [ ] **Step 10: Build and test**
 
-Run: `cd nerona-web && npm run build && npm test && npm run lint`
+Run: `cd nerona-web && npm run build && npm test`
 Expected: all pass.
 
 - [ ] **Step 11: Commit**
@@ -1757,9 +1759,9 @@ export default async function PricingPage() {
 
 Leave the rest of the page — hero, `PricingSwitcher`, `StepsSection`, `FaqSection`, and the `CtaBanner` whose CTA is "Buat akun gratis" — exactly as it is. It is now unambiguously the guest view, so nothing in it needs to branch.
 
-- [ ] **Step 4: Build, test, lint**
+- [ ] **Step 4: Build and test**
 
-Run: `cd nerona-web && npm run build && npm test && npm run lint`
+Run: `cd nerona-web && npm run build && npm test`
 Expected: all pass, including Task 2's `expect(hrefs).toContain("/paket")`.
 
 - [ ] **Step 5: Commit**
@@ -1790,7 +1792,6 @@ Run these after Task 7. Steps 4 onward are manual and need `npm run dev`.
 
 - [ ] `cd nerona-web && npm run build` — succeeds; route list matches the paths from Task 1 Step 6, plus `/paket` and `/post-login`.
 - [ ] `cd nerona-web && npm test` — all suites pass.
-- [ ] `cd nerona-web && npm run lint` — clean.
 - [ ] **Signed out, `/`:** top nav reads `Agent · Metadata · Harga`, then `Masuk` and a gold `Coba Gratis`. Footer present with a `Masuk` entry. No sidebar.
 - [ ] **Signed out, `/metadata`:** `Harga` is in the top nav — the gap this plan closes.
 - [ ] **Tenant, `/dashboard`:** sidebar with `Dashboard`, then `AGENT` (Chat, Koneksi WhatsApp), `TOKO` (Produk, Transaksi), `AKUN & TAGIHAN` (Paket & Harga, Finance). Topbar reads "Dashboard" small; the page's own `<h1>Dashboard</h1>` is still there below it. Points chip and avatar top right.

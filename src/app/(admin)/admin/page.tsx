@@ -2,32 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/format";
 import { Sparkline } from "@/components/admin/Sparkline";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 const ACTIVE_LICENSE = { in: ["active", "comp"] };
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const ICONS = {
-  users: (
-    <>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </>
-  ),
-  key: (
-    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-  ),
-  chat: (
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  ),
-  clock: (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </>
-  ),
-} as const;
 
 const CHIP_TONES = {
   blue: "bg-brand-blue/15 text-[#3B65C4]",
@@ -36,21 +14,10 @@ const CHIP_TONES = {
   gold: "bg-gold-400/30 text-[#9A6B08]",
 } as const;
 
-function IconChip({ tone, icon }: { tone: keyof typeof CHIP_TONES; icon: keyof typeof ICONS }) {
+function IconChip({ tone, icon }: { tone: keyof typeof CHIP_TONES; icon: IconName }) {
   return (
     <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${CHIP_TONES[tone]}`}>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        className="h-[18px] w-[18px]"
-      >
-        {ICONS[icon]}
-      </svg>
+      <Icon name={icon} />
     </span>
   );
 }
@@ -64,7 +31,7 @@ function StatTile({
   alert,
 }: {
   tone: keyof typeof CHIP_TONES;
-  icon: keyof typeof ICONS;
+  icon: IconName;
   label: string;
   value: number | string;
   hint?: React.ReactNode;
