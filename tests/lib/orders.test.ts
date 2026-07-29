@@ -13,6 +13,9 @@ vi.mock("@/lib/prisma", () => ({
       findMany: vi.fn(),
     },
     pointTransaction: { create: vi.fn() },
+    // creditPlanPoints reads the configured allowance; null means the code
+    // default applies, which is what these expectations are written against.
+    setting: { findUnique: vi.fn(async () => null) },
   },
 }));
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
@@ -195,7 +198,7 @@ describe("fulfillOrderRequest", () => {
         userId: "user-1",
         delta: 11_000,
         reason: "plan_grant",
-        note: "Bonus paket Pro",
+        note: "Bonus paket Agent Pro",
         createdById: "admin-1",
       },
     });
@@ -216,7 +219,7 @@ describe("fulfillOrderRequest", () => {
 
     expect(prisma.pointTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ delta: 11_000, note: "Perpanjangan paket Pro" }),
+        data: expect.objectContaining({ delta: 11_000, note: "Perpanjangan paket Agent Pro" }),
       })
     );
   });
