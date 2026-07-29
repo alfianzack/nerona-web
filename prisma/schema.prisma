@@ -477,7 +477,7 @@ model PointTransaction {
   userId      String
   user        User     @relation("UserPointTransactions", fields: [userId], references: [id], onDelete: Cascade)
   delta       Int      // signed: positive = credit, negative = debit
-  reason      String   // "manual_adjust" | "spend" (future: "topup")
+  reason      String   // "manual_adjust" | "spend" | "plan_grant" (future: "topup")
   note        String?
   createdById String?
   createdBy   User?    @relation("PointAdjustedByAdmin", fields: [createdById], references: [id])
