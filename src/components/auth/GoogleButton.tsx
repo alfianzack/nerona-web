@@ -26,9 +26,15 @@ function GoogleLogo() {
   );
 }
 
-export function GoogleButton() {
+export function GoogleButton({ callbackUrl }: { callbackUrl?: string | null }) {
+  // Land on /post-login rather than a hardcoded /dashboard, so admins reach
+  // /admin and a deep link survives the OAuth round trip.
+  const next = callbackUrl
+    ? `/post-login?next=${encodeURIComponent(callbackUrl)}`
+    : "/post-login";
+
   return (
-    <AuthButton variant="secondary" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
+    <AuthButton variant="secondary" onClick={() => signIn("google", { callbackUrl: next })}>
       <span className="flex items-center justify-center gap-2.5">
         <GoogleLogo />
         Lanjutkan dengan Google

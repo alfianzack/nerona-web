@@ -31,7 +31,12 @@ function LoginForm() {
       return;
     }
 
-    router.push("/dashboard");
+    // /post-login decides the destination for both sign-in paths: the
+    // callbackUrl if there is a safe one, otherwise the role's home.
+    const callbackUrl = searchParams.get("callbackUrl");
+    router.push(
+      callbackUrl ? `/post-login?next=${encodeURIComponent(callbackUrl)}` : "/post-login"
+    );
   }
 
   return (
@@ -61,7 +66,7 @@ function LoginForm() {
         <span className="text-xs text-muted/70">atau</span>
         <div className="h-px flex-1 bg-navy-900/5" />
       </div>
-      <GoogleButton />
+      <GoogleButton callbackUrl={searchParams.get("callbackUrl")} />
       <p className="mt-6 text-center text-sm text-muted">
         Belum punya akun?{" "}
         <a href="/register" className="font-medium text-ink underline">
