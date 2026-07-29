@@ -90,14 +90,15 @@ export function ExtensionConnectPanel() {
         <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
         <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
           <li>
-            Ekstrak ZIP-nya ke folder tetap — misalnya <code>Documents\Nerona</code>.
+            Ekstrak ZIP-nya. Isinya satu folder bernama <code>nerona-metadata</code> — taruh di
+            tempat yang tidak akan dipindah, misalnya <code>Documents</code>.
           </li>
           <li>
             Buka <code>chrome://extensions</code>, lalu nyalakan <b>Developer mode</b> di kanan atas.
           </li>
           <li>
-            Klik <b>Load unpacked</b> / <b>Muat yang belum dikemas</b>, pilih folder hasil ekstrak
-            (folder yang berisi <code>manifest.json</code>).
+            Klik <b>Load unpacked</b> / <b>Muat yang belum dikemas</b>, lalu pilih folder{" "}
+            <code>nerona-metadata</code> itu (folder yang berisi <code>manifest.json</code>).
           </li>
           <li>
             Kalau nanti ada versi baru: unduh lagi, timpa isi folder itu, lalu klik ikon{" "}

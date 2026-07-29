@@ -16,7 +16,15 @@
 # popup.html, bukan dari manifest.
 param(
   [string]$Source = "..\nerona_medata",
-  [string]$Output = "public\nerona-metadata.zip"
+  [string]$Output = "public\nerona-metadata.zip",
+  # Semua berkas dibungkus dalam satu folder ini. Tanpa pembungkus, "Extract Here"
+  # di 7-Zip/WinRAR menghambur 26 berkas ke folder yang sedang dibuka, dan user
+  # kehilangan jejak mana yang harus dipilih saat Load unpacked.
+  #
+  # Catatan kalau nanti diunggah ke Chrome Web Store: validator di sana menuntut
+  # manifest.json ada di ROOT zip, jadi untuk keperluan itu jalankan dengan
+  # -Wrapper "" supaya pembungkusnya dilepas.
+  [string]$Wrapper = "nerona-metadata"
 )
 $ErrorActionPreference = "Stop"
 
@@ -60,8 +68,10 @@ $sl = [char]0x2F
 # salah diekstrak di luar Windows, termasuk oleh validator Chrome Web Store.
 $fs = [System.IO.File]::Open($outPath, [System.IO.FileMode]::Create)
 $archive = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create)
+$prefix = ""
+if ($Wrapper) { $prefix = $Wrapper + $sl }
 foreach ($f in ($files | Sort-Object)) {
-  $name = $f.Replace($bs, $sl)
+  $name = $prefix + $f.Replace($bs, $sl)
   $entry = $archive.CreateEntry($name, [System.IO.Compression.CompressionLevel]::Optimal)
   $es = $entry.Open()
   $bytes = [System.IO.File]::ReadAllBytes((Join-Path $src $f))
