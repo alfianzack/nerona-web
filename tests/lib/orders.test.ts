@@ -131,6 +131,7 @@ describe("submitOrder — paid plans", () => {
     expect(await submitOrder("user-1", "metadata", "Pro")).toEqual({
       ok: false,
       reason: "already_pending",
+      orderId: "req-1",
     });
     expect(prisma.orderRequest.create).not.toHaveBeenCalled();
   });
@@ -138,10 +139,11 @@ describe("submitOrder — paid plans", () => {
   it("creates a pending request with the contact note", async () => {
     (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
     (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+    (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-new" });
 
     const result = await submitOrder("user-1", "metadata", "Pro", "WA 0812...");
 
-    expect(result).toEqual({ ok: true, kind: "request_created" });
+    expect(result).toEqual({ ok: true, kind: "request_created", orderId: "req-new" });
     expect(prisma.orderRequest.create).toHaveBeenCalledWith({
       data: { userId: "user-1", product: "metadata", planName: "Pro", contactNote: "WA 0812..." },
     });
