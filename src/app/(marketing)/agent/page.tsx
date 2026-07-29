@@ -6,7 +6,7 @@ import { agentTiers } from "@/lib/pricing-tiers";
 const FEATURES = [
   {
     title: "Chat langsung di WhatsApp Anda.",
-    body: "Satu nomor WhatsApp Nerona melayani semua pelanggan Nerona Agent. Hubungkan nomor Anda sekali, lalu mulai chat seperti biasa.",
+    body: "Satu nomor WhatsApp Nerona melayani semua pengguna Nerona Agent. Hubungkan nomor Anda sekali, lalu mulai chat seperti biasa. Agent hanya menjawab nomor yang sudah terdaftar — jadi ini asisten pribadi Anda, bukan chatbot untuk pembeli.",
   },
   {
     title: "Ingat percakapan dan bisnis Anda.",
@@ -14,7 +14,24 @@ const FEATURES = [
   },
 ];
 
-export default function AgentMarketingPage() {
+/**
+ * Every line here must map to a tool the agent actually has (lib/agent/tools.ts:
+ * list_products, add_product, record_sale, list_recent_orders,
+ * get_sales_summary, update_order_status) or to its memory. Nothing aspirational
+ * — a capability listed without a tool behind it is a refund request.
+ */
+const CAPABILITIES = [
+  "Catat penjualan lengkap dengan nama pembeli dan tanggal transaksi",
+  "Tambah produk baru atau perbarui harganya",
+  "Cek daftar produk aktif beserta harga dan stok",
+  "Lihat order terakhir beserta itemnya",
+  "Tandai order lunas atau batalkan order",
+  "Minta ringkasan omzet harian, mingguan, atau bulanan",
+];
+
+export default async function AgentMarketingPage() {
+  const tiers = await agentTiers();
+
   return (
     <main>
       <section className="relative overflow-hidden bg-canvas px-6 pb-24 pt-20 text-center sm:pt-28">
@@ -31,8 +48,8 @@ export default function AgentMarketingPage() {
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
-            Nerona Agent membantu pemilik usaha kecil mencatat pesanan, mengingat percakapan, dan
-            menjawab pelanggan — semua lewat WhatsApp yang sudah Anda pakai setiap hari.
+            Asisten pribadi untuk pemilik usaha kecil: catat pesanan, cek stok, dan tanya omzet
+            toko Anda — semua lewat WhatsApp yang sudah Anda pakai setiap hari.
           </p>
           <div className="mx-auto mt-16 max-w-lg">
             <AgentChatMockup />
@@ -53,11 +70,32 @@ export default function AgentMarketingPage() {
         </div>
       </section>
 
+      <section className="bg-canvas px-6 py-24 sm:py-32">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="text-center text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            Yang bisa Anda minta
+          </h2>
+          <p className="mx-auto mt-3.5 max-w-xl text-center text-base leading-relaxed text-muted">
+            Tulis dengan bahasa sehari-hari — Agent yang mengerjakan sisanya.
+          </p>
+          <ul className="mx-auto mt-10 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+            {CAPABILITIES.map((capability) => (
+              <li key={capability} className="flex gap-2.5 text-[15px] leading-relaxed text-ink">
+                <span className="mt-0.5 font-bold text-emerald-600" aria-hidden="true">
+                  ✓
+                </span>
+                {capability}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       <PricingTiers
         id="pricing"
         heading="Harga Nerona Agent"
-        subheading="Mulai gratis, upgrade saat chat Anda makin ramai."
-        tiers={agentTiers()}
+        subheading="Paket Free memberi poin percobaan sekali per akun. Upgrade untuk poin bulanan."
+        tiers={tiers}
       />
 
       <section className="bg-canvas px-6 py-16 text-center">

@@ -11,12 +11,17 @@ const PRICING_FAQ = [
   {
     question: "Apakah paket diperpanjang otomatis?",
     answer:
-      "Tidak. Paket berjalan sampai masa aktifnya berakhir. Perpanjang hanya kalau Anda mau.",
+      "Tidak ada tagihan otomatis — kami tidak menyimpan data pembayaran Anda. Menjelang masa aktif berakhir, kami kirim invoice perpanjangan sebagai pengingat; paket baru berlanjut setelah Anda transfer dan pembayaran kami verifikasi. Abaikan invoice itu kalau Anda tidak ingin lanjut.",
   },
   {
-    question: "Bagaimana kalau kuota bulanan habis?",
+    question: "Apakah paket Free diperbarui setiap bulan?",
     answer:
-      "Alat berhenti sementara sampai kuota di-reset bulan berikutnya, atau upgrade paket untuk kuota lebih besar.",
+      "Tidak. Free adalah poin percobaan yang diberikan sekali per akun, seumur hidup — tidak di-reset dan tidak bertambah. Setelah habis, pilih paket berbayar untuk melanjutkan.",
+  },
+  {
+    question: "Apa itu poin, dan bagaimana kalau habis?",
+    answer:
+      "Poin terpakai setiap kali AI bekerja — besarnya tergantung panjang teks yang diproses. Alat berhenti sementara kalau poin habis atau masa aktif paket berakhir; mengaktifkan atau memperpanjang paket menambahkan poin baru ke saldo Anda. Poin yang belum terpakai tidak hangus.",
   },
   {
     question: "Apakah bisa pindah paket di tengah jalan?",
@@ -40,7 +45,7 @@ export default async function PricingPage() {
     redirect("/paket");
   }
 
-  const tiers = await metadataTiers();
+  const [tiers, agent] = await Promise.all([metadataTiers(), agentTiers()]);
 
   return (
     <main className="bg-canvas">
@@ -57,11 +62,12 @@ export default async function PricingPage() {
           <h1 className="text-balance text-center text-4xl font-semibold tracking-tight text-ink sm:text-6xl">
             Harga sederhana,{" "}
             <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
-              mulai dari gratis.
+              coba dulu tanpa bayar.
             </span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-center text-lg text-muted">
-            Semua produk Nerona punya paket Free — mulai tanpa pembayaran, upgrade kapan saja.
+            Setiap produk Nerona memberi poin percobaan gratis sekali per akun — pakai untuk
+            menilai sendiri, lalu pilih paket kalau cocok.
           </p>
           <div className="mt-9">
             <PricingSwitcher
@@ -76,7 +82,7 @@ export default async function PricingPage() {
                   key: "agent",
                   label: "💬 Agent",
                   subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
-                  tiers: agentTiers(),
+                  tiers: agent,
                 },
               ]}
             />
@@ -86,7 +92,7 @@ export default async function PricingPage() {
 
       <StepsSection
         title="Cara pembayaran"
-        subtitle="Tanpa perpanjangan otomatis — Anda selalu pegang kendali."
+        subtitle="Tanpa tagihan otomatis — setiap perpanjangan menunggu transfer Anda."
         variant="cards"
         steps={[
           {
@@ -107,8 +113,8 @@ export default async function PricingPage() {
       <FaqSection items={PRICING_FAQ} className="bg-canvas" />
 
       <CtaBanner
-        title="Masih ragu? Mulai dari yang gratis."
-        body="Tidak perlu kartu kredit, tidak ada perpanjangan otomatis. Upgrade hanya saat Anda siap."
+        title="Masih ragu? Coba dulu tanpa bayar."
+        body="Tidak perlu kartu kredit, tidak ada tagihan otomatis. Upgrade hanya saat Anda siap."
         ctaLabel="Buat akun gratis"
         ctaHref="/register"
       />

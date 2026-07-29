@@ -6,17 +6,32 @@ import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
 import { MetadataCardMockup } from "@/components/marketing/mockups/MetadataCardMockup";
 import { AgentChatMockup } from "@/components/marketing/mockups/AgentChatMockup";
+import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
+import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
+
+const MARKETPLACE_NAMES = CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ");
+
+/**
+ * The Free allowance, stated as points because "how many images that buys" is
+ * derived from admin-editable rates and is one Pengaturan edit away from being
+ * wrong. These are the code defaults; an owner who overrides them in Pengaturan
+ * must update this copy too — the alternative was a DB read on a page that
+ * otherwise renders without one.
+ */
+const FREE_METADATA_POINTS = DEFAULT_PLAN_POINTS.metadata.free;
+const FREE_AGENT_POINTS = DEFAULT_PLAN_POINTS.agent.free;
 
 const HERO_FACTS = [
-  "5+ marketplace didukung",
+  `${CLAIMABLE_MARKETPLACES.length} marketplace didukung`,
   "Chat langsung di WhatsApp",
-  "Paket Free, tanpa kartu kredit",
+  "Poin gratis untuk mencoba, tanpa kartu kredit",
 ];
 
 const HOME_FAQ = [
   {
     question: "Apakah saya perlu kartu kredit untuk mulai?",
-    answer: "Tidak. Paket Free aktif seketika setelah daftar, tanpa data pembayaran apa pun.",
+    answer:
+      "Tidak. Paket Free aktif seketika setelah daftar, tanpa data pembayaran apa pun. Free adalah poin percobaan sekali per akun, bukan kuota bulanan.",
   },
   {
     question: "Bagaimana cara pembayarannya?",
@@ -30,11 +45,11 @@ const HOME_FAQ = [
   {
     question: "Bisa ganti atau berhenti paket kapan saja?",
     answer:
-      "Bisa. Upgrade kapan saja, dan paket berjalan sampai masa aktifnya berakhir — tanpa perpanjangan otomatis.",
+      "Bisa. Upgrade kapan saja, dan paket berjalan sampai masa aktifnya berakhir — tanpa tagihan otomatis, karena setiap perpanjangan menunggu transfer Anda.",
   },
   {
     question: "Marketplace apa saja yang didukung Metadata?",
-    answer: "Adobe Stock, Shutterstock, Vecteezy, Canva, dan Freepik — dan terus bertambah.",
+    answer: `${MARKETPLACE_NAMES}.`,
   },
 ];
 
@@ -96,19 +111,19 @@ export default function HomePage() {
 
       <StepsSection
         title="Mulai dalam tiga langkah"
-        subtitle="Tanpa kartu kredit, tanpa instalasi rumit."
+        subtitle="Tanpa kartu kredit."
         steps={[
           {
             title: "Daftar gratis",
             body: "Buat akun dengan email — paket Free langsung aktif untuk semua produk.",
           },
           {
-            title: "Pakai alatnya",
-            body: "Generate metadata dari ekstensi browser, atau hubungkan nomor WhatsApp toko Anda.",
+            title: "Pasang ekstensi Chrome",
+            body: "Unduh folder ekstensi Nerona Metadata, lalu muat lewat Chrome — kami memandu langkahnya. Untuk Agent cukup hubungkan nomor WhatsApp toko Anda.",
           },
           {
             title: "Upgrade saat butuh",
-            body: "Kuota habis? Pilih paket, transfer, dan akun aktif setelah verifikasi tim kami.",
+            body: "Poin habis? Pilih paket, transfer, dan akun aktif setelah verifikasi tim kami.",
           },
         ]}
       />
@@ -117,7 +132,7 @@ export default function HomePage() {
         title="Nerona Metadata"
         body="Judul, deskripsi, dan kata kunci dibuat otomatis dengan AI, lalu diisi langsung ke formulir unggah marketplace favorit Anda."
         bullets={[
-          "Isi otomatis di Adobe Stock, Shutterstock, Vecteezy, Canva, Freepik",
+          `Isi otomatis di ${MARKETPLACE_NAMES}`,
           "Kata kunci relevan dalam hitungan detik, bukan menit",
           "Reject analyzer: pelajari alasan penolakan dan perbaiki",
         ]}
@@ -127,11 +142,11 @@ export default function HomePage() {
       />
       <FeatureSection
         title="Nerona Agent"
-        body="Asisten AI yang chat langsung di WhatsApp — tanpa aplikasi baru untuk dipelajari, untuk Anda maupun pelanggan Anda."
+        body="Asisten pribadi Anda sebagai pemilik usaha, chat langsung di WhatsApp — tanpa aplikasi baru untuk dipelajari. Agent hanya melayani nomor Anda sendiri, bukan nomor pembeli."
         bullets={[
-          "Catat pesanan dan stok lewat percakapan biasa",
-          "Ingat pelanggan dan riwayat belanja mereka",
-          "Balas pertanyaan umum toko Anda, kapan pun",
+          "Catat penjualan dan tambah produk lewat percakapan biasa",
+          "Tanya omzet harian, mingguan, atau bulanan kapan saja",
+          "Ingat catatan penting tentang bisnis Anda antar percakapan",
         ]}
         mockup={<AgentChatMockup theme="dark" />}
         theme="navy"
@@ -142,7 +157,7 @@ export default function HomePage() {
 
       <CtaBanner
         title="Coba gratis hari ini"
-        body="Paket Free untuk semua produk — rasakan dulu manfaatnya, upgrade hanya kalau memang butuh."
+        body={`Paket Free memberi ${FREE_METADATA_POINTS} poin Metadata dan ${FREE_AGENT_POINTS} poin Agent, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk mencoba sebelum Anda memutuskan.`}
         ctaLabel="Buat akun gratis"
         ctaHref="/register"
       />

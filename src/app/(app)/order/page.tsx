@@ -15,7 +15,11 @@ export default async function OrderPage({
   const planName = searchParams.plan;
 
   const tiers =
-    product === "metadata" ? await metadataTiers() : product === "agent" ? agentTiers() : null;
+    product === "metadata"
+      ? await metadataTiers()
+      : product === "agent"
+        ? await agentTiers()
+        : null;
   const tier = tiers?.find((candidate) => candidate.name === planName);
 
   if (!tier || (product !== "metadata" && product !== "agent")) {

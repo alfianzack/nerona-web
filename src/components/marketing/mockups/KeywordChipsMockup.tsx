@@ -15,7 +15,7 @@ export function KeywordChipsMockup() {
   return (
     <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-7 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
       <p className="text-xs font-medium uppercase tracking-wide text-muted/70">
-        30 kata kunci, siap disunting
+        Kata kunci hasil AI, siap disunting
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {KEYWORDS.map((word) => (

@@ -14,8 +14,9 @@ export const metadata = { title: "Paket & Harga — Nerona" };
 // meaningless for someone already signed in.
 export default async function PaketPage() {
   const session = await requireUser();
-  const [tiers, balance] = await Promise.all([
+  const [tiers, agent, balance] = await Promise.all([
     metadataTiers(),
+    agentTiers(),
     getBalance(session.user.id),
   ]);
 
@@ -45,7 +46,7 @@ export default async function PaketPage() {
                 key: "agent",
                 label: "💬 Agent",
                 subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
-                tiers: agentTiers(),
+                tiers: agent,
               },
             ]}
           />

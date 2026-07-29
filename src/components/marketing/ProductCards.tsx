@@ -15,7 +15,7 @@ const PRODUCTS = [
     href: "/agent",
     icon: "💬",
     title: "Nerona Agent",
-    body: "Asisten AI yang chat langsung di WhatsApp — catat pesanan, ingat pelanggan, dan bantu jawab pertanyaan toko Anda 24 jam.",
+    body: "Asisten AI pribadi yang chat langsung di WhatsApp — catat pesanan, cek stok, dan tanya omzet toko Anda kapan saja.",
     go: "Pelajari Agent →",
     stripe: "bg-gradient-to-b from-gold-400 to-brand-orange",
     chip: "bg-brand-orange/15",

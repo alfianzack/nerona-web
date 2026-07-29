@@ -1,4 +1,4 @@
-import { MARKETPLACES } from "@/lib/marketplaces";
+import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 
 export function MarketplaceRow() {
   return (
@@ -7,7 +7,7 @@ export function MarketplaceRow() {
         Bekerja di marketplace tempat Anda mengunggah
       </p>
       <div className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-x-12 gap-y-5">
-        {MARKETPLACES.map((marketplace) => (
+        {CLAIMABLE_MARKETPLACES.map((marketplace) => (
           <span
             key={marketplace.key}
             className="text-lg font-semibold tracking-tight text-muted/70 transition hover:text-brand-blue"

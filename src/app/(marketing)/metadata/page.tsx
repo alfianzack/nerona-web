@@ -6,6 +6,7 @@ import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgres
 import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { metadataTiers } from "@/lib/pricing-tiers";
+import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 
 export default async function MetadataPage() {
   const tiers = await metadataTiers();
@@ -14,15 +15,15 @@ export default async function MetadataPage() {
     <main>
       <Hero />
       <FeatureSection
-        title="Satu klik. Semua marketplace."
-        body="Bekerja langsung di formulir unggah Adobe Stock, Shutterstock, Vecteezy, Canva, dan lainnya — tanpa salin-tempel."
+        title={`Satu klik. ${CLAIMABLE_MARKETPLACES.length} marketplace.`}
+        body={`Bekerja langsung di formulir unggah ${CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ")} — tanpa salin-tempel.`}
         mockup={<MarketplaceTabsMockup />}
         theme="dark"
         imageSide="left"
       />
       <FeatureSection
         title="Kata kunci yang konsisten."
-        body="30 kata kunci hasil AI plus ruang untuk kata kunci Anda sendiri, konsisten di setiap unggahan."
+        body="Puluhan kata kunci hasil AI — sebanyak yang marketplace tujuan izinkan — plus ruang untuk kata kunci Anda sendiri di setiap unggahan."
         mockup={<KeywordChipsMockup />}
         theme="light"
         imageSide="right"
@@ -38,7 +39,7 @@ export default async function MetadataPage() {
       <PricingTiers
         id="pricing"
         heading="Harga Nerona Metadata"
-        subheading="Mulai gratis, upgrade saat volume unggahan Anda naik."
+        subheading="Paket Free memberi poin percobaan sekali per akun. Upgrade untuk poin bulanan."
         tiers={tiers}
       />
     </main>

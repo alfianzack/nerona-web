@@ -15,11 +15,23 @@ export interface AiPricing {
   pointsPerUsd: number;
 }
 
-/** Today's gemini-2.0-flash-lite rates — the last resort when nothing is configured. */
+/**
+ * The last resort when nothing is configured — deliberately kept in step with
+ * the rates actually stored in Pengaturan today.
+ *
+ * These must stay calibrated against the plan allowances in
+ * `lib/plan-points.ts`, because AdminAiSettingsPanel invites the operator to
+ * "Kosongkan untuk pakai default": clearing those three fields hands metering
+ * over to this constant. The previous values (0.075 / 0.3 / 100,000) priced a
+ * generate at ~24 points, which was sane when allowances were 5,000 and 15,000
+ * but left Free (10 points) unable to buy a single generate once the allowances
+ * were revised down. A default that silently disables every plan is a landmine,
+ * not a fallback.
+ */
 export const DEFAULT_AI_PRICING: AiPricing = {
-  inPerMTok: 0.075,
-  outPerMTok: 0.3,
-  pointsPerUsd: 100_000,
+  inPerMTok: 0.25,
+  outPerMTok: 1.5,
+  pointsPerUsd: 1_000,
 };
 
 /**

@@ -1,11 +1,49 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { costForUsage, pricingFromInput } from "@/lib/agent/pricing";
+import { DEFAULT_AI_PRICING, costForUsage, pricingFromInput } from "@/lib/agent/pricing";
+import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
 
 // Rates are passed in now (resolved from admin settings), so nothing here reads env.
+// A local fixture on purpose — these numbers exercise the arithmetic and are not
+// meant to track DEFAULT_AI_PRICING, which is asserted separately below.
 const PRICING = { inPerMTok: 0.075, outPerMTok: 0.3, pointsPerUsd: 100_000 };
+
+/** A representative call: a prompt plus a short reply. */
+const TYPICAL_USAGE = { promptTokens: 1500, completionTokens: 350 };
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+/**
+ * AdminAiSettingsPanel says "Kosongkan untuk pakai default", so clearing the
+ * three rate fields hands metering to DEFAULT_AI_PRICING. If those defaults are
+ * not calibrated against the plan allowances, that documented affordance
+ * silently disables every plan — which is exactly what happened once, when the
+ * allowances were cut ~24x and the defaults were left behind.
+ *
+ * This is the guard against a repeat: it fails if either side moves out of step.
+ */
+describe("DEFAULT_AI_PRICING calibration", () => {
+  it("leaves the Free metadata allowance able to pay for several calls", () => {
+    const cost = costForUsage({ usage: TYPICAL_USAGE, pricing: DEFAULT_AI_PRICING });
+
+    expect(cost).toBeLessThanOrEqual(DEFAULT_PLAN_POINTS.metadata.free);
+    expect(cost).toBeGreaterThan(0);
+  });
+
+  it("keeps a paid plan worth buying — Pro affords at least 100 calls", () => {
+    const cost = costForUsage({ usage: TYPICAL_USAGE, pricing: DEFAULT_AI_PRICING });
+
+    expect(DEFAULT_PLAN_POINTS.metadata.pro / cost).toBeGreaterThanOrEqual(100);
+  });
+
+  it("charges the missing-usage fallback within the Free allowance too", () => {
+    // No usage reported: costForUsage prices a ~1k-token reply rather than
+    // charging nothing. That path must stay affordable as well.
+    const cost = costForUsage({ usage: null, pricing: DEFAULT_AI_PRICING });
+
+    expect(cost).toBeLessThanOrEqual(DEFAULT_PLAN_POINTS.metadata.free);
+  });
 });
 
 describe("costForUsage", () => {
