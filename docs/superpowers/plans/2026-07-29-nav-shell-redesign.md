@@ -1632,7 +1632,7 @@ signed-in redirect would otherwise swallow the next parameter."
 **Files:**
 - Create: `src/app/(app)/paket/page.tsx`
 - Modify: `src/app/(app)/finance/page.tsx:141-145` — replace the "Hubungi admin" dead end with a link to `/paket`
-- Modify: `src/app/(marketing)/pricing/page.tsx` — add a signed-in banner pointing at `/paket`
+- Modify: `src/app/(marketing)/pricing/page.tsx` — hand signed-in visitors over to `/paket`
 
 **Interfaces:**
 - Consumes: `requireUser` from `@/lib/session-guards`; `metadataTiers`/`agentTiers` from `@/lib/pricing-tiers`; `PricingSwitcher` from `@/components/marketing/PricingSwitcher`; `getBalance` from `@/lib/points`.
@@ -1724,39 +1724,38 @@ The "Poin" section header currently reads:
 
 `Link` is already imported at line 1.
 
-- [ ] **Step 3: Add the signed-in banner to `src/app/(marketing)/pricing/page.tsx`**
+- [ ] **Step 3: Send signed-in visitors from `/pricing` to `/paket`**
 
-A signed-in visitor landing here — from the footer, a bookmark, or a search result — should be offered the in-app version. Add the imports:
+A tenant must never sit on a purchase page without their sidebar, and `/pricing` cannot exist in both `(marketing)` and `(app)` — identical paths in two route groups is a build error. So the tenant gets their own path and `/pricing` hands them over.
+
+The sidebar points at `/paket` directly, so this only catches stale entry points: the footer, bookmarks, search results, and the existing in-page links at `(marketing)/page.tsx:76` and `(app)/order/page.tsx:29,41`.
+
+In `src/app/(marketing)/pricing/page.tsx`, add the imports:
 
 ```tsx
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 ```
 
-Read the session at the top of `PricingPage` (it is already an async component):
+Then open `PricingPage` — already an async component — with the handover, before `metadataTiers()` so a redirected tenant never pays for the query:
 
 ```tsx
 export default async function PricingPage() {
-  const [tiers, session] = await Promise.all([
-    metadataTiers(),
-    getServerSession(authOptions),
-  ]);
+  // /pricing is the one dual-audience page: marketing copy for visitors,
+  // a purchase surface for tenants. A tenant buying points should have the
+  // app sidebar, and one path cannot live in two route groups — so they get
+  // /paket instead. Deliberately NOT applied to /, /agent, or /metadata:
+  // those are pure marketing and are fine to read while signed in.
+  const session = await getServerSession(authOptions);
+  if (session?.user) {
+    redirect("/paket");
+  }
+
+  const tiers = await metadataTiers();
 ```
 
-Then insert this as the first child of the `<main>`, immediately before the `<section>` at line 30:
-
-```tsx
-      {session?.user && (
-        <div className="border-b border-navy-900/10 bg-brand-blue/5 px-6 py-2.5 text-center text-xs text-ink">
-          Anda sudah masuk —{" "}
-          <Link href="/paket" className="font-semibold text-brand-blue hover:underline">
-            lihat paket Anda di dashboard
-          </Link>
-          .
-        </div>
-      )}
-```
+Leave the rest of the page — hero, `PricingSwitcher`, `StepsSection`, `FaqSection`, and the `CtaBanner` whose CTA is "Buat akun gratis" — exactly as it is. It is now unambiguously the guest view, so nothing in it needs to branch.
 
 - [ ] **Step 4: Build, test, lint**
 
@@ -1775,7 +1774,12 @@ git commit -m "feat: add /paket so tenants buy and renew inside the app shell
 Reuses PricingSwitcher against the same lib/pricing-tiers data as
 /pricing, dropping the hero, steps, FAQ, and the 'Buat akun gratis' CTA
 that makes no sense for a signed-in user. Replaces Finance's 'contact an
-admin to top up' dead end."
+admin to top up' dead end.
+
+/pricing now hands signed-in visitors to /paket: a tenant buying points
+should have the app sidebar, and one path cannot live in two route
+groups. Not applied to /, /agent, or /metadata — those are pure
+marketing and fine to read while signed in."
 ```
 
 ---
@@ -1795,7 +1799,8 @@ Run these after Task 7. Steps 4 onward are manual and need `npm run dev`.
 - [ ] **Tenant, `/paket`:** both product tabs render tiers; the points chip shows the same balance as the topbar.
 - [ ] **Tenant, `/finance`:** the Poin section links to `/paket` instead of telling the user to contact an admin.
 - [ ] **Tenant, `/`:** marketing chrome, and the top-right button reads `Dashboard →`. Clicking it returns to `/dashboard`.
-- [ ] **Tenant, `/pricing`:** the signed-in banner appears and links to `/paket`.
+- [ ] **Tenant, `/pricing`:** lands on `/paket`, inside the sidebar shell. Check the footer's `Harga` link too — it goes through `/pricing` and must end up in the same place.
+- [ ] **Signed out, `/pricing`:** still the full marketing page — hero, tiers, steps, FAQ, and the "Buat akun gratis" banner. The redirect must not fire for guests.
 - [ ] **Tenant, avatar menu:** shows the email, `Profile`, and `Sign Out`. `Sign Out` opens the "Keluar dari akun?" confirmation and signing out lands on `/`.
 - [ ] **Admin login:** lands on `/admin`, not `/dashboard`. Admin sidebar shows `Dashboard`, `KELOLA` (Pengguna, Order), `SISTEM` (Pengaturan). No points chip. No leftover `<h1>Admin</h1>` or `email · role` line.
 - [ ] **Non-admin visiting `/admin`:** redirected to `/dashboard`, not `/profile`.

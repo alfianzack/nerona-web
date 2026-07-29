@@ -33,7 +33,8 @@ These were settled during design and should not be relitigated during implementa
 | Decision | Choice |
 |---|---|
 | Shell structure | Two shells via route groups; sidebar for the app |
-| Signed-in user on `/` or `/pricing` | Page stays viewable; header CTA becomes `Dashboard →`. No hard redirect — `/pricing` is where tenants buy. |
+| Signed-in user on a marketing page | `/`, `/agent`, `/metadata` stay viewable; the header CTA becomes `Dashboard →`. No hard redirect. |
+| Signed-in user on `/pricing` | Redirected to `/paket`. A tenant must never sit on a purchase page without the app sidebar, and `/pricing` cannot exist in two route groups. |
 | Tenant-facing plan purchase | New `(app)/paket` reusing `PricingSwitcher`; marketing `/pricing` unchanged |
 | Nav label language | **Indonesian everywhere.** This revokes the "top-nav labels are English" decision from plan `2026-07-19`; `CUSTOMER_NAV` had already drifted to Indonesian and the body copy is Indonesian throughout. |
 | `Harga` in guest top nav | Re-added. This revises `2026-07-19`, which is acceptable because the `PricingTeaser` that decision depended on no longer exists. |
@@ -188,7 +189,11 @@ Deliberately **not** carried over from `/pricing`: the hero, `StepsSection`, `Fa
 
 Two cross-links tie it together:
 - `/finance` gains a "Beli / perpanjang paket" button → `/paket`, replacing the dead-end copy at `finance/page.tsx:143-145` ("Hubungi admin untuk isi ulang").
-- Marketing `/pricing` shows a small banner → `/paket` when the visitor is already signed in.
+- Marketing `/pricing` redirects a signed-in visitor to `/paket`. The sidebar item points at `/paket` directly, so this fires only for stale links: bookmarks, the footer, search results, and the in-page links at `page.tsx:76` and `order/page.tsx:29,41`.
+
+Why a redirect here and nowhere else: `/pricing` is the one dual-audience page. `/`, `/agent`, and `/metadata` are pure marketing and a signed-in visitor reading them with the topbar is correct. `/pricing` is transactional, and a tenant buying points should have their sidebar. Since one path cannot live in two route groups, the tenant gets their own path.
+
+The alternative — keeping one `/pricing` outside all groups with a layout that branches on session — was rejected. It would make `/pricing` the only session-branching layout in the app, which a later cleanup could quietly fold back into `(marketing)` and hand tenants the marketing chrome again with a green build.
 
 ### Redirect flow
 
@@ -240,7 +245,7 @@ One plan, but the order is load-bearing rather than cosmetic — each step ends 
 2. `npm test` — all suites green.
 3. `npm run lint`.
 4. Manual, signed out: `/` shows `Agent · Metadata · Harga` + `Masuk` + `Coba Gratis`; footer present.
-5. Manual, tenant: `/dashboard` renders inside the sidebar shell; every sidebar item resolves and highlights correctly; `/agent/dashboard` is reachable from the sidebar; `/paket` shows both product tiers; `/` shows `Dashboard →`.
+5. Manual, tenant: `/dashboard` renders inside the sidebar shell; every sidebar item resolves and highlights correctly; `/agent/dashboard` is reachable from the sidebar; `/paket` shows both product tiers inside the sidebar; `/` shows `Dashboard →`; opening `/pricing` lands on `/paket`.
 6. Manual, admin: login lands on `/admin`, not `/dashboard`; admin sidebar renders.
 7. Manual, deep link: visit `/admin/users` signed out → login → land on `/admin/users`, not `/dashboard`.
 8. Manual, open redirect: visit `/post-login?next=//example.com` while signed in → lands on the role home, never leaves the origin.
