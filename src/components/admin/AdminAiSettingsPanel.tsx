@@ -27,6 +27,8 @@ interface ConnectionTestResult {
 
 export function AdminAiSettingsPanel() {
   const [model, setModel] = useState("");
+  /** Last value loaded from the server, so unsaved edits are detectable. */
+  const [storedModel, setStoredModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [apiKeyMasked, setApiKeyMasked] = useState("");
   const [apiKeySet, setApiKeySet] = useState(false);
@@ -48,6 +50,7 @@ export function AdminAiSettingsPanel() {
       return;
     }
     setModel(data.settings.model ?? "");
+    setStoredModel(data.settings.model ?? "");
     setApiKeyMasked(data.settings.apiKeyMasked ?? "");
     setApiKeySet(Boolean(data.settings.apiKeySet));
     setPriceIn(data.settings.priceIn ?? "");
@@ -60,9 +63,24 @@ export function AdminAiSettingsPanel() {
     load();
   }, []);
 
+  /**
+   * A connection verdict only describes the model and key it ran against, so it
+   * has to die the moment either of those changes. Without this a green
+   * "berfungsi (gpt-5-nano)" panel survives a switch to another model and reads
+   * as if the new one had been verified.
+   *
+   * Point rates do not affect the probe, so they deliberately do not clear it.
+   */
+  function invalidateTestResult() {
+    setTestResult(null);
+  }
+
   async function handleSave() {
     setError("");
     setSaved(false);
+    // The stored config is about to change; whatever is on screen described the
+    // previous one.
+    invalidateTestResult();
     setSaving(true);
     const res = await fetch("/api/admin/ai-settings", {
       method: "POST",
@@ -98,6 +116,14 @@ export function AdminAiSettingsPanel() {
     }
     setTestResult(data.result);
   }
+
+  /**
+   * "Cek koneksi" probes the SAVED settings — it posts no body, so the server
+   * reads the Setting rows. Running it against unsaved edits produces a verdict
+   * about the old model while the form shows a new one, which is exactly the
+   * confusion this panel used to cause. Block it instead.
+   */
+  const hasUnsavedConnectionEdits = model !== storedModel || apiKey !== "";
 
   const keyPlaceholder = apiKeySet
     ? `Tersimpan (${apiKeyMasked}) — biarkan kosong untuk tetap`
@@ -144,7 +170,11 @@ export function AdminAiSettingsPanel() {
             id="ai-model"
             type="text"
             value={model}
-            onChange={(e) => setModel(e.target.value)}
+            onChange={(e) => {
+              setSaved(false);
+              invalidateTestResult();
+              setModel(e.target.value);
+            }}
             placeholder="gemini-2.0-flash-lite"
             className={`mt-1.5 ${inputClass}`}
           />
@@ -160,7 +190,11 @@ export function AdminAiSettingsPanel() {
             id="ai-key"
             type="password"
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(e) => {
+              setSaved(false);
+              invalidateTestResult();
+              setApiKey(e.target.value);
+            }}
             placeholder={keyPlaceholder}
             className={`mt-1.5 ${inputClass}`}
           />
@@ -179,7 +213,10 @@ export function AdminAiSettingsPanel() {
               hint="USD / 1jt token"
               value={priceIn}
               placeholder={String(effective.inPerMTok)}
-              onChange={setPriceIn}
+              onChange={(v) => {
+                setSaved(false);
+                setPriceIn(v);
+              }}
             />
             <RateField
               id="ai-price-out"
@@ -187,7 +224,10 @@ export function AdminAiSettingsPanel() {
               hint="USD / 1jt token"
               value={priceOut}
               placeholder={String(effective.outPerMTok)}
-              onChange={setPriceOut}
+              onChange={(v) => {
+                setSaved(false);
+                setPriceOut(v);
+              }}
             />
             <RateField
               id="ai-points-per-usd"
@@ -195,7 +235,10 @@ export function AdminAiSettingsPanel() {
               hint="1 USD = ? poin"
               value={pointsPerUsd}
               placeholder={String(effective.pointsPerUsd)}
-              onChange={setPointsPerUsd}
+              onChange={(v) => {
+                setSaved(false);
+                setPointsPerUsd(v);
+              }}
             />
           </div>
           <p className="mt-3 text-[11px] text-muted">
@@ -215,12 +258,22 @@ export function AdminAiSettingsPanel() {
         </button>
         <button
           onClick={handleTest}
-          disabled={testing}
+          disabled={testing || hasUnsavedConnectionEdits}
+          title={
+            hasUnsavedConnectionEdits
+              ? "Simpan dulu — pengecekan menguji pengaturan yang tersimpan."
+              : undefined
+          }
           className="rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
         >
           {testing ? "Mengecek..." : "Cek koneksi"}
         </button>
         {saved && <span className="text-xs font-semibold text-emerald-700">✓ Tersimpan</span>}
+        {hasUnsavedConnectionEdits && (
+          <span className="text-xs text-muted">
+            Simpan dulu untuk bisa cek koneksi — pengecekan memakai pengaturan yang tersimpan.
+          </span>
+        )}
       </div>
 
       {testResult && <ConnectionTestReport result={testResult} />}
