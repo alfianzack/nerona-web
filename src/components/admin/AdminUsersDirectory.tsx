@@ -16,6 +16,7 @@ interface UserRow {
   adminRole: string | null;
   metadata: PlanState | null;
   agent: PlanState | null;
+  points: number;
 }
 
 interface FilterCounts {
@@ -177,12 +178,13 @@ export function AdminUsersDirectory() {
 
       <div className="mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-surface to-surface2 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b border-navy-900/10 bg-canvas/60 text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-3 font-medium">Pengguna</th>
                 <th className="px-4 py-3 font-medium">Metadata</th>
                 <th className="px-4 py-3 font-medium">Agent</th>
+                <th className="px-4 py-3 font-medium">Poin</th>
                 <th className="px-4 py-3 font-medium">Terdaftar</th>
                 <th className="px-4 py-3 font-medium">
                   <span className="sr-only">Aksi</span>
@@ -192,7 +194,7 @@ export function AdminUsersDirectory() {
             <tbody className="divide-y divide-navy-900/10">
               {rows.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     Tidak ada pengguna.
                   </td>
                 </tr>
@@ -227,6 +229,9 @@ export function AdminUsersDirectory() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusPill state={row.agent} fallbackLabel="Agent" />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm tabular-nums text-ink">
+                      {row.points.toLocaleString("id-ID")}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-muted">
                       {new Date(row.createdAt).toLocaleDateString("id-ID", {

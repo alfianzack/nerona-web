@@ -66,6 +66,15 @@ export async function GET(request: Request) {
     prisma.user.count({ where: { AND: [searchWhere, FILTERS.none] } }),
   ]);
 
+  // One grouped query rather than getBalance per user — a 25-row page would
+  // otherwise fire 25 aggregates.
+  const balances = await prisma.pointTransaction.groupBy({
+    by: ["userId"],
+    where: { userId: { in: users.map((user) => user.id) } },
+    _sum: { delta: true },
+  });
+  const pointsByUser = new Map(balances.map((b) => [b.userId, b._sum.delta ?? 0]));
+
   const rows = users.map((user) => {
     const license = user.licenses[0];
     return {
@@ -74,6 +83,7 @@ export async function GET(request: Request) {
       name: user.name,
       createdAt: user.createdAt.toISOString(),
       adminRole: user.adminRole?.role ?? null,
+      points: pointsByUser.get(user.id) ?? 0,
       metadata: license
         ? { status: license.status, plan: license.plan?.name ?? null }
         : null,
