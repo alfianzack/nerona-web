@@ -242,6 +242,7 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1",
       validUntil: undefined,
+      isRenewal: false,
     });
     expect(prisma.license.findFirst).not.toHaveBeenCalled();
     expect(prisma.orderRequest.update).toHaveBeenCalledWith({
@@ -284,6 +285,7 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1r",
       validUntil: expectedValidUntil,
+      isRenewal: true,
     });
   });
 
@@ -363,5 +365,36 @@ describe("cancelOrderRequest", () => {
     (prisma.orderRequest.findUnique as any).mockResolvedValue({ id: "req-1", status: "fulfilled" });
 
     expect(await cancelOrderRequest("req-1")).toEqual({ ok: false, reason: "not_pending" });
+  });
+});
+
+describe("fulfillOrderRequest — metadata points", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("leaves crediting to grantLicense so the allowance is not doubled", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-1",
+      status: "pending",
+      product: "metadata",
+      planName: "Pro",
+      isRenewal: false,
+      user: { id: "user-1", email: "t@example.com" },
+    });
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro", name: "Pro" });
+    (grantLicense as any).mockResolvedValue({ ok: true });
+
+    const result = await fulfillOrderRequest("admin-1", "req-1");
+
+    expect(result).toEqual({ ok: true });
+    // grantLicense is mocked here, so it credits nothing. Any ledger write that
+    // shows up came from the metadata branch — which would double the allowance
+    // in production, where grantLicense does credit.
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+    expect(grantLicense).toHaveBeenCalledWith(
+      "admin-1",
+      "t@example.com",
+      "plan-pro",
+      expect.objectContaining({ isRenewal: false })
+    );
   });
 });

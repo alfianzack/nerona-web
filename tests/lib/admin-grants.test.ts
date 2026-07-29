@@ -8,6 +8,10 @@ vi.mock("@/lib/prisma", () => ({
     course: { findUnique: vi.fn() },
     enrollment: { upsert: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
     order: { create: vi.fn() },
+    // grantLicense credits the metadata allowance, which reads the configured
+    // amount and writes a ledger row. null means the code default applies.
+    setting: { findUnique: vi.fn(async () => null) },
+    pointTransaction: { create: vi.fn() },
   },
 }));
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
@@ -26,7 +30,9 @@ describe("grantLicense", () => {
     vi.clearAllMocks();
   });
 
-  const plan = { id: "plan-1", marketplaces: "*", rejectAnalyzer: true };
+  // `name` is non-nullable in the schema and is what the point allowance is
+  // looked up by, so the fixture has to carry it.
+  const plan = { id: "plan-1", name: "Pro", marketplaces: "*", rejectAnalyzer: true };
 
   it("returns user_not_found when no User matches the email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);

@@ -256,9 +256,12 @@ export async function fulfillOrderRequest(
       });
       validUntil = renewedExpiryFrom(current?.validUntil ?? null, new Date());
     }
+    // grantLicense credits the metadata allowance, so this branch must not —
+    // a second call here would double every metadata activation.
     const result = await grantLicense(adminId, order.user.email, plan.id, {
       note: `Order ${order.id}`,
       validUntil,
+      isRenewal: Boolean(order.isRenewal),
     });
     if (!result.ok) {
       return { ok: false, reason: "grant_failed" };

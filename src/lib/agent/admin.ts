@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isExpired, monthlyExpiryFrom } from "@/lib/billing-period";
+import { creditPlanPoints } from "@/lib/plan-points";
 
 export type AgentAdminResult =
   | { ok: true }
@@ -39,6 +40,19 @@ export async function activateAgentProfile(
     update: { status: "active", ...(plan ? { plan } : {}), ...expiryData },
     create: { userId: user.id, status: "active", ...(plan ? { plan } : {}), ...expiryData },
   });
+
+  // Same reasoning as the metadata grant: an active plan with an empty wallet
+  // makes the agent answer "poin habis" to the tenant's first message. Only
+  // credit when a plan was actually named — a bare reactivation keeps whatever
+  // plan the profile already had, and that allowance was granted back then.
+  if (plan) {
+    await creditPlanPoints({
+      userId: user.id,
+      product: "agent",
+      plan,
+      createdById: null,
+    });
+  }
 
   return { ok: true };
 }

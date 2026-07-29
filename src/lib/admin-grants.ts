@@ -1,12 +1,15 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { monthlyExpiryFrom } from "@/lib/billing-period";
+import { creditPlanPoints } from "@/lib/plan-points";
 
 export interface GrantOptions {
   note?: string;
   amount?: number;
   currency?: string;
   validUntil?: Date;
+  /** Only changes the ledger note ("Perpanjangan" vs "Bonus"). */
+  isRenewal?: boolean;
 }
 
 export type GrantLicenseResult =
@@ -75,6 +78,19 @@ export async function grantLicense(
       },
     });
   }
+
+  // A metadata license without points is useless: api/extension/generate spends
+  // points on every call, so activating a plan and granting no allowance leaves
+  // the tenant unable to use what they just paid for. Both metadata activation
+  // paths — order fulfilment and the manual admin grant — land here, which is
+  // why fulfillOrderRequest's metadata branch deliberately does not credit.
+  await creditPlanPoints({
+    userId: user.id,
+    product: "metadata",
+    plan: plan.name,
+    createdById: adminId,
+    isRenewal: Boolean(options.isRenewal),
+  });
 
   return { ok: true };
 }
