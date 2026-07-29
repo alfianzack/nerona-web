@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
 import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
@@ -23,6 +26,20 @@ const PRICING_FAQ = [
 ];
 
 export default async function PricingPage() {
+  // /pricing is the one dual-audience page: marketing copy for visitors, a
+  // purchase surface for tenants. A tenant buying points should have the app
+  // sidebar, and one path cannot live in two route groups — so they get /paket
+  // instead. Deliberately NOT applied to /, /agent, or /metadata: those are
+  // pure marketing and are fine to read while signed in.
+  //
+  // The sidebar links straight to /paket, so this only catches stale entry
+  // points: the footer, bookmarks, search results, and the in-page links in
+  // (marketing)/page.tsx and (app)/order/page.tsx.
+  const session = await getServerSession(authOptions);
+  if (session?.user) {
+    redirect("/paket");
+  }
+
   const tiers = await metadataTiers();
 
   return (

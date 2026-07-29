@@ -139,9 +139,17 @@ export default async function FinancePage() {
         </section>
 
         <section className={`mt-6 ${cardClass}`}>
-          <h2 className="text-sm font-semibold text-ink">Poin</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">Poin</h2>
+            <Link
+              href="/paket"
+              className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
+            >
+              Beli / perpanjang paket
+            </Link>
+          </div>
           <p className="mt-1 text-xs text-muted">
-            Poin dipakai untuk balasan AI asisten WhatsApp. Hubungi admin untuk isi ulang.
+            Poin dipakai untuk balasan AI asisten WhatsApp.
           </p>
           <ul className="mt-3 divide-y divide-navy-900/10">
             {transactions.length === 0 && (
