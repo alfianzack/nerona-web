@@ -3,9 +3,9 @@
 Panduan deploy `nerona-web` ke Vercel. Untuk deploy ke VPS sendiri, lihat
 `docs/production.md`.
 
-Repo ini sudah menyertakan `vercel.json` (berisi dua cron), dan
-`package.json` sudah punya `postinstall: prisma generate` yang wajib ada agar build
-Vercel berhasil.
+Repo ini sudah menyertakan `vercel.json` (berisi **satu** cron harian — lihat batasan
+nomor 2 di bawah), dan `package.json` sudah punya `postinstall: prisma generate` yang
+wajib ada agar build Vercel berhasil.
 
 ---
 
@@ -27,21 +27,39 @@ Akibatnya gambar besar ditolak platform dengan 413 mentah, bukan error
 sendiri yang muncul, dan idealnya perkecil gambar di sisi extension sebelum dikirim.
 Base64 menambah ±33% ukuran, jadi gambar sumber ±3,3 MB saja sudah melewati batas.
 
-### 2. Cron `*/5` butuh plan Pro
+### 2. Sweep job agent sudah dilepas dari cron Vercel
 
-`vercel.json`:
+Plan **Hobby hanya mengizinkan cron harian**, jadi jadwal `*/5 * * * *` **menggagalkan
+deploy** — bukan sekadar tidak jalan. Karena itu `vercel.json` sekarang hanya memuat
+cron renewal yang harian:
 
 ```json
 {
   "crons": [
-    { "path": "/api/agent/cron", "schedule": "*/5 * * * *" },
     { "path": "/api/billing/renewals", "schedule": "0 1 * * *" }
   ]
 }
 ```
 
-Plan **Hobby hanya mengizinkan cron harian**. Jadwal `*/5` memerlukan **Pro**.
-Kalau tetap di Hobby, sweep job agent yang tersangkut tidak akan jalan tiap 5 menit.
+**Yang hilang, dan yang tidak.** Balasan agent tetap normal: webhook memanggil
+`runInBackground(processJob(...))` (`lib/agent/webhook-handler.ts`), jadi job diproses
+saat pesan masuk, bukan oleh cron. Cron `*/5` hanya menjalankan `runStuckJobSweep()`,
+yaitu jaring pengaman untuk job yang tersangkut lebih dari 2 menit — biasanya karena
+function-nya mati di tengah jalan. Tanpa cron itu, job semacam itu **tetap tersangkut
+sampai ada yang memanggil endpoint-nya**.
+
+`/api/agent/cron` sendiri **tidak dihapus** dan masih berfungsi. Tiga cara memulihkan
+sweep tanpa upgrade:
+
+1. **Cron eksternal** (cron-job.org, GitHub Actions, atau crontab di mesin lain) memanggil
+   endpoint tiap 5 menit dengan header `Authorization: Bearer $CRON_SECRET`. Tidak ada
+   perubahan kode.
+2. **Manual saat ada keluhan** — perintah curl di bagian "Setelah deploy" di bawah.
+3. **Upgrade ke Pro**, lalu kembalikan entri ini ke `vercel.json`:
+   `{ "path": "/api/agent/cron", "schedule": "*/5 * * * *" }`
+
+Kalau job tersangkut sering terjadi, `docs/production.md` (VPS + worker sungguhan) lebih
+cocok daripada menambal dengan polling.
 
 Selain itu `maxDuration = 60` di route generate mengikuti limit plan — panggilan AI
 vision pada gambar besar bisa memakan waktu.
@@ -143,7 +161,8 @@ Klik **Deploy**. Setelah selesai, cek:
 - Halaman utama terbuka
 - **Functions** memuat `/api/extension/generate`, `/api/extension/me`,
   `/api/extension/tokens`, `/api/whatsapp/webhook`
-- **Settings → Cron Jobs** memuat dua entri dari `vercel.json`
+- **Settings → Cron Jobs** memuat satu entri dari `vercel.json`
+  (`/api/billing/renewals`)
 
 ---
 
@@ -155,14 +174,18 @@ Klik **Deploy**. Setelah selesai, cek:
    verify token = `WHATSAPP_VERIFY_TOKEN`, subscribe field `messages`
 3. **AI settings** di `/admin/pengaturan` — isi model + API key Sumopod.
    Model **wajib vision-capable**, karena extension mengirim gambar.
-4. **Harga model** — tambahkan tarif ke `MODEL_PRICES` (`src/lib/agent/pricing.ts`)
-   kalau memakai model di luar 3 entri yang ada. Model tak dikenal ditagih dengan tarif
-   **termurah**, jadi poin tenant kurang terpotong.
-5. **Uji cron secara manual:**
+4. **Tarif AI** — isi tiga field tarif (harga input, harga output, poin per USD) di
+   `/admin/pengaturan`. Tarif tidak lagi dipetakan per model; urutannya DB → env →
+   `DEFAULT_AI_PRICING`. **Kalau ketiga field dikosongkan**, `DEFAULT_AI_PRICING` yang
+   dipakai — nilainya sengaja dikalibrasi terhadap alokasi poin paket, dan ada test yang
+   gagal kalau keduanya melenceng.
+5. **Uji sweep job agent secara manual** — sekarang ini satu-satunya cara menjalankannya
+   di Hobby (lihat batasan nomor 2):
    ```bash
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://domain-anda.com/api/agent/cron
-   # 200 {"ok":true,...}; tanpa header harus 401
+   # 200 {"ok":true,"swept":0}; tanpa header harus 401
    ```
+   Pertimbangkan memasang cron eksternal yang memanggil ini tiap 5 menit.
 6. **Update extension** (`nerona_medata`):
    - `access/access-config.js` → `neronaWebBaseUrl: "https://domain-anda.com"`
    - `manifest.json` → hapus `http://localhost/*` dan `http://127.0.0.1/*`
@@ -183,7 +206,9 @@ Berlaku di Vercel maupun VPS:
   ini. Di Vercel batas 4,5 MB tetap yang mengikat lebih dulu.
 - **API key tersimpan plaintext** di tabel `Setting`.
 - **Kegagalan `spendPoints` ditelan** (`generate/route.ts`) — call AI langka bisa gratis.
-- **Dua test `orders.test.ts` merah** sejak sebelum pekerjaan ini; `npm test` = 304 lulus, 2 gagal.
+- **Sweep job tersangkut tidak berjalan otomatis** di Hobby — lihat batasan nomor 2.
+  (Catatan lama soal dua test `orders.test.ts` merah sudah tidak berlaku:
+  `npm test` = 541 lulus, 0 gagal per 2026-07-29.)
 
 ---
 
