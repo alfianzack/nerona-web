@@ -19,6 +19,7 @@
 - **`AppShell` must not wrap `children` in `<main>`.** All nine tenant pages already open with their own `<main>`; a wrapper would nest `<main>` inside `<main>`.
 - **The topbar page title is a `<span>`, never a heading.** Tenant pages keep their existing `<h1>`. Two `<h1>`s per page is the failure mode being avoided.
 - **Tailwind tokens only** (from `tailwind.config.ts`): `canvas`, `surface`, `surface2`, `ink`, `muted`, `navy-900`, `brand-blue`, `brand-orange`, `gold-400`, `gold-500`. No raw hex except the two already in the codebase: `#9A6B08` (points chip text) and `#C25717`/`#3B65C4` (pricing tabs).
+- **Do not change a single grid class.** Six declarations (`dashboard/page.tsx:46,102`, `admin/page.tsx:206,248,337`, `admin/pengaturan/page.tsx:7`) use `lg:` breakpoints tuned for a full-width page. The sidebar's collapsed 56px strip is sized precisely so they all keep working — at 1024px a stat card is 218px wide with 178px of text room, and `Stat`'s `text-2xl font-bold` "Rp 4.250.000" needs ~165px. A fixed 224px sidebar would give 176px/136px and break it. If a grid looks wrong, the sidebar width is the bug, not the grid.
 - **Leave the per-page `requireUser()` calls alone.** All nine tenant pages call it for the `session` object they need to fetch data; the new `(app)/layout.tsx` guard is defense in depth, mirroring how `src/middleware.ts:43-56` already duplicates the admin check. Do not "de-duplicate" them.
 - **Commit after every task.** The working tree is clean on `master` at the start.
 
@@ -113,24 +114,34 @@ The root layout still supplies Header/Footer; per-group chrome lands next."
 
 ---
 
-### Task 2: `src/lib/nav.ts` — one source of truth for nav shape
+### Task 2: The nav's data — icon set and `src/lib/nav.ts`
+
+The glyph map and the nav config are one deliverable: the sidebar's collapsed strip has nothing to render without both.
 
 **Files:**
+- Create: `src/components/ui/icons.tsx`
 - Create: `src/lib/nav.ts`
+- Modify: `src/app/admin/page.tsx:9-29,39-56` — import `Icon` from the shared module instead of keeping a private `ICONS` map
 - Modify: `tests/lib/tenant-nav.test.ts` (replace contents; keep the filename and the intent of its doc comment)
 - Do NOT yet modify: `src/components/layout/Header.tsx`, `src/components/layout/HeaderNav.tsx` — Task 4 and Task 5 delete them. They keep their own copy of `activeHref` until then so the build stays green.
+
+Note the admin page is at `src/app/(admin)/admin/page.tsx` after Task 1.
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces, all imported by Tasks 4, 5, and 7:
+  - From `@/components/ui/icons`: `type IconName`, `Icon({ name, className }: { name: IconName; className?: string })`
   - `type NavItem = { href: string; label: string }`
-  - `type NavSection = { title?: string; items: NavItem[] }`
+  - `type SidebarItem = NavItem & { icon: IconName }`
+  - `type NavSection = { title?: string; items: SidebarItem[] }`
   - `MARKETING_NAV: NavItem[]`
   - `TENANT_NAV: NavSection[]`
   - `ADMIN_NAV: NavSection[]`
-  - `flatten(sections: NavSection[]): NavItem[]`
+  - `flatten(sections: NavSection[]): SidebarItem[]`
   - `activeHref(pathname: string, items: NavItem[]): string | null`
   - `pageTitle(pathname: string, sections: NavSection[]): string`
+
+`SidebarItem` extends `NavItem`, so `SidebarItem[]` satisfies `activeHref`'s parameter and the marketing nav needs no icons.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -139,6 +150,7 @@ Replace the entire contents of `tests/lib/tenant-nav.test.ts`. The original file
 ```ts
 import { describe, expect, it } from "vitest";
 
+import { ICON_NAMES } from "@/components/ui/icons";
 import {
   ADMIN_NAV,
   MARKETING_NAV,
@@ -216,6 +228,19 @@ describe("marketing navigation", () => {
   });
 });
 
+describe("sidebar glyphs", () => {
+  /**
+   * Between sm and xl the sidebar is a 56px icon strip with no labels, so a
+   * misspelled icon name renders nothing at all — and stays invisible in
+   * testing because the label covers for it at xl and above.
+   */
+  it("gives every sidebar item a glyph that exists", () => {
+    for (const item of [...flatten(TENANT_NAV), ...flatten(ADMIN_NAV)]) {
+      expect(ICON_NAMES).toContain(item.icon);
+    }
+  });
+});
+
 describe("activeHref", () => {
   const tenant = flatten(TENANT_NAV);
 
@@ -258,17 +283,130 @@ describe("pageTitle", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd nerona-web && npx vitest run tests/lib/tenant-nav.test.ts`
-Expected: FAIL — `Failed to resolve import "@/lib/nav"`.
+Expected: FAIL — `Failed to resolve import "@/components/ui/icons"`.
 
-- [ ] **Step 3: Write `src/lib/nav.ts`**
+- [ ] **Step 3: Create `src/components/ui/icons.tsx`**
+
+`users`, `key`, `chat`, and `clock` are lifted verbatim from `src/app/(admin)/admin/page.tsx:9-29`. The other eight are the Feather glyphs the sidebar needs, in the same house style: 24px viewBox, `stroke="currentColor"`, `strokeWidth={2}`, round caps.
+
+```tsx
+const ICONS = {
+  users: (
+    <>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
+  key: (
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  ),
+  chat: (
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  chart: (
+    <>
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </>
+  ),
+  box: (
+    <>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </>
+  ),
+  receipt: (
+    <>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </>
+  ),
+  wallet: (
+    <>
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </>
+  ),
+  settings: (
+    <>
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </>
+  ),
+} as const;
+
+export type IconName = keyof typeof ICONS;
+
+// Exported as a plain array so tests can assert a nav item's icon exists —
+// between sm and xl the sidebar shows no labels, so a typo renders nothing.
+export const ICON_NAMES = Object.keys(ICONS) as IconName[];
+
+export function Icon({ name, className }: { name: IconName; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className ?? "h-[18px] w-[18px]"}
+    >
+      {ICONS[name]}
+    </svg>
+  );
+}
+```
+
+- [ ] **Step 4: Write `src/lib/nav.ts`**
 
 `activeHref` and its `matches` helper are moved verbatim from `src/components/layout/HeaderNav.tsx:13-27`. The longest-match behavior is already correct; do not "improve" it.
 
-```ts
-export type NavItem = { href: string; label: string };
-export type NavSection = { title?: string; items: NavItem[] };
+This file must contain **no JSX** — `vitest` runs it in a node environment. That is why the icon is a string key and `IconName` comes in as a type-only import, which the transpiler erases entirely.
 
-// Public marketing pages. "Home" is deliberately absent — the logo is the
+```ts
+import type { IconName } from "@/components/ui/icons";
+
+export type NavItem = { href: string; label: string };
+// Sidebar items carry a glyph for the collapsed 56px strip. Requiring it here
+// means an item with no icon cannot compile into a sidebar section.
+export type SidebarItem = NavItem & { icon: IconName };
+export type NavSection = { title?: string; items: SidebarItem[] };
+
+// Public marketing pages. Text-only — that is why NavItem stays separate from
+// SidebarItem. "Home" is deliberately absent — the logo is the
 // home link. "Harga" is back after plan 2026-07-19 dropped it from the top
 // nav: that decision relied on an in-page PricingTeaser component which no
 // longer exists, leaving /metadata and /agent with no pricing path at all.
@@ -284,40 +422,43 @@ export const MARKETING_NAV: NavItem[] = [
 // /finance side by side, which read as one thing; keeping them apart is the
 // point of this grouping.
 export const TENANT_NAV: NavSection[] = [
-  { items: [{ href: "/dashboard", label: "Dashboard" }] },
+  { items: [{ href: "/dashboard", label: "Dashboard", icon: "chart" }] },
   {
     title: "Agent",
     items: [
-      { href: "/agent/chat", label: "Chat" },
-      { href: "/agent/dashboard", label: "Koneksi WhatsApp" },
+      { href: "/agent/chat", label: "Chat", icon: "chat" },
+      { href: "/agent/dashboard", label: "Koneksi WhatsApp", icon: "link" },
     ],
   },
   {
     title: "Toko",
     items: [
-      { href: "/produk", label: "Produk" },
-      { href: "/transaksi", label: "Transaksi" },
+      { href: "/produk", label: "Produk", icon: "box" },
+      { href: "/transaksi", label: "Transaksi", icon: "receipt" },
     ],
   },
   {
     title: "Akun & Tagihan",
     items: [
-      { href: "/paket", label: "Paket & Harga" },
-      { href: "/finance", label: "Finance" },
+      { href: "/paket", label: "Paket & Harga", icon: "tag" },
+      { href: "/finance", label: "Finance", icon: "wallet" },
     ],
   },
 ];
 
 export const ADMIN_NAV: NavSection[] = [
-  { items: [{ href: "/admin", label: "Dashboard" }] },
+  { items: [{ href: "/admin", label: "Dashboard", icon: "chart" }] },
   {
     title: "Kelola",
     items: [
-      { href: "/admin/users", label: "Pengguna" },
-      { href: "/admin/orders", label: "Order" },
+      { href: "/admin/users", label: "Pengguna", icon: "users" },
+      { href: "/admin/orders", label: "Order", icon: "receipt" },
     ],
   },
-  { title: "Sistem", items: [{ href: "/admin/pengaturan", label: "Pengaturan" }] },
+  {
+    title: "Sistem",
+    items: [{ href: "/admin/pengaturan", label: "Pengaturan", icon: "settings" }],
+  },
 ];
 
 // App pages reachable from inside the shell but deliberately kept out of the
@@ -329,7 +470,7 @@ const TITLE_OVERRIDES: NavItem[] = [
   { href: "/account", label: "Profile" },
 ];
 
-export function flatten(sections: NavSection[]): NavItem[] {
+export function flatten(sections: NavSection[]): SidebarItem[] {
   return sections.flatMap((section) => section.items);
 }
 
@@ -358,25 +499,49 @@ export function pageTitle(pathname: string, sections: NavSection[]): string {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [ ] **Step 5: Run the test to verify it passes**
 
 Run: `cd nerona-web && npx vitest run tests/lib/tenant-nav.test.ts`
-Expected: PASS, all cases.
+Expected: PASS, all cases including `sidebar glyphs`.
 
-- [ ] **Step 5: Run the whole suite and lint**
+- [ ] **Step 6: Point the admin dashboard at the shared icon module**
+
+In `src/app/(admin)/admin/page.tsx`, delete the private `ICONS` map (lines 9-29) and reduce `IconChip` (lines 39-56) to use the shared component. `CHIP_TONES` and `StatTile` stay as they are.
+
+```tsx
+import { Icon, type IconName } from "@/components/ui/icons";
+
+function IconChip({ tone, icon }: { tone: keyof typeof CHIP_TONES; icon: IconName }) {
+  return (
+    <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${CHIP_TONES[tone]}`}>
+      <Icon name={icon} />
+    </span>
+  );
+}
+```
+
+`StatTile`'s prop type at line 67 is `icon: keyof typeof ICONS` — change it to `icon: IconName`. The four call sites (`users`, `key`, `chat`, `clock`) need no edits because those glyphs kept their names.
+
+- [ ] **Step 7: Run the whole suite and lint**
 
 Run: `cd nerona-web && npm test && npm run lint`
 Expected: all pass. `Header.tsx` still exports `CUSTOMER_NAV` and `HeaderNav.tsx` still exports `activeHref`; nothing imports them from the test any more, but they remain valid until Task 5 deletes them.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cd nerona-web
-git add src/lib/nav.ts tests/lib/tenant-nav.test.ts
-git commit -m "feat: add lib/nav.ts as the single source of truth for nav shape
+git add src/lib/nav.ts src/components/ui/icons.tsx \
+        "src/app/(admin)/admin/page.tsx" tests/lib/tenant-nav.test.ts
+git commit -m "feat: add lib/nav.ts and a shared icon set as the nav's data
 
 Sectioned TENANT_NAV/ADMIN_NAV plus MARKETING_NAV, with activeHref moved
 verbatim out of HeaderNav.tsx and a pageTitle helper for the app topbar.
+Every sidebar item carries a glyph, because between sm and xl the sidebar
+is a 56px icon strip with no labels.
+
+ICONS moves out of admin/page.tsx into components/ui/icons.tsx and gains
+the eight glyphs the sidebar needs.
 
 Closes the third instance of the bug tenant-nav.test.ts guards:
 /agent/dashboard was reachable from no nav array."
@@ -747,15 +912,22 @@ This is the task that makes the split real. At its end there is exactly one shel
 - Delete: `src/components/layout/Header.tsx`, `src/components/layout/HeaderNav.tsx`
 
 **Interfaces:**
-- Consumes: `TENANT_NAV`, `ADMIN_NAV`, `NavSection`, `activeHref`, `flatten`, `pageTitle` from `@/lib/nav`; `requireUser`/`requireAdmin` from `@/lib/session-guards`; `getBalance` from `@/lib/points`; `Modal` from `@/components/ui/Modal`.
+- Consumes: `TENANT_NAV`, `ADMIN_NAV`, `NavSection`, `activeHref`, `flatten`, `pageTitle` from `@/lib/nav`; `Icon` from `@/components/ui/icons`; `requireUser`/`requireAdmin` from `@/lib/session-guards`; `getBalance` from `@/lib/points`; `Modal` from `@/components/ui/Modal`.
 - Produces:
-  - `AppSidebar({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void })`
+  - `AppSidebar({ sections, showLabels, onNavigate }: { sections: NavSection[]; showLabels?: boolean; onNavigate?: () => void })`
   - `AccountMenu({ email }: { email: string })`
   - `AppShell({ sections, points, email, homeHref, children }: { sections: NavSection[]; points: number | null; email: string; homeHref: string; children: React.ReactNode })`
 
 `AppShell` is a client component taking only serializable props plus `children`; the two group layouts stay server components and do the data fetching.
 
+`AppSidebar`'s `showLabels` prop is what makes the collapse work. It is **not** a boolean the caller computes from a window width — the strip and the labelled sidebar are two renders of the same component, selected by Tailwind's `hidden`/`xl:block` on their containers, so there is no JavaScript width measurement and no hydration mismatch:
+
+- `showLabels` omitted → the 56px icon strip (`sm` to `xl`)
+- `showLabels` → the labelled sidebar (the `xl` rail and the mobile drawer, both of which have room)
+
 - [ ] **Step 1: Create `src/components/layout/AppSidebar.tsx`**
+
+Two things carry the label when it is hidden: `title` (hover tooltip) and `aria-label` (screen readers). Both are always set, so the labelled variant is unharmed by them.
 
 ```tsx
 "use client";
@@ -763,26 +935,34 @@ This is the task that makes the split real. At its end there is exactly one shel
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { activeHref, flatten, type NavSection } from "@/lib/nav";
+import { Icon } from "@/components/ui/icons";
 
 export function AppSidebar({
   sections,
+  showLabels,
   onNavigate,
 }: {
   sections: NavSection[];
+  showLabels?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname() ?? "";
   const active = activeHref(pathname, flatten(sections));
 
   return (
-    <nav className="flex flex-col gap-5 px-3 py-4">
+    <nav className={`flex flex-col gap-4 py-4 ${showLabels ? "px-3" : "px-2"}`}>
       {sections.map((section, index) => (
         <div key={section.title ?? `section-${index}`}>
-          {section.title && (
-            <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/70">
-              {section.title}
-            </p>
-          )}
+          {section.title &&
+            (showLabels ? (
+              <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/70">
+                {section.title}
+              </p>
+            ) : (
+              // "AKUN & TAGIHAN" cannot fit 56px, so the grouping survives as
+              // a rule instead of a caption.
+              <hr className="mx-2 mb-2 border-navy-900/10" />
+            ))}
           <ul className="flex flex-col gap-0.5">
             {section.items.map((item) => {
               const isActive = item.href === active;
@@ -791,14 +971,19 @@ export function AppSidebar({
                   <Link
                     href={item.href}
                     onClick={onNavigate}
+                    title={item.label}
+                    aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
-                    className={`block rounded-lg px-2 py-1.5 text-sm transition ${
+                    className={`flex items-center rounded-lg transition ${
+                      showLabels ? "gap-2.5 px-2 py-1.5" : "h-10 w-10 justify-center"
+                    } ${
                       isActive
                         ? "bg-brand-blue/10 font-semibold text-ink"
                         : "text-muted hover:bg-navy-900/5 hover:text-ink"
                     }`}
                   >
-                    {item.label}
+                    <Icon name={item.icon} className="h-[18px] w-[18px] flex-none" />
+                    {showLabels && <span className="truncate text-sm">{item.label}</span>}
                   </Link>
                 </li>
               );
@@ -909,7 +1094,11 @@ export function AccountMenu({ email }: { email: string }) {
 
 - [ ] **Step 3: Create `src/components/layout/AppShell.tsx`**
 
-Note the `<div className="min-w-0 flex-1">` around `children` — **not** `<main>`. Every tenant page brings its own `<main>`. And the title is a `<span>`, not a heading, because the pages own their `<h1>`.
+Three things here are load-bearing and must not be "simplified":
+
+1. **`<div className="min-w-0 flex-1">` around `children`, not `<main>`.** Every tenant page brings its own `<main>`.
+2. **The title is a `<span>`, not a heading.** The pages own their `<h1>`.
+3. **Two `<aside>` rails, selected by Tailwind, not by JavaScript.** The 56px strip is `hidden sm:block xl:hidden`; the 224px rail is `hidden xl:block`. Measuring `window.innerWidth` instead would break server rendering and flash the wrong width on load. The `w-14` on the strip is the number the whole responsive design rests on — see the Global Constraints.
 
 ```tsx
 "use client";
@@ -938,13 +1127,18 @@ export function AppShell({
   const pathname = usePathname() ?? "";
   const title = pageTitle(pathname, sections);
 
-  const brand = (
+  // The wordmark only appears where there is room for it; the 56px strip gets
+  // the logo mark alone, centered.
+  const brand = (withWordmark: boolean) => (
     <Link
       href={homeHref}
-      className="flex h-12 flex-none items-center gap-2 px-5 text-sm font-semibold tracking-tight text-ink"
+      title="Nerona"
+      className={`flex h-12 flex-none items-center text-sm font-semibold tracking-tight text-ink ${
+        withWordmark ? "gap-2 px-5" : "justify-center"
+      }`}
     >
-      <img src="/logo-nerona.svg" alt="" className="h-5 w-5" />
-      Nerona
+      <img src="/logo-nerona.svg" alt="" className="h-5 w-5 flex-none" />
+      {withWordmark && "Nerona"}
     </Link>
   );
 
@@ -959,17 +1153,33 @@ export function AppShell({
       </Link>
     ) : null;
 
+  const rail = "flex-none border-r border-navy-900/10 bg-surface/60";
+  const railInner = "sticky top-0 flex h-screen flex-col";
+
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-56 flex-none border-r border-navy-900/10 bg-surface/60 sm:block">
-        <div className="sticky top-0 flex h-screen flex-col">
-          {brand}
+      {/* sm → xl: the 56px icon strip. w-14 is what keeps every lg: grid in
+          the app working — see the Global Constraints. */}
+      <aside className={`hidden w-14 sm:block xl:hidden ${rail}`}>
+        <div className={railInner}>
+          {brand(false)}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <AppSidebar sections={sections} />
           </div>
         </div>
       </aside>
 
+      {/* xl and up: the full sidebar with labels and section headers. */}
+      <aside className={`hidden w-56 xl:block ${rail}`}>
+        <div className={railInner}>
+          {brand(true)}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <AppSidebar sections={sections} showLabels />
+          </div>
+        </div>
+      </aside>
+
+      {/* Below sm: a drawer. An overlay has room, so it always shows labels. */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 sm:hidden">
           <div
@@ -977,9 +1187,13 @@ export function AppShell({
             onClick={() => setDrawerOpen(false)}
           />
           <aside className="relative z-10 flex h-full w-64 flex-col border-r border-navy-900/10 bg-canvas">
-            {brand}
+            {brand(true)}
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <AppSidebar sections={sections} onNavigate={() => setDrawerOpen(false)} />
+              <AppSidebar
+                sections={sections}
+                showLabels
+                onNavigate={() => setDrawerOpen(false)}
+              />
             </div>
           </aside>
         </div>
@@ -1129,6 +1343,12 @@ git commit -m "feat: add the app sidebar shell and retire the shared header
 Nine tenant pages plus a points chip plus Sign Out no longer have to fit
 one h-12 bar. Sections keep the tenant's own shop apart from their Nerona
 billing, and /agent/dashboard finally has a nav entry.
+
+The sidebar collapses to a 56px icon strip between sm and xl. That width
+is chosen, not arbitrary: a fixed 224px rail leaves a stat card 176px at
+1024px, and 'Rp 4.250.000' at text-2xl needs ~165px in 136px of padded
+room. The strip gives 218px/178px, so all six lg: grids in the app keep
+working with no class changes.
 
 (admin) is a sibling group, not a child of (app) — nesting would wrap
 admin pages in the tenant sidebar and the admin sidebar both."
@@ -1582,5 +1802,9 @@ Run these after Task 7. Steps 4 onward are manual and need `npm run dev`.
 - [ ] **Deep link:** signed out, open `/admin/users` → login page → sign in as admin → land on `/admin/users`, not `/admin`.
 - [ ] **Open redirect:** signed in, open `/post-login?next=//example.com` → lands on the role home and never leaves the origin. Repeat with `/post-login?next=/a&next=//example.com`.
 - [ ] **Signed in, `/login`:** redirected to the role home.
-- [ ] **Mobile viewport (≤640px), tenant:** sidebar hidden; hamburger opens the drawer; tapping a nav item navigates and closes it; points chip stays in the topbar.
+- [ ] **< 640px, tenant:** no rail; hamburger opens the drawer with full labels and section headers; tapping a nav item navigates and closes it; points chip stays in the topbar.
+- [ ] **~1024px, tenant `/dashboard`:** the 56px icon strip is showing — logo mark only, no wordmark, section groups separated by a rule instead of captions. Hovering a glyph shows its label. **The stat row is four columns and "Rp 4.250.000" sits on one line.** This is the regression the strip exists to prevent; if that figure wraps, the strip is wider than `w-14` or a grid class was edited.
+- [ ] **~1024px, `/admin/users`:** the `min-w-[720px]` table scrolls inside its own wrapper (`AdminUsersDirectory.tsx:179`); the page itself does not scroll sideways.
+- [ ] **≥ 1280px, tenant:** full 224px sidebar with wordmark, labels, and `AGENT` / `TOKO` / `AKUN & TAGIHAN` headers. Stat cards are back to their pre-redesign width.
+- [ ] **Resize slowly through 640px and 1280px:** the rail swaps without a flash of the wrong width, and nothing shifts on first paint (the swap is CSS, not measured JavaScript).
 - [ ] **Mobile viewport, `/`:** marketing hamburger opens the dropdown containing the nav plus the auth area.

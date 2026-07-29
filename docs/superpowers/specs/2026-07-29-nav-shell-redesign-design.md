@@ -38,6 +38,7 @@ These were settled during design and should not be relitigated during implementa
 | Nav label language | **Indonesian everywhere.** This revokes the "top-nav labels are English" decision from plan `2026-07-19`; `CUSTOMER_NAV` had already drifted to Indonesian and the body copy is Indonesian throughout. |
 | `Harga` in guest top nav | Re-added. This revises `2026-07-19`, which is acceptable because the `PricingTeaser` that decision depended on no longer exists. |
 | `Finance` grouping | Moves out of the shop group into `AKUN & TAGIHAN` |
+| Sidebar width | Viewport-driven collapse: hidden below `sm`, 56px icon strip from `sm` to `xl`, full 224px at `xl`+. No user-facing toggle. |
 
 ## Architecture
 
@@ -73,7 +74,10 @@ One module owns nav shape for every shell. `activeHref()` moves here from `Heade
 
 ```ts
 export type NavItem = { href: string; label: string };
-export type NavSection = { title?: string; items: NavItem[] };
+// Sidebar items carry a glyph for the collapsed strip. Requiring it here means
+// an item with no icon cannot compile into a sidebar section.
+export type SidebarItem = NavItem & { icon: IconName };
+export type NavSection = { title?: string; items: SidebarItem[] };
 
 export const MARKETING_NAV: NavItem[] = [
   { href: "/agent", label: "Agent" },
@@ -81,33 +85,36 @@ export const MARKETING_NAV: NavItem[] = [
   { href: "/pricing", label: "Harga" },
 ];
 // "Home" is dropped — the logo is the home link, per standard practice.
+// No icons: the marketing nav is text-only, which is why NavItem stays separate.
 
 export const TENANT_NAV: NavSection[] = [
-  { items: [{ href: "/dashboard", label: "Dashboard" }] },
+  { items: [{ href: "/dashboard", label: "Dashboard", icon: "chart" }] },
   { title: "Agent", items: [
-    { href: "/agent/chat", label: "Chat" },
-    { href: "/agent/dashboard", label: "Koneksi WhatsApp" },
+    { href: "/agent/chat", label: "Chat", icon: "chat" },
+    { href: "/agent/dashboard", label: "Koneksi WhatsApp", icon: "link" },
   ]},
   { title: "Toko", items: [
-    { href: "/produk", label: "Produk" },
-    { href: "/transaksi", label: "Transaksi" },
+    { href: "/produk", label: "Produk", icon: "box" },
+    { href: "/transaksi", label: "Transaksi", icon: "receipt" },
   ]},
   { title: "Akun & Tagihan", items: [
-    { href: "/paket", label: "Paket & Harga" },
-    { href: "/finance", label: "Finance" },
+    { href: "/paket", label: "Paket & Harga", icon: "tag" },
+    { href: "/finance", label: "Finance", icon: "wallet" },
   ]},
 ];
 
 export const ADMIN_NAV: NavSection[] = [
-  { items: [{ href: "/admin", label: "Dashboard" }] },
+  { items: [{ href: "/admin", label: "Dashboard", icon: "chart" }] },
   { title: "Kelola", items: [
-    { href: "/admin/users", label: "Pengguna" },
-    { href: "/admin/orders", label: "Order" },
+    { href: "/admin/users", label: "Pengguna", icon: "users" },
+    { href: "/admin/orders", label: "Order", icon: "receipt" },
   ]},
-  { title: "Sistem", items: [{ href: "/admin/pengaturan", label: "Pengaturan" }] },
+  { title: "Sistem", items: [
+    { href: "/admin/pengaturan", label: "Pengaturan", icon: "settings" },
+  ]},
 ];
 
-export function flatten(sections: NavSection[]): NavItem[];
+export function flatten(sections: NavSection[]): SidebarItem[];
 export function activeHref(pathname: string, items: NavItem[]): string | null;  // moved as-is
 export function pageTitle(pathname: string, sections: NavSection[]): string;    // label of the active item
 ```
@@ -120,7 +127,8 @@ export function pageTitle(pathname: string, sections: NavSection[]): string;    
 |---|---|---|
 | `components/layout/MarketingHeader.tsx` | server | `MARKETING_NAV`; right side is `Masuk` (text) + `Coba Gratis` (filled CTA), or `Dashboard →` when a session exists |
 | `components/layout/AppShell.tsx` | server | Reads session and `getBalance()`, renders sidebar + topbar, accepts `sections: NavSection[]` |
-| `components/layout/AppSidebar.tsx` | client | Section headers, active state via `usePathname`, collapses to a drawer under `sm` |
+| `components/layout/AppSidebar.tsx` | client | Section headers, active state via `usePathname`, three width states (see "Responsive behavior") |
+| `components/ui/icons.tsx` | server-safe | The `ICONS` glyph map extracted from `admin/page.tsx:9-29` plus the eight glyphs the sidebar needs |
 | `components/layout/AccountMenu.tsx` | client | Avatar dropdown: Profile, Sign Out — **reuses the confirmation `Modal` currently at `HeaderNav.tsx:147-169`** |
 
 App topbar: page title on the left; points chip + `AccountMenu` on the right. On mobile the hamburger opens the sidebar drawer and the points chip stays visible in the topbar.
@@ -129,6 +137,34 @@ Two constraints from how the tenant pages are written today:
 
 - **`AppShell` must not wrap `children` in `<main>`.** All nine tenant pages already open with their own `<main>` (e.g. `dashboard/page.tsx:42`, `finance/page.tsx:73`); a wrapper would nest `<main>` inside `<main>`. Use a plain `<div className="min-w-0 flex-1">`.
 - **The topbar title is a `<span>`, not a heading, and the pages keep their `<h1>`.** Every tenant page has one (`<h1>Dashboard</h1>`, `<h1>Finance</h1>`, …). Rendering the name small in the topbar and large in the page is the Vercel/Linear pattern, and it avoids editing nine pages to strip headings. `pageTitle()` output is a locator, so it must not be an `<h1>` — that would create two competing top-level headings per page.
+
+### Responsive behavior
+
+Tailwind breakpoints measure the **viewport**, but a sidebar narrows the **content column**. A fixed 224px sidebar therefore silently breaks grids that were tuned without one. Six grid declarations are exposed — `dashboard/page.tsx:46,102`, `admin/page.tsx:206,248,337`, `admin/pengaturan/page.tsx:7` — and the worst case is concrete rather than theoretical: `Stat` renders its value at `text-2xl font-bold` (`dashboard/page.tsx:27`), and "Rp 4.250.000" needs roughly 165px.
+
+A viewport-driven collapse keeps every one of those grids working untouched:
+
+| Viewport | Sidebar | Content column | After `px-6` | Per stat card (4 cols, `gap-4`) | Text room after `p-5` |
+|---|---|---|---|---|---|
+| < 640px | drawer | full | — | 2 cols | ample |
+| 640px | 56px strip | 584px | 536px | 260px (2 cols) | 220px |
+| 1024px (`lg:grid-cols-4` fires) | 56px strip | 968px | 920px | **218px** | **178px** ✓ |
+| 1280px (`xl`) | 224px full | 1056px → capped 1024px | 976px | **232px** | 192px ✓ |
+| *rejected: fixed 224px* | *224px* | *800px* | *752px* | *176px* | *136px* ✗ |
+
+The last row is why the strip exists. At 1280px the numbers return to exactly what they were before the sidebar existed, and **no grid class changes anywhere in the codebase.**
+
+The three states:
+
+- **Below `sm`** — no sidebar; the topbar hamburger opens a `w-64` drawer that always shows full labels, because an overlay has room.
+- **`sm` to `xl`** — a `w-14` icon-only strip. Each item is its glyph plus `title` and `aria-label` carrying the label. Section titles are replaced by a thin divider, since "AKUN & TAGIHAN" cannot fit 56px.
+- **`xl` and up** — the full `w-56` sidebar with labels and section headers.
+
+This requires `NavItem` to carry an icon, so `nav.ts` gains an `icon: IconName` field. The name is a **string key**, not a `ReactNode` — `lib/nav.ts` must stay JSX-free for the node-environment test suite, so it imports `IconName` as a type only.
+
+Glyphs come from `components/ui/icons.tsx`, which is `ICONS` lifted out of `admin/page.tsx:9-29` (Feather-style, 24px viewBox, `stroke="currentColor"`, `strokeWidth={2}`). `users`, `chat`, `key`, and `clock` already exist; the sidebar adds `home`, `link`, `box`, `receipt`, `tag`, `wallet`, `chart`, and `settings`. `admin/page.tsx` then imports from the shared module instead of holding its own copy.
+
+**No user-facing collapse toggle.** The width follows the viewport only. A manual toggle would need persisted state and a control in the chrome; the arithmetic above is already solved without it, so it stays out of scope.
 
 `Header.tsx` and `HeaderNav.tsx` are deleted once every caller has moved. `Footer.tsx` loses its `if (session) return null` guard — it now lives only in `(marketing)` — but its `FOOTER_LINKS` must swap `Masuk` for `Dashboard` when a session exists, because signed-in users will now see the footer on marketing pages where previously it was hidden.
 
@@ -186,7 +222,7 @@ Call sites:
 One plan, but the order is load-bearing rather than cosmetic — each step ends at a state where the app builds and runs:
 
 1. **Move folders into route groups.** Root layout keeps `Header`/`Footer` for now so nothing visually changes. Build here to clear the route-group risk in isolation.
-2. **Build `lib/nav.ts`** — move `activeHref` out of `HeaderNav.tsx`, add `flatten`/`pageTitle`, define the three nav configs. Update `tenant-nav.test.ts` imports.
+2. **Build `lib/nav.ts` and `components/ui/icons.tsx`** — extract `ICONS` from `admin/page.tsx` and add the eight new glyphs; move `activeHref` out of `HeaderNav.tsx`, add `flatten`/`pageTitle`, define the three nav configs with icons. Update `tenant-nav.test.ts`.
 3. **Build the shells** — `MarketingHeader`, `AppShell`, `AppSidebar`, `AccountMenu`. Wire the four group layouts, strip the root layout to `html`/`body`, delete `Header.tsx` and `HeaderNav.tsx`, adjust `Footer.tsx`.
 4. **Redirect layer** — `lib/auth-redirect.ts`, `post-login/page.tsx`, the `(auth)` layout guard, `x-pathname` in middleware, `session-guards.ts`, and the two login call sites.
 5. **`(app)/paket`** plus the two cross-links in `/finance` and `/pricing`.
@@ -208,7 +244,11 @@ One plan, but the order is load-bearing rather than cosmetic — each step ends 
 6. Manual, admin: login lands on `/admin`, not `/dashboard`; admin sidebar renders.
 7. Manual, deep link: visit `/admin/users` signed out → login → land on `/admin/users`, not `/dashboard`.
 8. Manual, open redirect: visit `/post-login?next=//example.com` while signed in → lands on the role home, never leaves the origin.
-9. Manual, mobile viewport: sidebar collapses to a drawer; points chip stays in the topbar.
+9. Manual, three widths — this is where the collapse arithmetic is confirmed:
+   - **< 640px:** no sidebar; hamburger opens the drawer with full labels; points chip stays in the topbar.
+   - **~1024px:** 56px icon strip; every glyph shows its label on hover via `title`; the dashboard stat row is four columns and **"Rp 4.250.000" fits on one line** — this is the regression the strip exists to prevent.
+   - **≥ 1280px:** full 224px sidebar with labels and section headers; stat cards match their pre-redesign width.
+10. Manual, `/admin/users` at ~1024px: the `min-w-[720px]` table scrolls inside its own `overflow-x-auto` wrapper (`AdminUsersDirectory.tsx:179`) and the page itself does not scroll sideways.
 
 ## Risks
 
