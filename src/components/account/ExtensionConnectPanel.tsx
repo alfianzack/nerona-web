@@ -56,8 +56,60 @@ export function ExtensionConnectPanel() {
     <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
       <h2 className="text-lg font-semibold text-ink">Hubungkan Extension</h2>
       <p className="mt-1 text-sm text-muted">
-        Buat token lalu tempel di extension Nerona Metadata untuk menghubungkan akun ini.
+        Tiga langkah: unduh extension, pasang di Chrome, lalu tempel token di popup-nya.
       </p>
+
+      {/*
+        Extension Nerona Metadata tidak ada di Chrome Web Store, jadi manifest-nya
+        tanpa `update_url` dan pemasangannya lewat "Muat yang belum dikemas".
+        Artinya TIDAK ADA pembaruan otomatis: setiap rilis baru, user harus
+        mengunduh ZIP ini lagi dan menimpa foldernya.
+
+        ZIP di /public dibangun dari repo nerona_medata dan ikut ter-commit sebagai
+        artefak. Kalau extension-nya berubah, ZIP ini TIDAK ikut berubah sendiri —
+        harus dibangun ulang, kalau tidak user mengunduh versi lama tanpa tanda apa pun.
+      */}
+      <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Berisi extension untuk Chrome. Simpan lalu ekstrak — foldernya jangan dihapus,
+              Chrome memuatnya langsung dari situ.
+            </p>
+          </div>
+          <a
+            href="/nerona-metadata.zip"
+            download
+            className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+          >
+            Unduh ZIP
+          </a>
+        </div>
+
+        <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
+        <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
+          <li>
+            Ekstrak ZIP-nya ke folder tetap — misalnya <code>Documents\Nerona</code>.
+          </li>
+          <li>
+            Buka <code>chrome://extensions</code>, lalu nyalakan <b>Developer mode</b> di kanan atas.
+          </li>
+          <li>
+            Klik <b>Load unpacked</b> / <b>Muat yang belum dikemas</b>, pilih folder hasil ekstrak
+            (folder yang berisi <code>manifest.json</code>).
+          </li>
+          <li>
+            Kalau nanti ada versi baru: unduh lagi, timpa isi folder itu, lalu klik ikon{" "}
+            <b>⟳ Reload</b> di kartu extension-nya — pembaruan tidak otomatis.
+          </li>
+        </ol>
+
+        <p className="mt-4 text-sm font-semibold text-ink">3. Tempel token di popup extension</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Buat token di bawah ini, salin, lalu buka popup extension dan tempel di sana.
+        </p>
+      </div>
 
       {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
 

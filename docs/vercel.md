@@ -186,9 +186,21 @@ Klik **Deploy**. Setelah selesai, cek:
    # 200 {"ok":true,"swept":0}; tanpa header harus 401
    ```
    Pertimbangkan memasang cron eksternal yang memanggil ini tiap 5 menit.
-6. **Update extension** (`nerona_medata`):
+6. **Update extension** (`nerona_medata`) lalu **bangun ulang paket unduhannya**:
    - `access/access-config.js` → `neronaWebBaseUrl: "https://domain-anda.com"`
-   - `manifest.json` → hapus `http://localhost/*` dan `http://127.0.0.1/*`
+   - `manifest.json` → hapus `http://localhost/*` dan `http://127.0.0.1/*` (opsional;
+     `https://*/*` sudah mencakup produksi, entri localhost hanya untuk dev)
+   - `powershell -ExecutionPolicy Bypass -File scripts/build-extension.ps1`
+
+   **Langkah terakhir itu wajib setiap kali extension berubah.** `public/nerona-metadata.zip`
+   adalah artefak yang ikut di-commit — Vercel tidak punya akses ke repo `nerona_medata`
+   saat build, jadi ZIP tidak pernah dibangun otomatis. Kalau lupa, halaman Profile
+   tetap menyajikan paket versi lama **tanpa tanda apa pun**. Skripnya memberi peringatan
+   kalau base URL masih localhost, dan gagal keras kalau manifest merujuk berkas yang hilang.
+
+   User memasangnya lewat **Load unpacked**, jadi tidak ada pembaruan otomatis di sisi
+   mereka: setiap rilis baru mereka harus mengunduh ulang, menimpa folder, lalu klik
+   Reload di `chrome://extensions`.
 7. **Pastikan semua user extension aktif sudah ada di DB** dengan lisensi aktif —
    enforcement murni dari nerona-web, user yang tidak terdaftar langsung kehilangan akses.
 
