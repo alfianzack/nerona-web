@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { usesSecureCookies } from "@/lib/auth-cookies";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -43,7 +44,16 @@ export async function middleware(request: NextRequest) {
   const isAdminPath =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
   if (isAdminPath) {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    // `secureCookie` is passed explicitly and must stay that way. getToken's own
+    // default reads NEXTAUTH_URL and disagrees with the server whenever that
+    // value is http:// on a Vercel deployment, which looks for the wrong cookie
+    // name and turns this guard into an infinite /admin ↔ /login redirect. See
+    // lib/auth-cookies.ts.
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: usesSecureCookies(request.headers.get("x-forwarded-proto")),
+    });
     const hasAdminRole = Boolean(token && (token as { role?: unknown }).role);
     if (!hasAdminRole) {
       if (pathname.startsWith("/api/")) {
