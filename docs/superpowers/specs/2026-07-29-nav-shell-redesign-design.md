@@ -50,17 +50,20 @@ src/app/
   layout.tsx                    html/body/font only — no Header, no Footer
   (marketing)/layout.tsx        MarketingHeader + Footer
     page.tsx  agent/  metadata/  pricing/  learn/
-  (app)/layout.tsx              AppShell + requireUser()
+  (app)/layout.tsx              AppShell(TENANT_NAV) + requireUser()
     dashboard/  produk/  transaksi/  finance/  profile/
     order/  account/  paket/  agent/chat/  agent/dashboard/
-    admin/layout.tsx            AppShell with ADMIN_NAV + requireAdmin()
+  (admin)/layout.tsx            AppShell(ADMIN_NAV) + requireAdmin()
+    admin/                      → /admin, /admin/users, /admin/orders, /admin/pengaturan
   (auth)/layout.tsx             bare; redirects signed-in users to their role home
     login/  register/  reset-password/  verify-email/
   post-login/page.tsx           outside (auth) — see "Redirect flow"
   api/                          untouched
 ```
 
-`admin/layout.tsx` currently hardcodes `<h1>Admin</h1>` and its own container. Both become the app topbar's job, so that layout shrinks to a guard plus `AppShell`.
+**`(admin)` is a sibling group, not a child of `(app)`.** Nesting it would apply both layouts, wrapping admin pages in the tenant sidebar *and* the admin sidebar. The `admin/` folder stays inside the group because it is the real URL segment.
+
+`admin/layout.tsx`'s current `<h1>Admin</h1>` and `{email} · {role}` line are dropped — the topbar carries the section name and `AccountMenu` carries the identity. Its container (`mx-auto max-w-6xl px-6 py-12`) and a `<main>` element must be preserved inside `(admin)/layout.tsx`, because admin pages supply neither.
 
 The per-page `requireUser()` calls in the nine app pages stay — they need the `session` object for data fetching, and the layout guard is defense in depth, mirroring how `middleware.ts:43-56` already duplicates the admin check.
 
@@ -122,6 +125,11 @@ export function pageTitle(pathname: string, sections: NavSection[]): string;    
 
 App topbar: page title on the left; points chip + `AccountMenu` on the right. On mobile the hamburger opens the sidebar drawer and the points chip stays visible in the topbar.
 
+Two constraints from how the tenant pages are written today:
+
+- **`AppShell` must not wrap `children` in `<main>`.** All nine tenant pages already open with their own `<main>` (e.g. `dashboard/page.tsx:42`, `finance/page.tsx:73`); a wrapper would nest `<main>` inside `<main>`. Use a plain `<div className="min-w-0 flex-1">`.
+- **The topbar title is a `<span>`, not a heading, and the pages keep their `<h1>`.** Every tenant page has one (`<h1>Dashboard</h1>`, `<h1>Finance</h1>`, …). Rendering the name small in the topbar and large in the page is the Vercel/Linear pattern, and it avoids editing nine pages to strip headings. `pageTitle()` output is a locator, so it must not be an `<h1>` — that would create two competing top-level headings per page.
+
 `Header.tsx` and `HeaderNav.tsx` are deleted once every caller has moved. `Footer.tsx` loses its `if (session) return null` guard — it now lives only in `(marketing)` — but its `FOOTER_LINKS` must swap `Masuk` for `Dashboard` when a session exists, because signed-in users will now see the footer on marketing pages where previously it was hidden.
 
 ### `(app)/paket` — plan purchase inside the app shell
@@ -179,7 +187,7 @@ One plan, but the order is load-bearing rather than cosmetic — each step ends 
 
 1. **Move folders into route groups.** Root layout keeps `Header`/`Footer` for now so nothing visually changes. Build here to clear the route-group risk in isolation.
 2. **Build `lib/nav.ts`** — move `activeHref` out of `HeaderNav.tsx`, add `flatten`/`pageTitle`, define the three nav configs. Update `tenant-nav.test.ts` imports.
-3. **Build the shells** — `MarketingHeader`, `AppShell`, `AppSidebar`, `AccountMenu`. Wire the three group layouts, strip the root layout to `html`/`body`, delete `Header.tsx` and `HeaderNav.tsx`, adjust `Footer.tsx`.
+3. **Build the shells** — `MarketingHeader`, `AppShell`, `AppSidebar`, `AccountMenu`. Wire the four group layouts, strip the root layout to `html`/`body`, delete `Header.tsx` and `HeaderNav.tsx`, adjust `Footer.tsx`.
 4. **Redirect layer** — `lib/auth-redirect.ts`, `post-login/page.tsx`, the `(auth)` layout guard, `x-pathname` in middleware, `session-guards.ts`, and the two login call sites.
 5. **`(app)/paket`** plus the two cross-links in `/finance` and `/pricing`.
 
