@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
@@ -30,22 +29,23 @@ const PRICING_FAQ = [
   },
 ];
 
+/**
+ * Halaman harga publik — tetap tanpa sidebar, termasuk untuk yang sudah masuk.
+ *
+ * Dulu di sini ada pengalihan ke /paket bagi user yang sudah login, dengan
+ * alasan tenant yang membeli sebaiknya punya sidebar. Hasilnya: mengklik
+ * "Harga" di menu atas justru melompat ke halaman ber-sidebar — sesuatu yang
+ * tidak diminta dan membingungkan, karena menu atas dan sidebar adalah dua
+ * konteks yang berbeda. Keduanya kini hidup berdampingan: /pricing untuk siapa
+ * saja lewat menu atas, /paket sebagai permukaan pembelian di dalam aplikasi.
+ * Isinya sama-sama dari pricingProducts(), jadi harganya tidak mungkin berbeda.
+ */
 export default async function PricingPage() {
-  // /pricing is the one dual-audience page: marketing copy for visitors, a
-  // purchase surface for tenants. A tenant buying points should have the app
-  // sidebar, and one path cannot live in two route groups — so they get /paket
-  // instead. Deliberately NOT applied to /, /agent, or /metadata: those are
-  // pure marketing and are fine to read while signed in.
-  //
-  // The sidebar links straight to /paket, so this only catches stale entry
-  // points: the footer, bookmarks, search results, and the in-page links in
-  // (marketing)/page.tsx and (app)/order/page.tsx.
-  const session = await getServerSession(authOptions);
-  if (session?.user) {
-    redirect("/paket");
-  }
-
-  const { products, discounts } = await pricingProducts();
+  const [{ products, discounts }, session] = await Promise.all([
+    pricingProducts(),
+    getServerSession(authOptions),
+  ]);
+  const signedIn = Boolean(session?.user);
 
   return (
     <main className="bg-canvas">
@@ -97,12 +97,23 @@ export default async function PricingPage() {
 
       <FaqSection items={PRICING_FAQ} className="bg-canvas" />
 
-      <CtaBanner
-        title="Masih ragu? Coba dulu tanpa bayar."
-        body="Tidak perlu kartu kredit, tidak ada tagihan otomatis. Upgrade hanya saat Anda siap."
-        ctaLabel="Buat akun gratis"
-        ctaHref="/register"
-      />
+      {/* Mengajak orang yang sudah punya akun untuk "Buat akun gratis" jelas keliru,
+          dan sejak pengalihan ke /paket dilepas, mereka memang sampai di sini. */}
+      {signedIn ? (
+        <CtaBanner
+          title="Sudah menentukan pilihan?"
+          body="Buka Paket & Harga di dalam aplikasi untuk membeli atau memperpanjang, lengkap dengan saldo poin Anda."
+          ctaLabel="Buka Paket & Harga"
+          ctaHref="/paket"
+        />
+      ) : (
+        <CtaBanner
+          title="Masih ragu? Coba dulu tanpa bayar."
+          body="Tidak perlu kartu kredit, tidak ada tagihan otomatis. Upgrade hanya saat Anda siap."
+          ctaLabel="Buat akun gratis"
+          ctaHref="/register"
+        />
+      )}
     </main>
   );
 }
