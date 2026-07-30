@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
+import { getAiSettings } from "@/lib/ai-settings";
 
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("authorization") || "";
@@ -14,9 +15,15 @@ export async function GET(request: Request) {
   if (!resolved) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
-  const state = await getExtensionAccountState(resolved.userId);
+  // Model dikirim terpisah dari `account`: itu setelan global (Setting `ai_model`),
+  // bukan atribut lisensi. Hanya nama modelnya — apiKey tidak pernah keluar dari server.
+  const [state, ai] = await Promise.all([
+    getExtensionAccountState(resolved.userId),
+    getAiSettings(),
+  ]);
   return NextResponse.json({
     ok: true,
     account: { ...state, validUntil: state.validUntil ? state.validUntil.toISOString() : null },
+    ai: { model: ai.model },
   });
 }

@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
+vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
 
 import { GET } from "@/app/api/extension/me/route";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
+import { getAiSettings } from "@/lib/ai-settings";
 
 function req(auth?: string) {
   return new Request("http://test/api/extension/me", { headers: auth ? { authorization: auth } : {} });
@@ -27,10 +29,16 @@ describe("GET /api/extension/me", () => {
       validUntil: new Date("2026-08-01T00:00:00Z"), marketplaces: "*",
       rejectAnalyzer: false, pointsBalance: 1250, active: true,
     });
+    (getAiSettings as any).mockResolvedValue({
+      model: "gemini-2.5-flash", apiKey: "sk-secret", pricing: {},
+    });
     const res = await GET(req("Bearer nrx_ok"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.account).toMatchObject({ plan: "Pro", active: true, pointsBalance: 1250 });
     expect(body.account.validUntil).toBe("2026-08-01T00:00:00.000Z");
+    expect(body.ai).toEqual({ model: "gemini-2.5-flash" });
+    // Kunci API tidak boleh ikut keluar ke ekstensi.
+    expect(JSON.stringify(body)).not.toContain("sk-secret");
   });
 });
