@@ -18,21 +18,21 @@ describe("updatePlanPrice", () => {
   it("returns not_found for an unknown plan id", async () => {
     (prisma.plan.findUnique as any).mockResolvedValue(null);
 
-    const result = await updatePlanPrice("missing", "Rp 99.000/bulan");
+    const result = await updatePlanPrice("missing", "99000");
 
     expect(result).toEqual({ ok: false, reason: "not_found" });
     expect(prisma.plan.update).not.toHaveBeenCalled();
   });
 
-  it("updates the priceLabel", async () => {
+  it("stores the monthly price as a number", async () => {
     (prisma.plan.findUnique as any).mockResolvedValue({ id: "plan-1" });
 
-    const result = await updatePlanPrice("plan-1", "Rp 149.000/bulan");
+    const result = await updatePlanPrice("plan-1", "Rp 149.000");
 
     expect(result).toEqual({ ok: true });
     expect(prisma.plan.update).toHaveBeenCalledWith({
       where: { id: "plan-1" },
-      data: { priceLabel: "Rp 149.000/bulan" },
+      data: { priceMonthly: 149_000 },
     });
   });
 
@@ -44,8 +44,18 @@ describe("updatePlanPrice", () => {
     expect(result).toEqual({ ok: true });
     expect(prisma.plan.update).toHaveBeenCalledWith({
       where: { id: "plan-1" },
-      data: { priceLabel: null },
+      data: { priceMonthly: null },
     });
+  });
+
+  it("rejects a price it cannot read, before touching the database", async () => {
+    // "Rp 149.000/bulan" dulu sah sebagai teks. Sekarang tidak, dan menyimpannya
+    // diam-diam sebagai 149000 akan menebak maksud owner — lebih baik ditolak.
+    const result = await updatePlanPrice("plan-1", "seratus ribu");
+
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    expect(prisma.plan.findUnique).not.toHaveBeenCalled();
+    expect(prisma.plan.update).not.toHaveBeenCalled();
   });
 });
 

@@ -76,6 +76,7 @@ describe("grantLicense", () => {
         marketplaces: "*",
         rejectAnalyzer: true,
         validUntil: expect.any(Date),
+        durationMonths: 1,
       },
     });
     expect(prisma.order.create).not.toHaveBeenCalled();
@@ -100,6 +101,7 @@ describe("grantLicense", () => {
         marketplaces: "*",
         rejectAnalyzer: true,
         validUntil: expect.any(Date),
+        durationMonths: 1,
       },
     });
     expect(prisma.license.create).not.toHaveBeenCalled();
@@ -127,6 +129,7 @@ describe("grantLicense", () => {
         marketplaces: "*",
         rejectAnalyzer: true,
         validUntil: overrideDate,
+        durationMonths: 1,
       },
     });
   });

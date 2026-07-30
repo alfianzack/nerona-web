@@ -80,6 +80,7 @@ model User {
   pointTransactions         PointTransaction[] @relation("UserPointTransactions")
   adjustedPointTransactions PointTransaction[] @relation("PointAdjustedByAdmin")
   extensionTokens           ExtensionToken[]
+  metadataLogs              MetadataLog[]
 
   @@map("users")
 }
@@ -97,7 +98,10 @@ model AdminRole {
 model Plan {
   id             String   @id @default(cuid())
   name           String
-  priceLabel     String?
+  // Harga BULANAN dalam rupiah; null = "Hubungi kami". Harga 3/6/12 bulan
+  // dihitung dari sini lewat lib/plan-duration.ts, tidak disimpan terpisah.
+  // Dulu berupa teks bebas (`priceLabel`), yang tidak bisa dikalikan durasi.
+  priceMonthly   Int?
   marketplaces   String   @default("*")
   rejectAnalyzer Boolean  @default(false)
   // AI generations per month shown on pricing pages; null = unlimited.
@@ -125,6 +129,9 @@ model License {
   planId         String?
   plan           Plan?     @relation(fields: [planId], references: [id])
   validUntil     DateTime?
+  // Durasi yang dibeli, dipakai cron perpanjangan agar paket 6 bulan
+  // diperpanjang 6 bulan lagi — bukan kembali ke bulanan.
+  durationMonths Int       @default(1)
   marketplaces   String    @default("*")
   rejectAnalyzer Boolean   @default(false)
   createdAt      DateTime  @default(now())
@@ -279,6 +286,7 @@ model AgentProfile {
   status              String    @default("pending") // "pending" | "active" | "disabled"
   plan                String    @default("free") // "free" | "pro" | "business"
   planExpiresAt       DateTime? // paid plan valid until this instant; null = free/no expiry
+  planDurationMonths  Int       @default(1) // durasi yang dibeli; dipakai saat perpanjangan
   googleRefreshToken  String?   @db.Text
   googleCalendarEmail String?
   createdAt           DateTime  @default(now())
@@ -398,9 +406,15 @@ model OrderRequest {
   id            String    @id @default(cuid())
   userId        String
   user          User      @relation("UserOrderRequests", fields: [userId], references: [id], onDelete: Cascade)
-  product       String // "metadata" | "agent"
-  planName      String // "Pro" | "Business"
-  contactNote   String?
+  product        String // "metadata" | "agent" | "points"
+  planName       String // "Pro" | "Business" | "1.000 poin"
+  durationMonths Int      @default(1) // 1 | 3 | 6 | 12; tidak berlaku untuk top-up
+  // Top-up saja. Harga ikut disimpan, bukan dibaca ulang dari Setting saat
+  // dikonfirmasi: kalau owner mengubah harga di antara order dan verifikasi,
+  // invoice akan menyebut angka yang berbeda dari yang sudah ditransfer.
+  pointsAmount   Int?
+  priceAmount    Int?
+  contactNote    String?
   status        String    @default("pending") // "pending" | "fulfilled" | "cancelled"
   isRenewal     Boolean   @default(false) // auto-generated monthly renewal request
   createdAt     DateTime  @default(now())
@@ -485,6 +499,29 @@ model PointTransaction {
 
   @@index([userId])
   @@map("point_transactions")
+}
+
+// Satu baris per gambar yang selesai di-generate di extension. Ditulis SETELAH
+// extension merampungkan metadata, bukan di /api/extension/generate: keyword final
+// dibentuk di sisi client (penyaringan visual + limit per marketplace), jadi hanya
+// extension yang tahu apa yang benar-benar diisi ke form.
+//
+// `keywords` sengaja satu string dipisah ", " — bukan array/tabel terpisah. Yang
+// dibutuhkan cuma menampilkan dan menyalin ulang; tidak ada query per-keyword.
+model MetadataLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketplace  String
+  pageUrl      String
+  title        String
+  keywords     String   @db.Text
+  keywordCount Int
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("metadata_logs")
 }
 
 model ExtensionToken {

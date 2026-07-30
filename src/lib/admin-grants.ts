@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
-import { monthlyExpiryFrom } from "@/lib/billing-period";
+import { activationExpiryFrom } from "@/lib/billing-period";
 import { creditPlanPoints } from "@/lib/plan-points";
 
 export interface GrantOptions {
@@ -8,6 +8,12 @@ export interface GrantOptions {
   amount?: number;
   currency?: string;
   validUntil?: Date;
+  /**
+   * Durasi yang dibeli. Menentukan masa aktif dan kelipatan poin, lalu disimpan
+   * di lisensi supaya cron perpanjangan memperpanjang selama itu lagi.
+   * Pemberian manual admin tanpa nilai ini tetap 1 bulan.
+   */
+  durationMonths?: number;
   /** Only changes the ledger note ("Perpanjangan" vs "Bonus"). */
   isRenewal?: boolean;
 }
@@ -32,6 +38,7 @@ export async function grantLicense(
     return { ok: false, reason: "plan_not_found" };
   }
 
+  const months = Math.max(1, Math.floor(options.durationMonths ?? 1));
   const existingLicense = await prisma.license.findFirst({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
@@ -47,7 +54,8 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
-        validUntil: options.validUntil ?? monthlyExpiryFrom(new Date()),
+        validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
+        durationMonths: months,
       },
     });
   } else {
@@ -63,7 +71,8 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
-        validUntil: options.validUntil ?? monthlyExpiryFrom(new Date()),
+        validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
+        durationMonths: months,
       },
     });
   }
@@ -88,6 +97,7 @@ export async function grantLicense(
     userId: user.id,
     product: "metadata",
     plan: plan.name,
+    durationMonths: months,
     createdById: adminId,
     isRenewal: Boolean(options.isRenewal),
   });

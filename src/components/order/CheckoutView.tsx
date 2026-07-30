@@ -7,11 +7,22 @@ import type { PricingTierFeature } from "@/components/marketing/PricingTiers";
 interface CheckoutViewProps {
   product: "metadata" | "agent";
   planName: string;
+  durationMonths: number;
+  durationLabel: string;
   priceLabel: string;
+  savingsLabel?: string | null;
   features: PricingTierFeature[];
 }
 
-export function CheckoutView({ product, planName, priceLabel, features }: CheckoutViewProps) {
+export function CheckoutView({
+  product,
+  planName,
+  durationMonths,
+  durationLabel,
+  priceLabel,
+  savingsLabel,
+  features,
+}: CheckoutViewProps) {
   const router = useRouter();
   const [contactNote, setContactNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,7 +34,12 @@ export function CheckoutView({ product, planName, priceLabel, features }: Checko
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product, planName, contactNote: contactNote || undefined }),
+      body: JSON.stringify({
+        product,
+        planName,
+        durationMonths,
+        contactNote: contactNote || undefined,
+      }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.ok || !data.orderId) {
@@ -72,6 +88,7 @@ export function CheckoutView({ product, planName, priceLabel, features }: Checko
           {product === "metadata" ? "Nerona Metadata" : "Nerona Agent"}
         </p>
         <h2 className="mt-1 text-xl font-extrabold text-ink">Paket {planName}</h2>
+        <p className="mt-1 text-xs font-medium text-muted">Durasi {durationLabel}</p>
 
         <ul className="mt-4 space-y-2 text-[13px] text-ink">
           {features.map((feature) => (
@@ -98,6 +115,9 @@ export function CheckoutView({ product, planName, priceLabel, features }: Checko
             <span className="text-sm font-semibold text-ink">Total</span>
             <span className="text-lg font-extrabold text-brand-blue">{priceLabel}</span>
           </div>
+          {savingsLabel && (
+            <p className="mt-1 text-right text-xs font-medium text-emerald-600">{savingsLabel}</p>
+          )}
         </div>
 
         {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}

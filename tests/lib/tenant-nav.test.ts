@@ -37,6 +37,14 @@ describe("tenant navigation", () => {
     expect(hrefs).toContain("/finance");
   });
 
+  it("lets a tenant reach their metadata history", () => {
+    // "/metadata" is the public marketing page, so the in-app history must live
+    // somewhere else — a sidebar entry pointing at "/metadata" would send a
+    // signed-in tenant back to the sales page.
+    expect(hrefs).toContain("/riwayat-metadata");
+    expect(hrefs).not.toContain("/metadata");
+  });
+
   it("has no duplicate destinations", () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
@@ -57,6 +65,7 @@ describe("admin navigation", () => {
       "/admin",
       "/admin/users",
       "/admin/orders",
+      "/admin/metadata",
       "/admin/pengaturan",
     ]);
   });

@@ -38,7 +38,7 @@ describe("generateDueRenewals", () => {
     ]);
     const res = await generateDueRenewals(now, 3);
     expect(prisma.orderRequest.create).toHaveBeenCalledWith({
-      data: { userId: "u1", product: "agent", planName: "Pro", isRenewal: true },
+      data: { userId: "u1", product: "agent", planName: "Pro", durationMonths: 1, isRenewal: true },
     });
     expect(res.created).toBe(1);
   });
@@ -59,7 +59,7 @@ describe("generateDueRenewals", () => {
     ]);
     const res = await generateDueRenewals(now, 3);
     expect(prisma.orderRequest.create).toHaveBeenCalledWith({
-      data: { userId: "u2", product: "metadata", planName: "Business", isRenewal: true },
+      data: { userId: "u2", product: "metadata", planName: "Business", durationMonths: 1, isRenewal: true },
     });
     expect(res.created).toBe(1);
   });
@@ -78,7 +78,7 @@ describe("generateDueRenewals", () => {
     ]);
     const res = await generateDueRenewals(now, 7);
     expect(prisma.orderRequest.create).toHaveBeenCalledWith({
-      data: { userId: "u1", product: "agent", planName: "Pro", isRenewal: true },
+      data: { userId: "u1", product: "agent", planName: "Pro", durationMonths: 1, isRenewal: true },
     });
     expect(buildInvoicePdf).toHaveBeenCalledTimes(1);
     expect(sendRenewalInvoiceEmail).toHaveBeenCalledWith(

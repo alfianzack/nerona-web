@@ -46,6 +46,8 @@ describe("grantLicense point allowance", () => {
       product: "metadata",
       // The Plan table stores "Pro"; creditPlanPoints normalises it.
       plan: "Pro",
+      // Pemberian manual admin tanpa durasi tetap satu bulan.
+      durationMonths: 1,
       createdById: "admin-1",
       isRenewal: false,
     });

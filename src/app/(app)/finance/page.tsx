@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getBalance, listTransactions } from "@/lib/points";
 import { listPendingRenewals } from "@/lib/orders";
 import { isAgentPlanExpired } from "@/lib/agent/admin";
+import { getTopupPackages, perPointLabel } from "@/lib/topup";
+import { formatRupiah } from "@/lib/money";
+import { TopupCard } from "@/components/finance/TopupCard";
 
 export const metadata = { title: "Finance — Nerona" };
 
@@ -27,7 +30,7 @@ const cardClass =
 export default async function FinancePage() {
   const session = await requireUser();
 
-  const [balance, transactions, renewals, orderRequests, orders, agentProfile, license] = await Promise.all([
+  const [balance, transactions, renewals, orderRequests, orders, agentProfile, license, topupPackages] = await Promise.all([
     getBalance(session.user.id),
     listTransactions(session.user.id, 50),
     listPendingRenewals(session.user.id),
@@ -50,7 +53,15 @@ export default async function FinancePage() {
       orderBy: { createdAt: "desc" },
       select: { validUntil: true, status: true, plan: { select: { name: true } } },
     }),
+    getTopupPackages(),
   ]);
+
+  const topupOptions = topupPackages.map((pkg) => ({
+    points: pkg.points,
+    price: pkg.price,
+    priceLabel: formatRupiah(pkg.price),
+    perPointLabel: perPointLabel(pkg),
+  }));
 
   const purchases = [
     ...orderRequests.map((o) => ({
@@ -136,6 +147,16 @@ export default async function FinancePage() {
               </li>
             )}
           </ul>
+        </section>
+
+        <section className={`mt-6 ${cardClass}`}>
+          <TopupCard
+            options={topupOptions}
+            hasActivePlan={
+              Boolean(license) ||
+              Boolean(agentProfile && agentProfile.plan !== "free" && !isAgentPlanExpired(agentProfile))
+            }
+          />
         </section>
 
         <section className={`mt-6 ${cardClass}`}>

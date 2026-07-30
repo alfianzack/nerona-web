@@ -1,24 +1,28 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
+import { coerceDuration, DURATION_LABELS } from "@/lib/plan-duration";
 import { CheckoutView } from "@/components/order/CheckoutView";
 import { FreeActivateCard } from "@/components/order/FreeActivateCard";
 
 export default async function OrderPage({
   searchParams,
 }: {
-  searchParams: { product?: string; plan?: string };
+  searchParams: { product?: string; plan?: string; months?: string };
 }) {
   await requireUser();
 
   const product = searchParams.product;
   const planName = searchParams.plan;
+  // Durasi datang dari URL, jadi tidak bisa dipercaya — coerceDuration memaksa
+  // apa pun yang aneh kembali ke 1 bulan, bukan melempar.
+  const months = coerceDuration(searchParams.months);
 
   const tiers =
     product === "metadata"
-      ? await metadataTiers()
+      ? await metadataTiers(months)
       : product === "agent"
-        ? await agentTiers()
+        ? await agentTiers(months)
         : null;
   const tier = tiers?.find((candidate) => candidate.name === planName);
 
@@ -61,7 +65,10 @@ export default async function OrderPage({
           <CheckoutView
             product={product}
             planName={tier.name}
+            durationMonths={months}
+            durationLabel={DURATION_LABELS[months] ?? `${months} bulan`}
             priceLabel={tier.priceLabel}
+            savingsLabel={tier.savingsLabel ?? null}
             features={tier.features}
           />
         )}

@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
+import { parseRupiahInput } from "./money";
 
-export type UpdatePriceResult = { ok: true } | { ok: false; reason: "not_found" };
+export type UpdatePriceResult = { ok: true } | { ok: false; reason: "not_found" | "invalid" };
 
 // Empty string clears the price (stored as null, rendered as the
 // "Hubungi kami" fallback).
@@ -9,15 +10,15 @@ function normalize(priceLabel: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-export async function updatePlanPrice(
-  planId: string,
-  priceLabel: string
-): Promise<UpdatePriceResult> {
+export async function updatePlanPrice(planId: string, price: string): Promise<UpdatePriceResult> {
+  const parsed = parseRupiahInput(price);
+  if (parsed === undefined) return { ok: false, reason: "invalid" };
+
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) {
     return { ok: false, reason: "not_found" };
   }
-  await prisma.plan.update({ where: { id: planId }, data: { priceLabel: normalize(priceLabel) } });
+  await prisma.plan.update({ where: { id: planId }, data: { priceMonthly: parsed } });
   return { ok: true };
 }
 

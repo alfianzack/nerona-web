@@ -11,7 +11,7 @@ interface CourseSummary {
 interface PlanSummary {
   id: string;
   name: string;
-  priceLabel: string | null;
+  priceMonthly: number | null;
 }
 
 interface UserResult {
@@ -168,7 +168,7 @@ export function UserPlanManager({ userEmail }: { userEmail: string }) {
         >
           {plans.map((plan) => (
             <option key={plan.id} value={plan.id}>
-              {plan.name} — {plan.priceLabel ?? "harga belum diatur"}
+              {plan.name} — {plan.priceMonthly === null ? "harga belum diatur" : `Rp ${plan.priceMonthly.toLocaleString("id-ID")}/bulan`}
             </option>
           ))}
         </select>

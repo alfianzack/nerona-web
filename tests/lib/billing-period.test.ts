@@ -1,27 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { monthlyExpiryFrom, isExpired } from "@/lib/billing-period";
+import { activationExpiryFrom, isExpired } from "@/lib/billing-period";
 import { addOneMonthJakarta, renewedExpiryFrom } from "@/lib/billing-period";
 
-describe("monthlyExpiryFrom", () => {
-  it("returns next month 1st 00:00 WIB (UTC+7) for a mid-month date", () => {
-    // 2026-07-15 12:00 WIB === 2026-07-15T05:00:00Z
-    // Aug 1 00:00 WIB === 2026-07-31T17:00:00Z
-    expect(monthlyExpiryFrom(new Date("2026-07-15T05:00:00Z")).toISOString()).toBe(
-      "2026-07-31T17:00:00.000Z"
+/**
+ * Aktivasi dulu dipatok ke awal bulan berikutnya, jadi membeli tanggal 28 hanya
+ * memberi beberapa hari. Tes di bawah mengunci aturan penggantinya: satu bulan
+ * penuh sejak dibayar, sama dengan perpanjangan.
+ */
+describe("activationExpiryFrom", () => {
+  it("gives a full month from a late-in-the-month activation", () => {
+    // 2026-07-28 12:00 WIB === 2026-07-28T05:00:00Z → 2026-08-28 12:00 WIB
+    expect(activationExpiryFrom(new Date("2026-07-28T05:00:00Z")).toISOString()).toBe(
+      "2026-08-28T05:00:00.000Z"
     );
+  });
+
+  it("no longer truncates to the 1st of next month", () => {
+    // Nilai lama untuk instan ini adalah 2026-07-31T17:00:00Z (1 Agustus WIB).
+    const expiry = activationExpiryFrom(new Date("2026-07-28T05:00:00Z"));
+    expect(expiry.toISOString()).not.toBe("2026-07-31T17:00:00.000Z");
+    // Apa pun tanggal aktivasinya, masa aktif minimal 28 hari — bulan terpendek.
+    const days = (expiry.getTime() - new Date("2026-07-28T05:00:00Z").getTime()) / 86_400_000;
+    expect(days).toBeGreaterThanOrEqual(28);
   });
 
   it("rolls December into next January", () => {
-    // 2026-12-20 07:00 WIB === 2026-12-20T00:00:00Z → Jan 1 2027 00:00 WIB === 2026-12-31T17:00:00Z
-    expect(monthlyExpiryFrom(new Date("2026-12-20T00:00:00Z")).toISOString()).toBe(
-      "2026-12-31T17:00:00.000Z"
+    // 2026-12-20 07:00 WIB → 2027-01-20 07:00 WIB
+    expect(activationExpiryFrom(new Date("2026-12-20T00:00:00Z")).toISOString()).toBe(
+      "2027-01-20T00:00:00.000Z"
     );
   });
 
-  it("at the month boundary instant, targets the following month end", () => {
-    // 2026-07-31T17:00:00Z === Aug 1 00:00 WIB → next boundary Sep 1 00:00 WIB === 2026-08-31T17:00:00Z
-    expect(monthlyExpiryFrom(new Date("2026-07-31T17:00:00Z")).toISOString()).toBe(
-      "2026-08-31T17:00:00.000Z"
+  it("matches renewal, so both payment paths buy the same length", () => {
+    const now = new Date("2026-07-28T05:00:00Z");
+    expect(activationExpiryFrom(now).toISOString()).toBe(renewedExpiryFrom(null, now).toISOString());
+  });
+
+  it("clamps a 31st activation to the last day of a shorter month", () => {
+    // 2026-08-31 12:00 WIB → September hanya 30 hari; Date.UTC menormalkan
+    // overflow ke 1 Oktober, bukan melempar. Dikunci supaya perubahan diam-diam
+    // pada perilaku ini ketahuan.
+    expect(activationExpiryFrom(new Date("2026-08-31T05:00:00Z")).toISOString()).toBe(
+      "2026-10-01T05:00:00.000Z"
     );
   });
 });

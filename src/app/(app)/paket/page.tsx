@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/session-guards";
 import { getBalance } from "@/lib/points";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
-import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
+import { pricingProducts } from "@/lib/pricing-products";
 
 export const metadata = { title: "Paket & Harga — Nerona" };
 
@@ -14,9 +14,8 @@ export const metadata = { title: "Paket & Harga — Nerona" };
 // meaningless for someone already signed in.
 export default async function PaketPage() {
   const session = await requireUser();
-  const [tiers, agent, balance] = await Promise.all([
-    metadataTiers(),
-    agentTiers(),
+  const [{ products, discounts }, balance] = await Promise.all([
+    pricingProducts(),
     getBalance(session.user.id),
   ]);
 
@@ -34,22 +33,7 @@ export default async function PaketPage() {
         </p>
 
         <div className="mt-10">
-          <PricingSwitcher
-            products={[
-              {
-                key: "metadata",
-                label: "🖼️ Metadata",
-                subheading: "Metadata otomatis untuk kontributor stock.",
-                tiers,
-              },
-              {
-                key: "agent",
-                label: "💬 Agent",
-                subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
-                tiers: agent,
-              },
-            ]}
-          />
+          <PricingSwitcher products={products} discounts={discounts} />
         </div>
       </div>
     </main>

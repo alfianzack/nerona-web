@@ -84,6 +84,35 @@ export async function adjustPoints(params: {
   }
 }
 
+/**
+ * Kredit dari pembelian poin satuan.
+ *
+ * Reason "topup" dipisahkan dari "manual_adjust": keduanya sama-sama menambah
+ * saldo lewat tangan admin, tapi hanya yang ini mewakili uang masuk. Label
+ * "Top-up" sudah lama ada di halaman Dashboard, Finance, dan panel admin —
+ * sampai sekarang tidak ada satu pun kode yang menuliskannya.
+ */
+export async function creditTopupPoints(params: {
+  userId: string;
+  points: number;
+  note?: string;
+  createdById: string;
+}): Promise<number> {
+  if (!Number.isInteger(params.points) || params.points <= 0) {
+    throw new Error("creditTopupPoints: points must be a positive integer");
+  }
+  await prisma.pointTransaction.create({
+    data: {
+      userId: params.userId,
+      delta: params.points,
+      reason: "topup",
+      note: params.note ?? null,
+      createdById: params.createdById,
+    },
+  });
+  return getBalance(params.userId);
+}
+
 export async function spendPoints(params: {
   userId: string;
   cost: number;

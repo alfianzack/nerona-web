@@ -19,8 +19,12 @@ export function invoiceNumberFor(orderId: string, createdAt: Date): string {
   return `INV-${ym}-${orderId.slice(-6).toUpperCase()}`;
 }
 
-export async function priceLabelFor(product: string, planName: string): Promise<string> {
-  const tiers = product === "metadata" ? await metadataTiers() : await agentTiers();
+export async function priceLabelFor(
+  product: string,
+  planName: string,
+  months = 1
+): Promise<string> {
+  const tiers = product === "metadata" ? await metadataTiers(months) : await agentTiers(months);
   return tiers.find((t) => t.name === planName)?.priceLabel ?? "Hubungi admin";
 }
 

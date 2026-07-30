@@ -5,7 +5,7 @@ import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
 import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
-import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
+import { pricingProducts } from "@/lib/pricing-products";
 
 const PRICING_FAQ = [
   {
@@ -45,7 +45,7 @@ export default async function PricingPage() {
     redirect("/paket");
   }
 
-  const [tiers, agent] = await Promise.all([metadataTiers(), agentTiers()]);
+  const { products, discounts } = await pricingProducts();
 
   return (
     <main className="bg-canvas">
@@ -70,22 +70,7 @@ export default async function PricingPage() {
             menilai sendiri, lalu pilih paket kalau cocok.
           </p>
           <div className="mt-9">
-            <PricingSwitcher
-              products={[
-                {
-                  key: "metadata",
-                  label: "🖼️ Metadata",
-                  subheading: "Metadata otomatis untuk kontributor stock.",
-                  tiers,
-                },
-                {
-                  key: "agent",
-                  label: "💬 Agent",
-                  subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
-                  tiers: agent,
-                },
-              ]}
-            />
+            <PricingSwitcher products={products} discounts={discounts} />
           </div>
         </div>
       </section>

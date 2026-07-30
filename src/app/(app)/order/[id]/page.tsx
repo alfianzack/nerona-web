@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/session-guards";
 import { getUserOrder } from "@/lib/orders";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { getPaymentSettings, isPaymentConfigured } from "@/lib/payment-settings";
+import { formatRupiah } from "@/lib/money";
 import { PaymentProofUpload } from "@/components/order/PaymentProofUpload";
 
 function statusBanner(status: string, hasProof: boolean) {
@@ -25,9 +26,27 @@ function statusBanner(status: string, hasProof: boolean) {
   };
 }
 
-async function priceFor(product: string, planName: string): Promise<string> {
-  const tiers = product === "metadata" ? await metadataTiers() : await agentTiers();
-  return tiers.find((t) => t.name === planName)?.priceLabel ?? "Hubungi admin";
+async function priceFor(order: {
+  product: string;
+  planName: string;
+  durationMonths: number;
+  priceAmount: number | null;
+}): Promise<string> {
+  // Top-up membawa harganya sendiri: yang berlaku adalah harga saat order
+  // dibuat, bukan harga paket poin hari ini.
+  if (order.product === "points") {
+    return order.priceAmount === null ? "Hubungi admin" : formatRupiah(order.priceAmount);
+  }
+  const tiers =
+    order.product === "metadata"
+      ? await metadataTiers(order.durationMonths)
+      : await agentTiers(order.durationMonths);
+  return tiers.find((t) => t.name === order.planName)?.priceLabel ?? "Hubungi admin";
+}
+
+function orderTitle(product: string, planName: string): string {
+  if (product === "points") return `Top-up poin — ${planName}`;
+  return `${product === "metadata" ? "Nerona Metadata" : "Nerona Agent"} — ${planName}`;
 }
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
@@ -37,10 +56,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [price, bank] = await Promise.all([
-    priceFor(order.product, order.planName),
-    getPaymentSettings(),
-  ]);
+  const [price, bank] = await Promise.all([priceFor(order), getPaymentSettings()]);
 
   const hasProof = Boolean(order.proofUploadedAt);
   const banner = statusBanner(order.status, hasProof);
@@ -53,7 +69,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         ‹ Semua transaksi
       </Link>
       <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-        {order.product === "metadata" ? "Nerona Metadata" : "Nerona Agent"} — {order.planName}
+        {orderTitle(order.product, order.planName)}
       </h1>
 
       <div className={`mt-4 rounded-2xl px-4 py-3 text-sm font-medium ring-1 ${banner.tone}`}>

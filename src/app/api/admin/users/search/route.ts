@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "asc" },
     }),
     prisma.plan.findMany({
-      select: { id: true, name: true, priceLabel: true },
+      select: { id: true, name: true, priceMonthly: true },
       orderBy: { createdAt: "asc" },
     }),
   ]);

@@ -10,6 +10,8 @@ export interface PricingTier {
   icon: string;
   tagline: string;
   priceLabel: string;
+  /** Setara per bulan + penghematan; hanya terisi untuk durasi > 1 bulan. */
+  savingsLabel?: string | null;
   features: PricingTierFeature[];
   cta: string;
   href: string;
@@ -57,6 +59,9 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
           <h3 className="mt-4 text-lg font-extrabold text-ink">{tier.name}</h3>
           <p className="mt-0.5 text-xs text-muted">{tier.tagline}</p>
           <p className="mt-4 text-3xl font-extrabold text-[#3B65C4]">{tier.priceLabel}</p>
+          {tier.savingsLabel && (
+            <p className="mt-1 text-xs font-medium text-emerald-600">{tier.savingsLabel}</p>
+          )}
           <div className="my-5 h-px bg-navy-900/5" />
           <ul className="flex-1 space-y-2.5 text-[13px] text-ink">
             {tier.features.map((feature) => (

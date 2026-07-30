@@ -32,6 +32,11 @@ export const TENANT_NAV: NavSection[] = [
     ],
   },
   {
+    title: "Metadata",
+    // Bukan "/metadata" — path itu sudah dipakai halaman marketing publik.
+    items: [{ href: "/riwayat-metadata", label: "Riwayat", icon: "clock" }],
+  },
+  {
     title: "Toko",
     items: [
       { href: "/produk", label: "Produk", icon: "box" },
@@ -54,6 +59,7 @@ export const ADMIN_NAV: NavSection[] = [
     items: [
       { href: "/admin/users", label: "Pengguna", icon: "users" },
       { href: "/admin/orders", label: "Order", icon: "receipt" },
+      { href: "/admin/metadata", label: "Metadata", icon: "clock" },
     ],
   },
   {

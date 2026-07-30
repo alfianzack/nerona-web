@@ -12,7 +12,12 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(),
       findMany: vi.fn(),
     },
-    pointTransaction: { create: vi.fn(), findFirst: vi.fn(async () => null) },
+    pointTransaction: {
+      create: vi.fn(),
+      findFirst: vi.fn(async () => null),
+      // creditTopupPoints mengembalikan saldo terbaru setelah menulis.
+      aggregate: vi.fn(async () => ({ _sum: { delta: 0 } })),
+    },
     // creditPlanPoints reads the configured allowance; null means the code
     // default applies, which is what these expectations are written against.
     setting: { findUnique: vi.fn(async () => null) },
@@ -21,7 +26,12 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
 vi.mock("@/lib/admin-grants", () => ({ grantLicense: vi.fn() }));
 
-import { cancelOrderRequest, fulfillOrderRequest, submitOrder } from "@/lib/orders";
+import {
+  cancelOrderRequest,
+  fulfillOrderRequest,
+  submitOrder,
+  submitTopupOrder,
+} from "@/lib/orders";
 import { prisma } from "@/lib/prisma";
 import { generateLicenseKey } from "@/lib/license";
 import { grantLicense } from "@/lib/admin-grants";
@@ -148,8 +158,35 @@ describe("submitOrder — paid plans", () => {
 
     expect(result).toEqual({ ok: true, kind: "request_created", orderId: "req-new" });
     expect(prisma.orderRequest.create).toHaveBeenCalledWith({
-      data: { userId: "user-1", product: "metadata", planName: "Pro", contactNote: "WA 0812..." },
+      data: {
+        userId: "user-1",
+        product: "metadata",
+        planName: "Pro",
+        durationMonths: 1,
+        contactNote: "WA 0812...",
+      },
     });
+  });
+
+  it("stores the chosen duration", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+    (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-new" });
+
+    await submitOrder("user-1", "metadata", "Pro", undefined, 6);
+
+    expect((prisma.orderRequest.create as any).mock.calls[0][0].data.durationMonths).toBe(6);
+  });
+
+  it("refuses a duration it does not sell instead of honouring it", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+    (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-new" });
+
+    // Durasi datang dari query string — 999 bulan seharga sebulan kalau diteruskan.
+    await submitOrder("user-1", "metadata", "Pro", undefined, 999);
+
+    expect((prisma.orderRequest.create as any).mock.calls[0][0].data.durationMonths).toBe(1);
   });
 });
 
@@ -242,6 +279,7 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1",
       validUntil: undefined,
+      durationMonths: 1,
       isRenewal: false,
     });
     expect(prisma.license.findFirst).not.toHaveBeenCalled();
@@ -285,6 +323,7 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1r",
       validUntil: expectedValidUntil,
+      durationMonths: 1,
       isRenewal: true,
     });
   });
@@ -305,8 +344,8 @@ describe("fulfillOrderRequest", () => {
     expect(prisma.agentProfile.findUnique).not.toHaveBeenCalled();
     expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      update: { status: "active", plan: "business", planExpiresAt: expect.any(Date) },
-      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expect.any(Date) },
+      update: { status: "active", plan: "business", planExpiresAt: expect.any(Date), planDurationMonths: 1 },
+      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expect.any(Date), planDurationMonths: 1 },
     });
   });
 
@@ -340,9 +379,173 @@ describe("fulfillOrderRequest", () => {
     });
     expect(prisma.agentProfile.upsert).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      update: { status: "active", plan: "business", planExpiresAt: expectedExpiresAt },
-      create: { userId: "user-1", status: "active", plan: "business", planExpiresAt: expectedExpiresAt },
+      update: {
+        status: "active",
+        plan: "business",
+        planExpiresAt: expectedExpiresAt,
+        planDurationMonths: 1,
+      },
+      create: {
+        userId: "user-1",
+        status: "active",
+        plan: "business",
+        planExpiresAt: expectedExpiresAt,
+        planDurationMonths: 1,
+      },
     });
+  });
+
+  it("activates an agent plan for the full duration bought, and credits points for it", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-6m",
+      status: "pending",
+      product: "agent",
+      planName: "Pro",
+      durationMonths: 6,
+      isRenewal: false,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    const before = new Date();
+    expect(await fulfillOrderRequest("admin-1", "req-6m")).toEqual({ ok: true });
+
+    const upserted = (prisma.agentProfile.upsert as any).mock.calls[0][0];
+    expect(upserted.update.planDurationMonths).toBe(6);
+    // Kira-kira enam bulan ke depan — cukup untuk menangkap regresi ke 1 bulan
+    // tanpa ikut menguji aturan kalender yang sudah punya tesnya sendiri.
+    const days = (upserted.update.planExpiresAt.getTime() - before.getTime()) / 86_400_000;
+    expect(days).toBeGreaterThan(175);
+    expect(days).toBeLessThan(190);
+
+    // creditPlanPoints tidak di-mock di berkas ini, jadi yang diperiksa adalah
+    // barisnya di buku besar: jatah bulanan Agent Pro (600) × 6 bulan.
+    const ledger = (prisma.pointTransaction.create as any).mock.calls.at(-1)[0].data;
+    expect(ledger.delta).toBe(600 * 6);
+    expect(ledger.note).toContain("6 bulan");
+  });
+
+  it("renews a metadata license for the duration originally bought", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "req-6mr",
+      status: "pending",
+      product: "metadata",
+      planName: "Pro",
+      durationMonths: 6,
+      isRenewal: true,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
+    const currentValidUntil = new Date("2026-08-31T17:00:00.000Z");
+    (prisma.license.findFirst as any).mockResolvedValue({ validUntil: currentValidUntil });
+    (grantLicense as any).mockResolvedValue({ ok: true });
+
+    await fulfillOrderRequest("admin-1", "req-6mr");
+
+    expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
+      note: "Order req-6mr",
+      validUntil: renewedExpiryFrom(currentValidUntil, new Date(), 6),
+      durationMonths: 6,
+      isRenewal: true,
+    });
+  });
+});
+
+describe("submitTopupOrder", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (prisma.setting.findUnique as any).mockResolvedValue(null); // paket poin bawaan
+  });
+
+  it("creates an order priced from the server-side package list", async () => {
+    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+    (prisma.orderRequest.create as any).mockResolvedValue({ id: "topup-1" });
+
+    expect(await submitTopupOrder("user-1", 1000)).toEqual({ ok: true, orderId: "topup-1" });
+    expect((prisma.orderRequest.create as any).mock.calls[0][0].data).toEqual({
+      userId: "user-1",
+      product: "points",
+      planName: "1.000 poin",
+      pointsAmount: 1000,
+      priceAmount: 45_000,
+    });
+  });
+
+  it("ignores any price the client might send — only the amount is chosen", async () => {
+    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
+    (prisma.orderRequest.create as any).mockResolvedValue({ id: "topup-1" });
+
+    await submitTopupOrder("user-1", 5000);
+
+    // Harga datang dari daftar server, jadi "5000 poin seharga Rp 1" mustahil.
+    expect((prisma.orderRequest.create as any).mock.calls[0][0].data.priceAmount).toBe(200_000);
+  });
+
+  it("refuses an amount that is not on offer", async () => {
+    expect(await submitTopupOrder("user-1", 777)).toEqual({ ok: false, reason: "unknown_package" });
+    expect(prisma.orderRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("points an existing pending top-up back at that order", async () => {
+    (prisma.orderRequest.findFirst as any).mockResolvedValue({ id: "topup-old" });
+
+    expect(await submitTopupOrder("user-1", 1000)).toEqual({
+      ok: false,
+      reason: "already_pending",
+      orderId: "topup-old",
+    });
+    expect(prisma.orderRequest.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("fulfillOrderRequest — top-up", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("credits the bought points with reason topup", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "topup-1",
+      status: "pending",
+      product: "points",
+      planName: "1.000 poin",
+      pointsAmount: 1000,
+      priceAmount: 45_000,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    expect(await fulfillOrderRequest("admin-1", "topup-1")).toEqual({ ok: true });
+
+    const ledger = (prisma.pointTransaction.create as any).mock.calls[0][0].data;
+    expect(ledger).toMatchObject({
+      userId: "user-1",
+      delta: 1000,
+      // "topup" memisahkan uang masuk dari penyesuaian manual admin.
+      reason: "topup",
+      createdById: "admin-1",
+    });
+    expect(prisma.orderRequest.update).toHaveBeenCalledWith({
+      where: { id: "topup-1" },
+      data: expect.objectContaining({ status: "fulfilled" }),
+    });
+  });
+
+  it("refuses to credit an order with no recorded amount", async () => {
+    (prisma.orderRequest.findUnique as any).mockResolvedValue({
+      id: "topup-bad",
+      status: "pending",
+      product: "points",
+      planName: "poin",
+      pointsAmount: null,
+      user: { id: "user-1", email: "a@b.c" },
+    });
+
+    // Mengarang jumlahnya berarti memberi poin yang tidak pernah dibayar.
+    expect(await fulfillOrderRequest("admin-1", "topup-bad")).toEqual({
+      ok: false,
+      reason: "invalid_topup",
+    });
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.orderRequest.update).not.toHaveBeenCalled();
   });
 });
 

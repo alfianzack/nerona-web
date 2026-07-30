@@ -90,16 +90,23 @@ export async function creditPlanPoints(params: {
   userId: string;
   product: PlanProduct;
   plan: string;
+  /** Paket berdurasi panjang dikredit sekaligus di muka: jatah bulanan × durasi. */
+  durationMonths?: number;
   createdById?: string | null;
   isRenewal?: boolean;
 }): Promise<number> {
   const plan = normalizePlan(params.plan);
-  const amount = await pointsForPlan(params.product, plan);
+  const monthly = await pointsForPlan(params.product, plan);
+  // Free adalah jatah seumur hidup, bukan bulanan — mengalikannya dengan durasi
+  // akan memberi percobaan gratis berlipat lewat URL yang dikarang sendiri.
+  const months = plan === "free" ? 1 : Math.max(1, Math.floor(params.durationMonths ?? 1));
+  const amount = monthly * months;
   if (amount <= 0) return 0;
 
   // The product belongs in the note: both products have a Free, Pro, and
   // Business, so "Bonus paket Pro" alone does not say which wallet grew.
-  const label = `${PRODUCT_LABELS[params.product]} ${PLAN_LABELS[plan] ?? plan}`;
+  const durationSuffix = months > 1 ? ` ${months} bulan` : "";
+  const label = `${PRODUCT_LABELS[params.product]} ${PLAN_LABELS[plan] ?? plan}${durationSuffix}`;
   await prisma.pointTransaction.create({
     data: {
       userId: params.userId,

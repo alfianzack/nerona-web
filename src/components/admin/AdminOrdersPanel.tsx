@@ -6,6 +6,7 @@ interface OrderRow {
   id: string;
   product: string;
   planName: string;
+  durationMonths: number;
   contactNote: string | null;
   createdAt: string;
   proofUploadedAt: string | null;
@@ -67,7 +68,17 @@ export function AdminOrdersPanel() {
           >
             <div className="flex items-center justify-between">
               <p className="font-medium text-ink">
-                {order.product === "metadata" ? "Metadata" : "Agent"} — {order.planName}
+                {order.product === "points"
+                  ? "Top-up poin"
+                  : order.product === "metadata"
+                    ? "Metadata"
+                    : "Agent"}{" "}
+                — {order.planName}
+                {order.durationMonths > 1 && order.product !== "points" && (
+                  <span className="ml-2 rounded-full bg-navy-900/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink ring-1 ring-navy-900/10">
+                    {order.durationMonths} bulan
+                  </span>
+                )}
                 {order.isRenewal && (
                   <span className="ml-2 rounded-full bg-brand-blue/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#3B65C4] ring-1 ring-brand-blue/30">
                     Perpanjangan

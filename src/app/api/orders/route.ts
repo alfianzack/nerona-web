@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { submitOrder } from "@/lib/orders";
+import { submitOrder, submitTopupOrder } from "@/lib/orders";
 
 const ERROR_MESSAGES: Record<string, { status: number; message: string }> = {
   invalid_product: { status: 400, message: "Produk tidak dikenal." },
   invalid_plan: { status: 400, message: "Paket tidak dikenal." },
+  unknown_package: { status: 400, message: "Paket poin tidak dikenal." },
   plan_not_found: { status: 500, message: "Paket belum tersedia. Hubungi admin Nerona." },
   account_disabled: {
     status: 403,
@@ -21,13 +22,39 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const product: string | undefined = body?.product;
+
+  // Top-up tidak punya paket/durasi — bentuk permintaannya beda, jadi jalurnya
+  // dipisah daripada memaksakan planName palsu ke submitOrder.
+  if (product === "points") {
+    const topup = await submitTopupOrder(session.user.id, body?.points);
+    if (!topup.ok) {
+      if (topup.reason === "already_pending") {
+        return NextResponse.json({ ok: true, kind: "request_created", orderId: topup.orderId });
+      }
+      const mapped = ERROR_MESSAGES[topup.reason];
+      return NextResponse.json(
+        { ok: false, reason: topup.reason, message: mapped.message },
+        { status: mapped.status }
+      );
+    }
+    return NextResponse.json({ ok: true, kind: "request_created", orderId: topup.orderId });
+  }
+
   const planName: string | undefined = body?.planName;
   const contactNote: string | undefined = body?.contactNote;
   if (!product || !planName) {
     return NextResponse.json({ ok: false, message: "Permintaan tidak valid." }, { status: 400 });
   }
 
-  const result = await submitOrder(session.user.id, product, planName, contactNote);
+  const result = await submitOrder(
+    session.user.id,
+    product,
+    planName,
+    contactNote,
+    // Tanpa ini durasi yang dipilih di checkout hilang diam-diam dan setiap
+    // order tercatat sebagai paket bulanan.
+    body?.durationMonths
+  );
   if (!result.ok) {
     // An existing pending order isn't an error for checkout — point the client
     // at that order so they can finish paying / upload proof.

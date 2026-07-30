@@ -1,8 +1,11 @@
 import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
-import { monthlyExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
+import { activationExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
+import { coerceDuration } from "@/lib/plan-duration";
 import { creditPlanPoints, hasEverReceivedPlanGrant } from "@/lib/plan-points";
+import { creditTopupPoints } from "@/lib/points";
+import { getTopupPackages, topupLabel } from "@/lib/topup";
 
 export type Product = "metadata" | "agent";
 
@@ -15,6 +18,50 @@ function isProduct(value: string): value is Product {
 
 function isKnownPlan(planName: string): boolean {
   return planName === FREE_PLAN_NAME || PAID_PLAN_NAMES.includes(planName as never);
+}
+
+export type SubmitTopupResult =
+  | { ok: true; orderId: string }
+  | { ok: false; reason: "unknown_package"; }
+  | { ok: false; reason: "already_pending"; orderId: string };
+
+/**
+ * Order pembelian poin satuan.
+ *
+ * Jumlah poin diambil dari daftar paket di server, bukan dari yang dikirim
+ * client: satu-satunya yang datang dari browser adalah *jumlah poin mana* yang
+ * dipilih, dan harganya dicari sendiri. Tanpa itu, client bisa mengirim
+ * "5000 poin seharga 1 rupiah".
+ */
+export async function submitTopupOrder(
+  userId: string,
+  points: unknown
+): Promise<SubmitTopupResult> {
+  const packages = await getTopupPackages();
+  const chosen = packages.find((p) => p.points === Number(points));
+  if (!chosen) {
+    return { ok: false, reason: "unknown_package" };
+  }
+
+  // Satu top-up tertunda pada satu waktu, sama seperti order paket: dua order
+  // menunggu transfer sekaligus membuat admin tidak tahu bukti mana milik mana.
+  const pending = await prisma.orderRequest.findFirst({
+    where: { userId, product: "points", status: "pending" },
+  });
+  if (pending) {
+    return { ok: false, reason: "already_pending", orderId: pending.id };
+  }
+
+  const created = await prisma.orderRequest.create({
+    data: {
+      userId,
+      product: "points",
+      planName: topupLabel(chosen.points),
+      pointsAmount: chosen.points,
+      priceAmount: chosen.price,
+    },
+  });
+  return { ok: true, orderId: created.id };
 }
 
 export type SubmitOrderResult =
@@ -96,7 +143,8 @@ export async function submitOrder(
   userId: string,
   product: string,
   planName: string,
-  contactNote?: string
+  contactNote?: string,
+  durationMonths?: unknown
 ): Promise<SubmitOrderResult> {
   if (!isProduct(product)) {
     return { ok: false, reason: "invalid_product" };
@@ -124,7 +172,16 @@ export async function submitOrder(
   }
 
   const created = await prisma.orderRequest.create({
-    data: { userId, product, planName, contactNote: contactNote || undefined },
+    data: {
+      userId,
+      product,
+      planName,
+      // Durasi datang dari client; coerceDuration menolak apa pun di luar
+      // 1/3/6/12 dengan mengembalikannya ke bulanan, bukan menyimpan angka liar
+      // yang nanti dipakai menghitung masa aktif.
+      durationMonths: coerceDuration(durationMonths),
+      contactNote: contactNote || undefined,
+    },
   });
   return { ok: true, kind: "request_created", orderId: created.id };
 }
@@ -133,6 +190,10 @@ const ORDER_LIST_SELECT = {
   id: true,
   product: true,
   planName: true,
+  durationMonths: true,
+  pointsAmount: true,
+  priceAmount: true,
+  isRenewal: true,
   contactNote: true,
   status: true,
   createdAt: true,
@@ -238,7 +299,10 @@ export async function getProofImage(
 
 export type FulfillOrderResult =
   | { ok: true }
-  | { ok: false; reason: "order_not_found" | "not_pending" | "plan_not_found" | "grant_failed" };
+  | {
+      ok: false;
+      reason: "order_not_found" | "not_pending" | "plan_not_found" | "grant_failed" | "invalid_topup";
+    };
 
 export async function fulfillOrderRequest(
   adminId: string,
@@ -255,11 +319,25 @@ export async function fulfillOrderRequest(
     return { ok: false, reason: "not_pending" };
   }
 
-  if (order.product === "metadata") {
+  if (order.product === "points") {
+    // pointsAmount ditulis saat order dibuat dari daftar paket server. Kalau
+    // hilang, ada yang salah di data — mengarang jumlahnya di sini berarti
+    // memberi poin yang tidak pernah dibayar.
+    if (!order.pointsAmount || order.pointsAmount <= 0) {
+      return { ok: false, reason: "invalid_topup" };
+    }
+    await creditTopupPoints({
+      userId: order.user.id,
+      points: order.pointsAmount,
+      note: `Top-up ${topupLabel(order.pointsAmount)} · Order ${order.id}`,
+      createdById: adminId,
+    });
+  } else if (order.product === "metadata") {
     const plan = await prisma.plan.findFirst({ where: { name: order.planName } });
     if (!plan) {
       return { ok: false, reason: "plan_not_found" };
     }
+    const months = coerceDuration(order.durationMonths);
     let validUntil: Date | undefined;
     if (order.isRenewal) {
       const current = await prisma.license.findFirst({
@@ -267,13 +345,14 @@ export async function fulfillOrderRequest(
         orderBy: { createdAt: "desc" },
         select: { validUntil: true },
       });
-      validUntil = renewedExpiryFrom(current?.validUntil ?? null, new Date());
+      validUntil = renewedExpiryFrom(current?.validUntil ?? null, new Date(), months);
     }
     // grantLicense credits the metadata allowance, so this branch must not —
     // a second call here would double every metadata activation.
     const result = await grantLicense(adminId, order.user.email, plan.id, {
       note: `Order ${order.id}`,
       validUntil,
+      durationMonths: months,
       isRenewal: Boolean(order.isRenewal),
     });
     if (!result.ok) {
@@ -282,20 +361,27 @@ export async function fulfillOrderRequest(
   } else {
     const plan = order.planName.toLowerCase();
     const now = new Date();
+    const months = coerceDuration(order.durationMonths);
     let expiresAt: Date;
     if (order.isRenewal) {
       const current = await prisma.agentProfile.findUnique({
         where: { userId: order.user.id },
         select: { planExpiresAt: true },
       });
-      expiresAt = renewedExpiryFrom(current?.planExpiresAt ?? null, now);
+      expiresAt = renewedExpiryFrom(current?.planExpiresAt ?? null, now, months);
     } else {
-      expiresAt = monthlyExpiryFrom(now);
+      expiresAt = activationExpiryFrom(now, months);
     }
     await prisma.agentProfile.upsert({
       where: { userId: order.user.id },
-      update: { status: "active", plan, planExpiresAt: expiresAt },
-      create: { userId: order.user.id, status: "active", plan, planExpiresAt: expiresAt },
+      update: { status: "active", plan, planExpiresAt: expiresAt, planDurationMonths: months },
+      create: {
+        userId: order.user.id,
+        status: "active",
+        plan,
+        planExpiresAt: expiresAt,
+        planDurationMonths: months,
+      },
     });
     // Without this the tenant has an active plan and an empty wallet, so the
     // agent answers "poin habis" to their very first message.
@@ -303,6 +389,7 @@ export async function fulfillOrderRequest(
       userId: order.user.id,
       product: "agent",
       plan,
+      durationMonths: months,
       createdById: adminId,
       isRenewal: Boolean(order.isRenewal),
     });
@@ -346,6 +433,9 @@ export async function listPendingOrderRequests() {
       id: true,
       product: true,
       planName: true,
+      durationMonths: true,
+      pointsAmount: true,
+      priceAmount: true,
       contactNote: true,
       createdAt: true,
       proofUploadedAt: true,
