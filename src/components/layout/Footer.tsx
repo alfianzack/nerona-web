@@ -2,15 +2,23 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { homeForRole } from "@/lib/auth-redirect";
+import { AGENT_ENABLED } from "@/lib/features";
 
 const footerLink = "transition hover:text-brand-blue";
 
-const FOOTER_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/agent", label: "Agent" },
-  { href: "/metadata", label: "Metadata" },
-  { href: "/pricing", label: "Harga" },
-];
+// Dengan agent disembunyikan, "/" ADALAH halaman metadata, jadi kedua
+// tautan produk itu menunjuk ke tempat yang sama dengan Home.
+const FOOTER_LINKS = AGENT_ENABLED
+  ? [
+      { href: "/", label: "Home" },
+      { href: "/agent", label: "Agent" },
+      { href: "/metadata", label: "Metadata" },
+      { href: "/pricing", label: "Harga" },
+    ]
+  : [
+      { href: "/", label: "Home" },
+      { href: "/pricing", label: "Harga" },
+    ];
 
 export async function Footer() {
   const session = await getServerSession(authOptions);
@@ -30,7 +38,9 @@ export async function Footer() {
           Nerona
         </p>
         <p className="mt-2 max-w-md text-xs text-muted">
-          Alat AI untuk kontributor stock dan pemilik bisnis.
+          {AGENT_ENABLED
+            ? "Alat AI untuk kontributor stock dan pemilik bisnis."
+            : "Alat AI untuk kontributor stock."}
         </p>
         <nav className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted">
           {links.map((link) => (
