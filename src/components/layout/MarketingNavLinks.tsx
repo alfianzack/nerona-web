@@ -19,16 +19,18 @@ export function MarketingNavLinks({
   // Signed-in visitors keep full access to the marketing pages, so the auth
   // area becomes a way back in rather than a redirect. (/pricing is the one
   // exception — it hands tenants over to /paket, where the sidebar is.)
+  // Bar-nya navy-900, jadi setiap warna di sini terang: teks gelap warisan
+  // lama tidak akan terlihat sama sekali di atasnya.
   const authArea = dashboardHref ? (
     <Link
       href={dashboardHref}
-      className="rounded-full bg-navy-900/5 px-3.5 py-1.5 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+      className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20"
     >
       Dashboard →
     </Link>
   ) : (
     <>
-      <Link href="/login" className="text-xs text-ink transition hover:text-brand-blue">
+      <Link href="/login" className="text-xs text-navy-100 transition hover:text-white">
         Masuk
       </Link>
       <Link
@@ -51,8 +53,10 @@ export function MarketingNavLinks({
               key={item.href}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className={`text-xs text-ink transition hover:text-brand-blue ${
-                isActive ? "-mb-px border-b-2 border-brand-blue pb-px font-semibold" : ""
+              className={`text-xs transition ${
+                isActive
+                  ? "-mb-px border-b-2 border-brand-sky pb-px font-semibold text-white"
+                  : "text-navy-100 hover:text-white"
               }`}
             >
               {item.label}
@@ -68,7 +72,7 @@ export function MarketingNavLinks({
         onClick={() => setOpen((v) => !v)}
         aria-label="Menu"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/5 sm:hidden"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-white ring-1 ring-white/15 transition hover:bg-white/10 sm:hidden"
       >
         <span className="text-lg leading-none" aria-hidden="true">
           {open ? "✕" : "☰"}
@@ -77,7 +81,7 @@ export function MarketingNavLinks({
 
       {/* Mobile dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 top-12 border-b border-navy-900/10 bg-canvas/95 shadow-lg shadow-navy-900/10 backdrop-blur-xl sm:hidden">
+        <div className="absolute left-0 right-0 top-12 border-b border-white/10 bg-navy-900/95 shadow-lg shadow-navy-900/40 backdrop-blur-xl sm:hidden">
           <nav className="mx-auto flex max-w-5xl flex-col gap-1 px-6 py-3">
             {items.map((item) => (
               <Link
@@ -85,14 +89,16 @@ export function MarketingNavLinks({
                 href={item.href}
                 onClick={() => setOpen(false)}
                 aria-current={item.href === active ? "page" : undefined}
-                className={`rounded-lg px-2 py-2 text-sm text-ink transition hover:bg-navy-900/5 ${
-                  item.href === active ? "bg-navy-900/5 font-semibold" : ""
+                className={`rounded-lg px-2 py-2 text-sm transition hover:bg-white/10 ${
+                  item.href === active
+                    ? "bg-white/10 font-semibold text-white"
+                    : "text-navy-100"
                 }`}
               >
                 {item.label}
               </Link>
             ))}
-            <div className="mt-2 flex items-center gap-3 border-t border-navy-900/10 pt-3">
+            <div className="mt-2 flex items-center gap-3 border-t border-white/10 pt-3">
               {authArea}
             </div>
           </nav>

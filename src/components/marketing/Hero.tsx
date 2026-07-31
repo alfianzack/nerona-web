@@ -69,8 +69,11 @@ export function Hero() {
             </li>
           ))}
         </ul>
+        {/* Satu-satunya animasi di halaman ini, dan letaknya di atas lipatan
+            supaya benar-benar dilihat: kartu memainkan urutan pembuatannya
+            sekali saat halaman dibuka. */}
         <div className="mx-auto mt-16 max-w-lg">
-          <MetadataCardMockup />
+          <MetadataCardMockup animated />
         </div>
       </div>
     </section>

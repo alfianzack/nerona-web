@@ -7,6 +7,35 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
+      /**
+       * Urutan "AI sedang menulis metadata" di kartu hero.
+       *
+       * Setiap animasi memakai fill-mode `both`, dan keadaan `from`-lah yang
+       * menyembunyikan elemen — BUKAN kelas `opacity-0` di markup. Itu penting:
+       * dengan begini `motion-reduce:animate-none` membuat elemennya langsung
+       * terlihat utuh, bukan hilang permanen bagi orang yang mematikan animasi.
+       */
+      keyframes: {
+        "nerona-rise": {
+          from: { opacity: "0", transform: "translateY(6px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        "nerona-pop": {
+          from: { opacity: "0", transform: "scale(0.92)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        // Amber selama "menganalisis", lalu hijau begitu metadatanya jadi.
+        "nerona-done": {
+          "0%, 55%": { backgroundColor: "#f59e0b", transform: "scale(1)" },
+          "70%": { transform: "scale(1.5)" },
+          "100%": { backgroundColor: "#34d399", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "nerona-rise": "nerona-rise 600ms ease-out both",
+        "nerona-pop": "nerona-pop 400ms ease-out both",
+        "nerona-done": "nerona-done 1900ms ease-in-out both",
+      },
       // Light brand palette derived from the Pill-N logo: a sky→blue and a
       // gold→orange gradient on a soft, sky-tinted off-white ground.
       colors: {
