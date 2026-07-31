@@ -1,5 +1,6 @@
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { getDurationDiscounts, PLAN_DURATIONS } from "@/lib/plan-duration";
+import { AGENT_ENABLED } from "@/lib/features";
 import type { PricingProduct } from "@/components/marketing/PricingSwitcher";
 
 /**
@@ -11,35 +12,43 @@ import type { PricingProduct } from "@/components/marketing/PricingSwitcher";
  *
  * Dipakai /pricing (publik) dan /paket (tenant) supaya keduanya tidak pernah
  * memperlihatkan harga yang berbeda.
+ *
+ * `agentEnabled` diambil dari AGENT_ENABLED secara default; parameternya ada
+ * supaya tes bisa menguji kedua keadaan. Saat agent disembunyikan, tier-nya
+ * tidak dihitung sama sekali — bukan dihitung lalu dibuang.
  */
-export async function pricingProducts(): Promise<{
+export async function pricingProducts(agentEnabled: boolean = AGENT_ENABLED): Promise<{
   products: PricingProduct[];
   discounts: Record<number, number>;
 }> {
   const [discounts, metadataSets, agentSets] = await Promise.all([
     getDurationDiscounts(),
     Promise.all(PLAN_DURATIONS.map((months) => metadataTiers(months))),
-    Promise.all(PLAN_DURATIONS.map((months) => agentTiers(months))),
+    agentEnabled
+      ? Promise.all(PLAN_DURATIONS.map((months) => agentTiers(months)))
+      : Promise.resolve(null),
   ]);
 
   const byDuration = (sets: Awaited<ReturnType<typeof metadataTiers>>[]) =>
     Object.fromEntries(PLAN_DURATIONS.map((months, i) => [months, sets[i]]));
 
-  return {
-    discounts,
-    products: [
-      {
-        key: "metadata",
-        label: "🖼️ Metadata",
-        subheading: "Metadata otomatis untuk kontributor stock.",
-        tiersByDuration: byDuration(metadataSets),
-      },
-      {
-        key: "agent",
-        label: "💬 Agent",
-        subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
-        tiersByDuration: byDuration(agentSets),
-      },
-    ],
-  };
+  const products: PricingProduct[] = [
+    {
+      key: "metadata",
+      label: "🖼️ Metadata",
+      subheading: "Metadata otomatis untuk kontributor stock.",
+      tiersByDuration: byDuration(metadataSets),
+    },
+  ];
+
+  if (agentSets) {
+    products.push({
+      key: "agent",
+      label: "💬 Agent",
+      subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
+      tiersByDuration: byDuration(agentSets),
+    });
+  }
+
+  return { discounts, products };
 }
