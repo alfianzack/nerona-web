@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session-guards";
 import { getOwnProfile } from "@/lib/agent/profile";
+import { AGENT_ENABLED } from "@/lib/features";
 import { AgentLinkPanel } from "@/components/agent/AgentLinkPanel";
 
 export default async function AgentDashboardPage() {
+  // redirect, bukan 404: bookmark lama mendarat di tempat yang berguna.
+  if (!AGENT_ENABLED) redirect("/dashboard");
+
   const session = await requireUser();
   const profile = await getOwnProfile(session.user.id);
 

@@ -5,6 +5,7 @@ import { getOwnProfile } from "@/lib/agent/profile";
 import { logInbound } from "@/lib/agent/messages";
 import { runAgentTurn } from "@/lib/agent/turn";
 import { hit } from "@/lib/rate-limit";
+import { AGENT_ENABLED } from "@/lib/features";
 
 export const maxDuration = 60;
 
@@ -13,6 +14,13 @@ const FAILURE_APOLOGY =
   "Maaf, ada kendala teknis di sisi kami. Coba kirim pesan itu lagi sebentar ya.";
 
 export async function POST(request: Request) {
+  // Halaman yang memanggil endpoint ini sedang disembunyikan; endpoint-nya
+  // tidak boleh tetap menjawab. Webhook WhatsApp dan cron job TIDAK dijaga —
+  // pelanggan Agent yang sudah jalan tetap dilayani.
+  if (!AGENT_ENABLED) {
+    return NextResponse.json({ ok: false, error: "agent_disabled" }, { status: 403 });
+  }
+
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   if (!userId) {
