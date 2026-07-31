@@ -3,6 +3,7 @@ import { getPaymentSettings } from "@/lib/payment-settings";
 import { buildInvoicePdf, invoiceNumberFor, priceLabelFor } from "@/lib/billing/invoice";
 import { sendRenewalInvoiceEmail } from "@/lib/mail";
 import { coerceDuration, DURATION_LABELS } from "@/lib/plan-duration";
+import { AGENT_ENABLED } from "@/lib/features";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PAID_PLANS = ["pro", "business"];
@@ -62,31 +63,37 @@ export async function generateDueRenewals(
   const cutoff = new Date(now.getTime() + leadDays * DAY_MS);
   let created = 0;
 
-  const profiles = await prisma.agentProfile.findMany({
-    where: { status: "active", plan: { in: PAID_PLANS }, planExpiresAt: { lte: cutoff } },
-    select: {
-      userId: true,
-      plan: true,
-      // Perpanjangan mengikuti durasi yang dibeli: paket 6 bulan ditagih 6 bulan
-      // lagi, bukan turun diam-diam ke bulanan.
-      planDurationMonths: true,
-      user: { select: { email: true, name: true, businessName: true } },
-    },
-  });
-  for (const p of profiles) {
-    if (await hasPending(p.userId, "agent")) continue;
-    const months = coerceDuration(p.planDurationMonths);
-    const req = await prisma.orderRequest.create({
-      data: {
-        userId: p.userId,
-        product: "agent",
-        planName: title(p.plan),
-        durationMonths: months,
-        isRenewal: true,
+  // Selama Agent disembunyikan, perpanjangannya tidak dibuat sama sekali:
+  // banner "Perpanjangan jatuh tempo" di /finance akan menyebut produk yang
+  // sudah tidak ada di UI mana pun. Konsekuensinya disengaja — paket Agent
+  // yang berjalan akan habis masa aktifnya lalu tidak diperpanjang.
+  if (AGENT_ENABLED) {
+    const profiles = await prisma.agentProfile.findMany({
+      where: { status: "active", plan: { in: PAID_PLANS }, planExpiresAt: { lte: cutoff } },
+      select: {
+        userId: true,
+        plan: true,
+        // Perpanjangan mengikuti durasi yang dibeli: paket 6 bulan ditagih 6 bulan
+        // lagi, bukan turun diam-diam ke bulanan.
+        planDurationMonths: true,
+        user: { select: { email: true, name: true, businessName: true } },
       },
     });
-    created++;
-    await emailInvoice(req, p.user, "agent", title(p.plan), months);
+    for (const p of profiles) {
+      if (await hasPending(p.userId, "agent")) continue;
+      const months = coerceDuration(p.planDurationMonths);
+      const req = await prisma.orderRequest.create({
+        data: {
+          userId: p.userId,
+          product: "agent",
+          planName: title(p.plan),
+          durationMonths: months,
+          isRenewal: true,
+        },
+      });
+      created++;
+      await emailInvoice(req, p.user, "agent", title(p.plan), months);
+    }
   }
 
   const licenses = await prisma.license.findMany({

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { coerceDuration, DURATION_LABELS } from "@/lib/plan-duration";
+import { AGENT_ENABLED } from "@/lib/features";
 import { CheckoutView } from "@/components/order/CheckoutView";
 import { FreeActivateCard } from "@/components/order/FreeActivateCard";
 
@@ -18,15 +19,18 @@ export default async function OrderPage({
   // apa pun yang aneh kembali ke 1 bulan, bukan melempar.
   const months = coerceDuration(searchParams.months);
 
+  // Order agent baru ditolak selama produknya disembunyikan; URL agent jatuh
+  // ke cabang "Pilih paket dulu" di bawah, sama seperti produk tak dikenal.
+  const agentOrderable = product === "agent" && AGENT_ENABLED;
   const tiers =
     product === "metadata"
       ? await metadataTiers(months)
-      : product === "agent"
+      : agentOrderable
         ? await agentTiers(months)
         : null;
   const tier = tiers?.find((candidate) => candidate.name === planName);
 
-  if (!tier || (product !== "metadata" && product !== "agent")) {
+  if (!tier || (product !== "metadata" && !agentOrderable)) {
     return (
       <main className="mx-auto max-w-xl px-6 py-20 text-center">
         <h1 className="text-2xl font-semibold text-ink">Pilih paket dulu</h1>
