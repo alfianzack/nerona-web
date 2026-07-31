@@ -5,6 +5,8 @@ interface FeatureSectionProps {
   theme: "light" | "dark" | "navy";
   imageSide: "left" | "right";
   bullets?: string[];
+  /** Anchor target, so the top nav can link to a section. */
+  id?: string;
 }
 
 // "dark" sits on the page canvas and "light" is a slightly lifted surface, so
@@ -17,12 +19,13 @@ export function FeatureSection({
   theme,
   imageSide,
   bullets,
+  id,
 }: FeatureSectionProps) {
   const navy = theme === "navy";
   const sectionClass = navy ? "bg-navy-900" : theme === "dark" ? "bg-canvas" : "bg-surface2";
 
   return (
-    <section className={`${sectionClass} px-6 py-24 sm:py-32`}>
+    <section id={id} className={`${sectionClass} px-6 py-24 sm:py-32`}>
       <div
         className={`mx-auto flex max-w-5xl flex-col items-center gap-14 md:flex-row md:gap-20 ${
           imageSide === "left" ? "md:flex-row-reverse" : ""

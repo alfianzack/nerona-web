@@ -1,15 +1,11 @@
 import { AGENT_ENABLED } from "@/lib/features";
+import { HomeMetadataOnly } from "@/components/marketing/home/HomeMetadataOnly";
 import { HomeMultiProduct } from "@/components/marketing/home/HomeMultiProduct";
 
 /**
  * Beranda punya dua bentuk, dipilih oleh AGENT_ENABLED: halaman jualan
- * metadata tunggal, atau beranda dua produk. Cabang metadata-only masih
- * menampilkan beranda lama sampai HomeMetadataOnly ditulis — commit ini
- * sengaja hanya memindahkan isi, supaya bisa dipastikan tidak ada yang hilang.
+ * metadata tunggal, atau beranda dua produk.
  */
 export default function HomePage() {
-  if (!AGENT_ENABLED) {
-    return <HomeMultiProduct />;
-  }
-  return <HomeMultiProduct />;
+  return AGENT_ENABLED ? <HomeMultiProduct /> : <HomeMetadataOnly />;
 }
