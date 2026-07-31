@@ -79,6 +79,7 @@ Every existing consumer keeps importing the constants unchanged. `pricingProduct
 | `Footer.tsx` | Tagline drops "dan pemilik bisnis"; `/agent` and `/metadata` links removed |
 | `lib/pricing-products.ts` | Returns the metadata product only, so `/pricing` and `/paket` lose the Agent tab |
 | `ProductCards.tsx` | Unused by the new home page; kept for `HomeMultiProduct` |
+| `PricingSwitcher.tsx` | Product tablist hidden when there is only one product — a lone tab is a control with nothing to switch to. Duration tabs stay. |
 
 **"Harga" in the nav points at `/pricing`, not at the landing's own pricing section.** The approved mockup scrolled it in-page, but `/pricing` is the only place the 3/6/12-month duration switcher lives, and making all three nav items in-page anchors would orphan it — a discount tool nothing links to. So: the hero's secondary CTA scrolls to `#pricing` on the page, and the nav item goes to the full pricing page. Both are useful; the redundancy is deliberate.
 
@@ -132,9 +133,11 @@ Out: `getDashboardSummary` and `getSalesSeries` (revenue, order count, active pr
 
 ### Orders and renewals
 
-**Creation is blocked at one choke point.** `isProduct` (`lib/orders.ts:15`) is the single validator, called from `createOrderRequest` (line 149), which both `/order` and `POST /api/orders` go through. Gating it there rejects `product=agent` from the page and the API at once, returning the existing `invalid_product` → 400 "Produk tidak dikenal."
+**Creation is blocked at one choke point.** `submitOrder` (`lib/orders.ts:142`) is what `POST /api/orders` calls, and its `isProduct` check at line 149 is the single product validator. The flag check goes in as a second guard immediately after it, returning the existing `invalid_product` reason → 400 "Produk tidak dikenal." The guard is a separate line rather than folded into `isProduct`, because `isProduct` is a TypeScript type guard (`value is Product`) and making it answer "false" for a genuine `Product` would make the type lie. `/order` (the page) validates separately at `order/page.tsx:29` and needs the same treatment.
 
-**Fulfilment is not blocked.** `isProduct` is not on the fulfilment path (`orders.ts:322-390` branches on `order.product` directly), so an agent order already placed can still be verified and activated by an admin. Blocking that would trap a customer's money in a pending order.
+**Fulfilment is not blocked.** Neither `isProduct` nor the new guard sits on the fulfilment path (`orders.ts:322-390` branches on `order.product` directly), so an agent order already placed can still be verified and activated by an admin. Blocking that would trap a customer's money in a pending order.
+
+**Free activation goes with it.** `submitOrder` routes `planName === "Free"` to `activateFreeAgent` (line 157) before any of the paid logic, and the guard sits above that line — so a free agent activation is refused too, not just a paid order.
 
 **Renewals stop being generated — a different job from the agent cron.** Two things are called "cron" here and only one is touched: `/api/agent/cron` drives agent message jobs and is left alone, while the billing job below generates renewal invoices and skips agent. `generateDueRenewals` (`lib/billing/renewals.ts:58`) creates renewal requests for agent plans, and the "Perpanjangan paket jatuh tempo" banner on `/finance` would then show *"Agent WhatsApp — pro"* on a page that no longer knows what Agent is. So the job skips the agent pass while the flag is off, and `listPendingRenewals` (`orders.ts:419`) filters agent rows out of the banner. This is what makes existing agent plans expire without renewal — the accepted consequence recorded above.
 
@@ -163,7 +166,7 @@ Vitest, node environment, 73 test files, and **no component tests at all** (`tes
 New tests:
 
 - `pricingProducts(false)` returns one product keyed `metadata`; `pricingProducts(true)` returns both.
-- `createOrderRequest` with `product: "agent"` returns `invalid_product` when the flag is off, and succeeds when on.
+- `submitOrder` with `product: "agent"` returns `invalid_product` when the flag is off — for the Free plan as well as a paid one — and still accepts `metadata`.
 - `generateDueRenewals` creates no agent renewal with the flag off, while still creating metadata renewals.
 - `listPendingRenewals` omits agent rows with the flag off.
 
