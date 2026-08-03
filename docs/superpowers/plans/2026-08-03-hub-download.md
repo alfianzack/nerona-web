@@ -81,13 +81,28 @@ model License {
 }
 ```
 
-- [ ] **Step 4: Buat migrasi berikut backfill-nya**
+- [ ] **Step 4: Tulis migrasinya dengan tangan — JANGAN jalankan `prisma migrate dev`**
+
+**`.env.local` menunjuk ke database Supabase produksi; tidak ada database
+pengembangan terpisah.** `prisma migrate dev` membandingkan schema dengan
+database dan, begitu menemukan drift, menawarkan **reset** — pada database itu
+artinya data pelanggan hilang. Migrasi yang sudah ada di repo ini semuanya
+bertimestamp tangan, yang menandakan repo ini memang tidak pernah memakainya.
+
+Buat foldernya sendiri:
 
 ```bash
-npx prisma migrate dev --name add_hub_access
+mkdir -p prisma/migrations/20260803000000_add_hub_access
 ```
 
-Lalu tambahkan backfill ke bawah berkas `migration.sql` yang dihasilkan:
+Isi `prisma/migrations/20260803000000_add_hub_access/migration.sql`:
+
+```sql
+ALTER TABLE "plans" ADD COLUMN "hubAccess" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "licenses" ADD COLUMN "hubAccess" BOOLEAN NOT NULL DEFAULT false;
+```
+
+Lalu tambahkan backfill di bawahnya:
 
 ```sql
 -- Backfill: pelanggan Business yang lisensinya dibuat sebelum kolom ini ada
