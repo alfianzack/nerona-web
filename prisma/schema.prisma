@@ -81,6 +81,7 @@ model User {
   adjustedPointTransactions PointTransaction[] @relation("PointAdjustedByAdmin")
   extensionTokens           ExtensionToken[]
   metadataLogs              MetadataLog[]
+  devicePairings            DevicePairing[]
 
   @@map("users")
 }
@@ -532,7 +533,34 @@ model ExtensionToken {
   label      String?
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
+  pairings   DevicePairing[]
 
   @@index([userId])
   @@map("extension_tokens")
+}
+
+// Pasangan perangkat untuk Nerona Hub. Extension TIDAK memakai tabel ini —
+// ia menerima token langsung di halaman nerona-web lewat content script.
+//
+// `code` dan `deviceSecret` sengaja dua kolom berbeda. Kode itu pendek supaya
+// bisa dibaca mata, jadi ia memang bocor — cukup terlihat di layar. Kalau kode
+// juga yang menukar token, siapa pun yang mengintip layar bisa mencuri
+// sambungannya. Kode hanya MENUNJUK permintaan; deviceSecret yang MENGAMBIL.
+model DevicePairing {
+  id           String          @id @default(cuid())
+  code         String          @unique
+  deviceSecret String          @unique
+  kind         String
+  label        String
+  status       String          @default("pending") // pending|approved|claimed|denied
+  userId       String?
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenId      String?
+  token        ExtensionToken? @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now())
+  approvedAt   DateTime?
+  expiresAt    DateTime
+
+  @@index([expiresAt])
+  @@map("device_pairings")
 }
