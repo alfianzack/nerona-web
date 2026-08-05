@@ -17,18 +17,23 @@ export function FormPersetujuan({ kodeAwal }: { kodeAwal: string }) {
   async function kirim(setuju: boolean) {
     setGalat("");
     setSibuk(true);
-    const res = await fetch("/api/extension/pair/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: kode, setuju }),
-    });
-    const data = await res.json().catch(() => null);
-    setSibuk(false);
-    if (!res.ok || !data?.ok) {
-      setGalat(PESAN[data?.reason] || "Gagal memproses kode. Coba lagi.");
-      return;
+    try {
+      const res = await fetch("/api/extension/pair/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: kode, setuju }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setGalat(PESAN[data?.reason] || "Gagal memproses kode. Coba lagi.");
+        return;
+      }
+      setHasil(setuju ? "disetujui" : "ditolak");
+    } catch {
+      setGalat("Koneksi terputus. Periksa internet Anda lalu coba lagi.");
+    } finally {
+      setSibuk(false);
     }
-    setHasil(setuju ? "disetujui" : "ditolak");
   }
 
   if (hasil === "disetujui") {
