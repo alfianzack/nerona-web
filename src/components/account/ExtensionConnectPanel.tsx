@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface TokenRow {
   id: string;
@@ -22,6 +22,12 @@ export function ExtensionConnectPanel() {
   const [sibuk, setSibuk] = useState(false);
   const [created, setCreated] = useState("");
   const [error, setError] = useState("");
+  // Token TOKEN dikirim ke extension lewat postMessage tanpa jaminan balasan —
+  // content script bisa gagal diam-diam. Timer ini yang memutus kebisuan itu,
+  // jadi tombol tidak macet selamanya di "Menghubungkan...". Disimpan di ref
+  // (bukan state) karena effect pendengar message dan handler klik tombol
+  // sama-sama perlu membacanya untuk membatalkannya.
+  const batasRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/extension/tokens");
@@ -42,12 +48,18 @@ export function ExtensionConnectPanel() {
 
       if (data.type === "HADIR") setExtVersion(String(data.version || "?"));
       if (data.type === "TERSAMBUNG") {
+        // Balasan datang — batas waktu tidak boleh menyusul dan menimpa
+        // keadaan sukses ini dengan galat basi.
+        if (batasRef.current) clearTimeout(batasRef.current);
+        batasRef.current = null;
         setEmailTersambung(String(data.email || ""));
         setSibuk(false);
         setError("");
         load();
       }
       if (data.type === "GAGAL") {
+        if (batasRef.current) clearTimeout(batasRef.current);
+        batasRef.current = null;
         setSibuk(false);
         setError(String(data.pesan || "Extension menolak token."));
       }
@@ -56,7 +68,12 @@ export function ExtensionConnectPanel() {
     // Extension mungkin sudah mengumumkan diri sebelum React memasang
     // pendengarnya. Satu sapaan balik memaksanya mengumumkan ulang.
     window.postMessage({ source: "nerona-web", type: "HALO" }, window.location.origin);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      // Halaman bisa ditutup/dipindah sebelum extension membalas — jangan
+      // tinggalkan timer yang men-setState komponen yang sudah lenyap.
+      if (batasRef.current) clearTimeout(batasRef.current);
+    };
   }, [load]);
 
   async function hubungkanExtension() {
@@ -78,6 +95,18 @@ export function ExtensionConnectPanel() {
       { source: "nerona-web", type: "TOKEN", token: data.token },
       window.location.origin
     );
+    // Token sudah dibuat di server di atas — kalau extension diam saja
+    // (pesan tak sampai, content script error), token itu nganggur tak
+    // terlihat dan tombol ini macet selamanya. Batas waktu ini yang
+    // memutus kebisuannya.
+    if (batasRef.current) clearTimeout(batasRef.current);
+    batasRef.current = setTimeout(() => {
+      batasRef.current = null;
+      setSibuk(false);
+      setError(
+        "Extension tidak membalas. Muat ulang halaman, atau pakai token manual di bawah."
+      );
+    }, 10_000);
   }
 
   async function createToken() {
