@@ -17,7 +17,11 @@ export async function POST(request: Request) {
   );
   if (!limited.ok) {
     const { body, init } = tooManyRequests(limited, "Terlalu sering. Coba lagi sebentar.");
-    return NextResponse.json(body, init);
+    // `reason` ikut dikirim, bukan `message` saja: halaman persetujuan memetakan
+    // `reason` ke kalimatnya sendiri, jadi tanpa ini pengguna dapat "Gagal
+    // memproses kode. Coba lagi." — ajakan mencoba lagi yang dijamin gagal
+    // selama jendela batas laju masih berjalan.
+    return NextResponse.json({ ...body, reason: "too_many" }, init);
   }
 
   const payload = await request.json().catch(() => ({}));

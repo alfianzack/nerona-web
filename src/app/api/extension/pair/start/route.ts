@@ -6,7 +6,7 @@ import { baseUrl } from "@/lib/base-url";
 // Satu-satunya endpoint pasangan yang tanpa auth, jadi batas laju di sini
 // bukan hiasan: tanpanya siapa pun bisa membanjiri tabel device_pairings.
 export async function POST(request: Request) {
-  const limited = limitByIp(request, "pair-start", RATE_LIMITS.accountAction);
+  const limited = limitByIp(request, "pair-start", RATE_LIMITS.pairStart);
   if (limited) {
     const { body, init } = tooManyRequests(limited, "Terlalu sering. Coba lagi sebentar.");
     return NextResponse.json(body, init);

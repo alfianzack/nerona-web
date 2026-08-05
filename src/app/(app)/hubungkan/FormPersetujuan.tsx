@@ -6,6 +6,8 @@ const PESAN: Record<string, string> = {
   not_found: "Kode tidak dikenal. Periksa lagi kode yang tampil di Nerona Hub.",
   expired: "Kode sudah kedaluwarsa. Klik Hubungkan akun lagi di Nerona Hub untuk kode baru.",
   already_handled: "Kode ini sudah dipakai. Minta kode baru dari Nerona Hub.",
+  too_many:
+    "Terlalu banyak percobaan. Tunggu sekitar 10 menit, lalu buka lagi tautan ini dari Nerona Hub.",
 };
 
 export function FormPersetujuan({ kodeAwal }: { kodeAwal: string }) {

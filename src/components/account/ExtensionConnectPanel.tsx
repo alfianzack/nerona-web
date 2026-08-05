@@ -10,6 +10,14 @@ interface TokenRow {
 }
 
 /**
+ * Awalan label token yang dibuat tombol "Hubungkan extension" (label lengkapnya
+ * `Extension · Chrome`). Dipakai untuk MENEMUKAN kembali baris tokennya setelah
+ * halaman dimuat ulang — keadaan tersambung tidak boleh bergantung pada pesan
+ * postMessage yang cuma hidup selama satu sesi halaman.
+ */
+const AWALAN_LABEL_EXT = "Extension";
+
+/**
  * Extension mengumumkan dirinya lewat postMessage saat halaman ini dimuat.
  * Sebelum ini dasbor cuma bisa MENEBAK apakah extension terpasang, jadi
  * panduan pemasangan selalu tampil penuh bahkan untuk yang sudah terpasang —
@@ -18,7 +26,16 @@ interface TokenRow {
 export function ExtensionConnectPanel() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [extVersion, setExtVersion] = useState<string | null>(null);
+  // Apakah browser INI memegang token, seperti dilaporkan HADIR. `null` berarti
+  // extension-nya build lama yang belum melaporkannya sama sekali — dibedakan
+  // dari `false` supaya build lama jatuh ke bukti daftar token saja, bukan
+  // dinyatakan "tidak tersambung" atas dasar field yang memang tidak ada.
+  const [extPunyaToken, setExtPunyaToken] = useState<boolean | null>(null);
   const [emailTersambung, setEmailTersambung] = useState("");
+  // `null` = belum tahu (mis. sesudah muat ulang). Hanya `false` yang perlu
+  // dikatakan, dan hanya di detik penyambungan; kartu lisensi di atas panel ini
+  // yang jadi sumber tetapnya.
+  const [lisensiAktif, setLisensiAktif] = useState<boolean | null>(null);
   const [sibuk, setSibuk] = useState(false);
   const [created, setCreated] = useState("");
   const [error, setError] = useState("");
@@ -28,6 +45,15 @@ export function ExtensionConnectPanel() {
   // (bukan state) karena effect pendengar message dan handler klik tombol
   // sama-sama perlu membacanya untuk membatalkannya.
   const batasRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // `disabled` baru berlaku setelah React me-render ulang; dua klik dalam satu
+  // frame masih lolos berdua. Ref ini menutup jendela itu karena berubah
+  // seketika — dan setiap POST yang lolos mencetak kredensial penuh permanen,
+  // jadi taruhannya bukan sekadar permintaan ganda.
+  const kirimRef = useRef(false);
+  // Id token yang baru dibuat, disimpan supaya jalur batas-waktu bisa
+  // mencabutnya lagi: tokennya sudah terlanjur ada di server sebelum extension
+  // sempat diam.
+  const idBaruRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/extension/tokens");
@@ -46,13 +72,24 @@ export function ExtensionConnectPanel() {
       const data = event.data;
       if (data?.source !== "nerona-ext") return;
 
-      if (data.type === "HADIR") setExtVersion(String(data.version || "?"));
+      if (data.type === "HADIR") {
+        setExtVersion(String(data.version || "?"));
+        setExtPunyaToken(typeof data.tersambung === "boolean" ? data.tersambung : null);
+      }
       if (data.type === "TERSAMBUNG") {
         // Balasan datang — batas waktu tidak boleh menyusul dan menimpa
-        // keadaan sukses ini dengan galat basi.
+        // keadaan sukses ini dengan galat basi, dan tokennya jelas TIDAK boleh
+        // ikut dicabut jalur batas waktu itu.
         if (batasRef.current) clearTimeout(batasRef.current);
         batasRef.current = null;
+        idBaruRef.current = null;
+        kirimRef.current = false;
         setEmailTersambung(String(data.email || ""));
+        setExtPunyaToken(true);
+        // Extension memberi tahu keadaan lisensinya terpisah dari keberhasilan
+        // penyambungan. Keduanya fakta yang berbeda: tokennya sah sekarang juga,
+        // paketnya mungkin belum aktif.
+        setLisensiAktif(data.lisensiAktif !== false);
         setSibuk(false);
         setError("");
         load();
@@ -60,6 +97,11 @@ export function ExtensionConnectPanel() {
       if (data.type === "GAGAL") {
         if (batasRef.current) clearTimeout(batasRef.current);
         batasRef.current = null;
+        // Tokennya sengaja TIDAK dicabut di sini: extension sudah menyimpannya
+        // sebelum gagal (mis. jaringan putus saat memverifikasi), jadi
+        // mencabutnya justru mematikan token yang benar-benar dipegang.
+        idBaruRef.current = null;
+        kirimRef.current = false;
         setSibuk(false);
         setError(String(data.pesan || "Extension menolak token."));
       }
@@ -76,20 +118,42 @@ export function ExtensionConnectPanel() {
     };
   }, [load]);
 
+  /** Mencabut token yang terlanjur dibuat, tanpa menambah galat kedua di layar. */
+  const cabutDiamDiam = useCallback(
+    async (id: string) => {
+      await fetch(`/api/extension/tokens/${id}`, { method: "DELETE" }).catch(() => null);
+      load();
+    },
+    [load]
+  );
+
   async function hubungkanExtension() {
+    if (kirimRef.current) return;
+    kirimRef.current = true;
     setError("");
     setSibuk(true);
-    const res = await fetch("/api/extension/tokens", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: `Extension · ${namaBrowser()}` }),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.ok) {
+    let data: { ok?: boolean; id?: string; token?: string } | null = null;
+    try {
+      const res = await fetch("/api/extension/tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // `replace` mencabut token lama berlabel sama: extension cuma menyimpan
+        // SATU token, jadi tanpa ini setiap klik meninggalkan kredensial penuh
+        // yang tidak dipegang siapa pun dan tidak bisa dikenali pengguna.
+        body: JSON.stringify({ label: `Extension · ${namaBrowser()}`, replace: true }),
+      });
+      const body = await res.json().catch(() => null);
+      if (res.ok && body?.ok) data = body;
+    } catch {
+      /* jaringan putus — ditangani sama seperti balasan yang tidak ok */
+    }
+    if (!data?.token) {
+      kirimRef.current = false;
       setSibuk(false);
       setError("Gagal membuat token. Muat ulang halaman lalu coba lagi.");
       return;
     }
+    idBaruRef.current = data.id ?? null;
     // Extension membalas TERSAMBUNG / GAGAL; `sibuk` dimatikan di sana.
     window.postMessage(
       { source: "nerona-web", type: "TOKEN", token: data.token },
@@ -102,10 +166,18 @@ export function ExtensionConnectPanel() {
     if (batasRef.current) clearTimeout(batasRef.current);
     batasRef.current = setTimeout(() => {
       batasRef.current = null;
+      kirimRef.current = false;
       setSibuk(false);
       setError(
         "Extension tidak membalas. Muat ulang halaman, atau pakai token manual di bawah."
       );
+      // Tidak ada balasan sama sekali berarti extension tidak pernah menerima
+      // tokennya. Membiarkannya hidup meninggalkan kredensial penuh yang tidak
+      // dipegang siapa pun — persis kelas token yang `lastUsedAt` dibuat untuk
+      // menemukan, dan yang tidak bisa dibedakan pengguna dari yang sah.
+      const id = idBaruRef.current;
+      idBaruRef.current = null;
+      if (id) void cabutDiamDiam(id);
     }, 10_000);
   }
 
@@ -135,7 +207,17 @@ export function ExtensionConnectPanel() {
     setTokens((prev) => prev.filter((t) => t.id !== id));
   }
 
-  const sudahTersambung = Boolean(emailTersambung);
+  // Dua sumber yang sama-sama selamat dari muat ulang halaman, dan masing-masing
+  // menutup lubang yang satunya tinggalkan:
+  //  - `barisExtension` tahu apakah tokennya masih hidup di server, yang tidak
+  //    bisa diketahui extension setelah pengguna menekan Putuskan di sini;
+  //  - `extPunyaToken` (dari HADIR) tahu apakah BROWSER INI yang memegangnya,
+  //    yang tidak bisa disimpulkan dari daftar token milik akun.
+  // Dulu keadaan ini datang dari pesan TERSAMBUNG yang cuma hidup satu sesi
+  // halaman, jadi muat ulang mengembalikan tombol "Hubungkan" untuk extension
+  // yang sudah tersambung — dan setiap klik berikutnya mencetak token permanen.
+  const barisExtension = tokens.find((t) => (t.label ?? "").startsWith(AWALAN_LABEL_EXT));
+  const sudahTersambung = Boolean(barisExtension) && extPunyaToken !== false;
 
   return (
     <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
@@ -181,6 +263,29 @@ export function ExtensionConnectPanel() {
             </li>
             <li>Kembali ke halaman ini lalu muat ulang — tombol Hubungkan akan menyala.</li>
           </ol>
+          {/*
+            Blok ini hanya tampil saat extension TIDAK terdeteksi — dan penyebab
+            paling sering keadaan itu bukan "belum pernah dipasang", melainkan
+            build lama yang masih terpasang (extension ini tidak punya pembaruan
+            otomatis sama sekali). Untuk pengguna itu, "Load unpacked" menyuruh
+            memuat folder yang sudah dimuat Chrome: pemulihan yang salah. Yang
+            benar adalah menimpa isinya lalu menekan Reload.
+          */}
+          <p className="mt-4 text-sm font-semibold text-ink">
+            Sudah pernah dipasang tapi tetap tidak terdeteksi?
+          </p>
+          <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
+            <li>
+              Berarti yang terpasang versi lama — unduh lagi ZIP di atas, lalu{" "}
+              <b>timpa isi folder</b> <code>nerona-metadata</code> yang sudah ada (jangan pilih
+              Load unpacked lagi, Chrome sudah memuatnya).
+            </li>
+            <li>
+              Buka <code>chrome://extensions</code>, klik ikon <b>⟳ Reload</b> di kartu{" "}
+              <b>Nerona Metadata</b>.
+            </li>
+            <li>Muat ulang halaman ini.</li>
+          </ol>
         </div>
       )}
 
@@ -198,9 +303,22 @@ export function ExtensionConnectPanel() {
       )}
 
       {sudahTersambung && (
-        <p className="mt-4 rounded-2xl bg-gold-400/15 p-4 text-sm text-ink ring-1 ring-gold-400/40">
-          ✓ Extension tersambung sebagai {emailTersambung}.
-        </p>
+        <div className="mt-4 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
+          <p className="text-sm text-ink">
+            ✓ Extension tersambung{emailTersambung ? ` sebagai ${emailTersambung}` : ""}.
+          </p>
+          {lisensiAktif === false && (
+            // Dua pernyataan yang dua-duanya benar. Sebelum ini keadaan yang
+            // sama dilaporkan sebagai satu pernyataan yang salah ("Server
+            // menolak token yang baru dibuat"), dan setiap klik ulang mencetak
+            // token baru yang tidak menyelesaikan apa pun.
+            <p className="mt-1 text-xs text-muted">
+              Paket Anda belum aktif, jadi extension belum bisa dipakai membuat
+              metadata. Aktifkan paket dulu — penyambungannya sendiri tidak perlu
+              diulang.
+            </p>
+          )}
+        </div>
       )}
 
       {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}

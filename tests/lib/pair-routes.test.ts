@@ -55,13 +55,16 @@ describe("POST /api/extension/pair/start", () => {
     expect(startPairing).not.toHaveBeenCalled();
   });
 
-  it("429 setelah melewati batas laju", async () => {
+  // Batasnya sengaja jauh di atas `accountAction` (5): skrip QA Hub di
+  // nerona-hub/docs/pemasangan.md saja menuntut sembilan kali mulai, dan
+  // pembatas lama mengunci pengujinya di tengah jalan selama sepuluh menit.
+  it("429 setelah melewati batas laju, tapi tidak sebelum 20 kali", async () => {
     (startPairing as any).mockResolvedValue({
       code: "4KQ97ZTM", deviceSecret: "nrd_x", expiresAt: new Date(Date.now() + 600000),
     });
     const ip = freshIp();
     const kirim = () => START(post("http://t/api/extension/pair/start", { kind: "hub", label: "x" }, ip));
-    for (let i = 0; i < 5; i++) expect((await kirim()).status).toBe(200);
+    for (let i = 0; i < 20; i++) expect((await kirim()).status).toBe(200);
     expect((await kirim()).status).toBe(429);
   });
 });
@@ -103,6 +106,20 @@ describe("POST /api/extension/pair/approve", () => {
     expect(res.status).toBe(200);
     expect(approvePairing).toHaveBeenCalledWith({ userId: "u1", code: "4KQ9-7ZTM", setuju: true });
   });
+  // Tanpa `reason`, halaman persetujuan jatuh ke kalimat generiknya —
+  // "Gagal memproses kode. Coba lagi." — padahal setiap percobaan ulang
+  // dijamin gagal selama jendela batas lajunya masih berjalan.
+  it("429 menyertakan reason yang bisa dipetakan halaman persetujuan", async () => {
+    (getServerSession as any).mockResolvedValue({ user: { id: "u-batas" } });
+    (approvePairing as any).mockResolvedValue({ ok: true });
+    const kirim = () => APPROVE(post("http://t/api/extension/pair/approve",
+      { code: "4KQ9-7ZTM", setuju: true }, freshIp()));
+    for (let i = 0; i < 5; i++) expect((await kirim()).status).toBe(200);
+    const res = await kirim();
+    expect(res.status).toBe(429);
+    expect((await res.json()).reason).toBe("too_many");
+  });
+
   it("410 untuk kode kadaluarsa", async () => {
     (getServerSession as any).mockResolvedValue({ user: { id: "u1" } });
     (approvePairing as any).mockResolvedValue({ ok: false, reason: "expired" });
