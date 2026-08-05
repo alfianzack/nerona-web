@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { createExtensionToken } from "@/lib/extension-auth";
 
@@ -9,9 +9,14 @@ export const PAIRING_TTL_MS = 10 * 60 * 1000;
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 export function makeCode(): string {
-  const bytes = randomBytes(8);
+  // randomInt(0, n) uniform atas [0, n) — beda dengan `byte % n` yang bias
+  // saat 256 bukan kelipatan panjang alfabet (31 huruf). Kode ini dibandingkan
+  // manusia dengan layar lain, jadi distribusi yang tidak rata membuat sebagian
+  // huruf tampak "lebih sering" tanpa alasan yang semestinya.
   let out = "";
-  for (const b of bytes) out += ALPHABET[b % ALPHABET.length];
+  for (let i = 0; i < 8; i++) {
+    out += ALPHABET[randomInt(0, ALPHABET.length)];
+  }
   return out;
 }
 
