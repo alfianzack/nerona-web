@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface TokenRow {
   id: string;
@@ -9,31 +9,85 @@ interface TokenRow {
   lastUsedAt: string | null;
 }
 
+/**
+ * Extension mengumumkan dirinya lewat postMessage saat halaman ini dimuat.
+ * Sebelum ini dasbor cuma bisa MENEBAK apakah extension terpasang, jadi
+ * panduan pemasangan selalu tampil penuh bahkan untuk yang sudah terpasang —
+ * dan token yang dibuat tapi tak pernah ditempel tidak terdeteksi siapa pun.
+ */
 export function ExtensionConnectPanel() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
+  const [extVersion, setExtVersion] = useState<string | null>(null);
+  const [emailTersambung, setEmailTersambung] = useState("");
+  const [sibuk, setSibuk] = useState(false);
   const [created, setCreated] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch("/api/extension/tokens");
     const data = await res.json().catch(() => null);
     if (res.ok && data?.ok) setTokens(data.tokens);
-  }
-  useEffect(() => {
-    load();
   }, []);
 
-  async function createToken() {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (data?.source !== "nerona-ext") return;
+
+      if (data.type === "HADIR") setExtVersion(String(data.version || "?"));
+      if (data.type === "TERSAMBUNG") {
+        setEmailTersambung(String(data.email || ""));
+        setSibuk(false);
+        setError("");
+        load();
+      }
+      if (data.type === "GAGAL") {
+        setSibuk(false);
+        setError(String(data.pesan || "Extension menolak token."));
+      }
+    }
+    window.addEventListener("message", onMessage);
+    // Extension mungkin sudah mengumumkan diri sebelum React memasang
+    // pendengarnya. Satu sapaan balik memaksanya mengumumkan ulang.
+    window.postMessage({ source: "nerona-web", type: "HALO" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+  }, [load]);
+
+  async function hubungkanExtension() {
     setError("");
-    setLoading(true);
+    setSibuk(true);
     const res = await fetch("/api/extension/tokens", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: "Extension" }),
+      body: JSON.stringify({ label: `Extension · ${namaBrowser()}` }),
     });
     const data = await res.json().catch(() => null);
-    setLoading(false);
+    if (!res.ok || !data?.ok) {
+      setSibuk(false);
+      setError("Gagal membuat token. Muat ulang halaman lalu coba lagi.");
+      return;
+    }
+    // Extension membalas TERSAMBUNG / GAGAL; `sibuk` dimatikan di sana.
+    window.postMessage(
+      { source: "nerona-web", type: "TOKEN", token: data.token },
+      window.location.origin
+    );
+  }
+
+  async function createToken() {
+    setError("");
+    const res = await fetch("/api/extension/tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "Token manual" }),
+    });
+    const data = await res.json().catch(() => null);
     if (!res.ok || !data?.ok) {
       setError("Gagal membuat token.");
       return;
@@ -46,109 +100,139 @@ export function ExtensionConnectPanel() {
     setError("");
     const res = await fetch(`/api/extension/tokens/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      setError("Gagal mencabut token. Muat ulang halaman lalu coba lagi.");
+      setError("Gagal memutuskan perangkat. Muat ulang halaman lalu coba lagi.");
       return;
     }
     setTokens((prev) => prev.filter((t) => t.id !== id));
   }
 
+  const sudahTersambung = Boolean(emailTersambung);
+
   return (
     <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <h2 className="text-lg font-semibold text-ink">Hubungkan Extension</h2>
-      <p className="mt-1 text-sm text-muted">
-        Tiga langkah: unduh extension, pasang di Chrome, lalu tempel token di popup-nya.
-      </p>
+      <h2 className="text-lg font-semibold text-ink">Perangkat terhubung</h2>
 
       {/*
-        Extension Nerona Metadata tidak ada di Chrome Web Store, jadi manifest-nya
-        tanpa `update_url` dan pemasangannya lewat "Muat yang belum dikemas".
-        Artinya TIDAK ADA pembaruan otomatis: setiap rilis baru, user harus
-        mengunduh ZIP ini lagi dan menimpa foldernya.
-
-        ZIP di /public dibangun dari repo nerona_medata dan ikut ter-commit sebagai
-        artefak. Kalau extension-nya berubah, ZIP ini TIDAK ikut berubah sendiri —
-        harus dibangun ulang, kalau tidak user mengunduh versi lama tanpa tanda apa pun.
+        Extension Nerona Metadata tidak ada di Chrome Web Store, jadi
+        pemasangannya lewat "Muat yang belum dikemas" dan TIDAK ADA pembaruan
+        otomatis. ZIP di /public dibangun dari repo nerona_medata lewat
+        scripts/build-extension.ps1 dan ikut ter-commit — kalau extension
+        berubah tanpa skrip itu dijalankan, user mengunduh versi lama tanpa
+        tanda apa pun.
       */}
-      <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Berisi extension untuk Chrome. Simpan lalu ekstrak — foldernya jangan dihapus,
-              Chrome memuatnya langsung dari situ.
-            </p>
+      {!extVersion && (
+        <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
+              </p>
+            </div>
+            <a
+              href="/nerona-metadata.zip"
+              download
+              className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+            >
+              Unduh ZIP
+            </a>
           </div>
-          <a
-            href="/nerona-metadata.zip"
-            download
-            className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-          >
-            Unduh ZIP
-          </a>
-        </div>
-
-        <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
-        <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
-          <li>
-            Ekstrak ZIP-nya. Isinya satu folder bernama <code>nerona-metadata</code> — taruh di
-            tempat yang tidak akan dipindah, misalnya <code>Documents</code>.
-          </li>
-          <li>
-            Buka <code>chrome://extensions</code>, lalu nyalakan <b>Developer mode</b> di kanan atas.
-          </li>
-          <li>
-            Klik <b>Load unpacked</b> / <b>Muat yang belum dikemas</b>, lalu pilih folder{" "}
-            <code>nerona-metadata</code> itu (folder yang berisi <code>manifest.json</code>).
-          </li>
-          <li>
-            Kalau nanti ada versi baru: unduh lagi, timpa isi folder itu, lalu klik ikon{" "}
-            <b>⟳ Reload</b> di kartu extension-nya — pembaruan tidak otomatis.
-          </li>
-        </ol>
-
-        <p className="mt-4 text-sm font-semibold text-ink">3. Tempel token di popup extension</p>
-        <p className="mt-0.5 text-xs text-muted">
-          Buat token di bawah ini, salin, lalu buka popup extension dan tempel di sana.
-        </p>
-      </div>
-
-      {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
-
-      {created && (
-        <div className="mt-4 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
-          <p className="text-xs font-semibold text-ink">Token baru (salin sekarang — tidak ditampilkan lagi):</p>
-          <code className="mt-1 block break-all text-sm text-ink">{created}</code>
+          <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
+          <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
+            <li>
+              Ekstrak ZIP-nya. Isinya satu folder bernama <code>nerona-metadata</code> — taruh di
+              tempat yang tidak akan dipindah, misalnya <code>Documents</code>.
+            </li>
+            <li>
+              Buka <code>chrome://extensions</code>, lalu nyalakan <b>Developer mode</b> di kanan atas.
+            </li>
+            <li>
+              Klik <b>Load unpacked</b> / <b>Muat yang belum dikemas</b>, lalu pilih folder{" "}
+              <code>nerona-metadata</code> itu.
+            </li>
+            <li>Kembali ke halaman ini lalu muat ulang — tombol Hubungkan akan menyala.</li>
+          </ol>
         </div>
       )}
 
-      <button
-        onClick={createToken}
-        disabled={loading}
-        className="mt-4 rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-      >
-        {loading ? "Membuat..." : "Buat token"}
-      </button>
+      {extVersion && !sudahTersambung && (
+        <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
+          <p className="text-sm text-ink">✓ Extension terpasang (versi {extVersion}).</p>
+          <button
+            onClick={hubungkanExtension}
+            disabled={sibuk}
+            className="mt-3 rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
+          >
+            {sibuk ? "Menghubungkan..." : "Hubungkan extension"}
+          </button>
+        </div>
+      )}
+
+      {sudahTersambung && (
+        <p className="mt-4 rounded-2xl bg-gold-400/15 p-4 text-sm text-ink ring-1 ring-gold-400/40">
+          ✓ Extension tersambung sebagai {emailTersambung}.
+        </p>
+      )}
+
+      {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
 
       <ul className="mt-4 divide-y divide-navy-900/10">
-        {tokens.length === 0 && <li className="py-2 text-sm text-muted">Belum ada token.</li>}
+        {tokens.length === 0 && (
+          <li className="py-2 text-sm text-muted">Belum ada perangkat terhubung.</li>
+        )}
         {tokens.map((t) => (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
             <div className="min-w-0">
-              <p className="text-ink">{t.label || "Token"}</p>
+              <p className="text-ink">{t.label || "Perangkat"}</p>
               <p className="text-xs text-muted">
                 Dibuat {new Date(t.createdAt).toLocaleDateString("id-ID")}
-                {t.lastUsedAt ? ` · dipakai ${new Date(t.lastUsedAt).toLocaleDateString("id-ID")}` : " · belum dipakai"}
+                {t.lastUsedAt
+                  ? ` · dipakai ${new Date(t.lastUsedAt).toLocaleDateString("id-ID")}`
+                  : " · belum dipakai"}
               </p>
             </div>
             <button
               onClick={() => revoke(t.id)}
               className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
             >
-              Cabut
+              Putuskan
             </button>
           </li>
         ))}
       </ul>
+
+      <details className="mt-4">
+        <summary className="cursor-pointer text-xs text-muted">
+          Kalau tombolnya tidak muncul
+        </summary>
+        <p className="mt-2 text-xs text-muted">
+          Buat token manual di bawah, lalu tempel di popup extension (buka bagian
+          &quot;Cara lain&quot; di sana). Dipakai juga untuk Nerona Hub kalau halaman
+          persetujuannya tidak bisa dibuka.
+        </p>
+        {created && (
+          <div className="mt-3 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
+            <p className="text-xs font-semibold text-ink">
+              Token baru (salin sekarang — tidak ditampilkan lagi):
+            </p>
+            <code className="mt-1 block break-all text-sm text-ink">{created}</code>
+          </div>
+        )}
+        <button
+          onClick={createToken}
+          className="mt-3 rounded-full bg-navy-900/5 px-4 py-2 text-xs font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+        >
+          Buat token manual
+        </button>
+      </details>
     </div>
   );
+}
+
+function namaBrowser(): string {
+  const ua = navigator.userAgent;
+  if (ua.includes("Edg/")) return "Edge";
+  if (ua.includes("OPR/")) return "Opera";
+  if (ua.includes("Chrome/")) return "Chrome";
+  return "Browser";
 }
