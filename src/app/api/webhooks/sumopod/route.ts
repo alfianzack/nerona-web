@@ -32,9 +32,26 @@ export async function POST(request: Request) {
     rawBody,
   });
   if (!verifikasi.ok) {
-    // 401 untuk semuanya, termasuk rahasia yang belum diatur: membedakan
-    // "rahasia belum diatur" dari "tanda tangan salah" di balasan berarti
-    // memberi tahu penyerang keadaan server kita.
+    // Balasannya tetap 401 polos untuk semua sebab — membedakannya di sana
+    // berarti memberi tahu penyerang keadaan server kita. Tapi sebabnya WAJIB
+    // terlihat di log, karena tanpa itu satu-satunya gejala dari rahasia yang
+    // salah tempel dan tanda tangan yang benar-benar palsu adalah 401 yang
+    // sama persis, dan tidak ada cara membedakannya dari luar.
+    console.warn("[webhook sumopod] ditolak", {
+      alasan: verifikasi.reason,
+      // Awalan saja, tidak pernah nilainya. `whtok_` di sini berarti yang
+      // tertempel adalah Webhook Token, bukan Signing Secret — dua nilai
+      // berbeda yang duduk bersebelahan di tab Settings SumoPod.
+      awalanRahasia: secret ? secret.slice(0, 6) : "(kosong)",
+      panjangRahasia: secret.length,
+      header: {
+        svixId: Boolean(request.headers.get("svix-id")),
+        svixTimestamp: request.headers.get("svix-timestamp") ?? null,
+        svixSignature: Boolean(request.headers.get("svix-signature")),
+        webhookToken: Boolean(request.headers.get("x-webhook-token")),
+      },
+      panjangBadan: rawBody.length,
+    });
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
