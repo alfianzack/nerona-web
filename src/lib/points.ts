@@ -96,7 +96,12 @@ export async function creditTopupPoints(params: {
   userId: string;
   points: number;
   note?: string;
-  createdById: string;
+  /**
+   * `null` = tidak ada admin yang melakukannya, kreditnya datang dari
+   * pembayaran gateway yang lunas. Kolomnya memang nullable; mengisinya dengan
+   * id pelanggan sendiri akan membuat jejak audit berbohong.
+   */
+  createdById: string | null;
 }): Promise<number> {
   if (!Number.isInteger(params.points) || params.points <= 0) {
     throw new Error("creditTopupPoints: points must be a positive integer");

@@ -164,10 +164,16 @@ yang kosong.
 
 | Nama | Tempat | Isi |
 |---|---|---|
-| `SUMOPOD_API_BASE` | env | `https://api-pay-sandbox.sumopod.com` |
-| `SUMOPOD_API_KEY` | env | kunci proyek |
-| `SUMOPOD_WEBHOOK_SECRET` | env | `whsec_…` |
+| `SUMOPOD_PAY_API_BASE` | env | `https://api-pay-sandbox.sumopod.com` |
+| `SUMOPOD_PAY_API_KEY` | env | kunci proyek Managed Payment |
+| `SUMOPOD_PAY_WEBHOOK_SECRET` | env | `whsec_…` |
 | `payment_gateway_enabled` | `Setting` | `"1"` menyalakan tombol QRIS |
+
+**Awalan `SUMOPOD_PAY_`, bukan `SUMOPOD_`.** `SUMOPOD_API_KEY` dan
+`SUMOPOD_BASE_URL` **sudah dipakai** layanan AI SumoPod (`ai-settings.ts:65`,
+`agent/claude-client.ts:3`) — dua produk berbeda dari vendor yang sama, dengan
+kunci yang berbeda. Memakai nama yang sama berarti kunci AI terkirim ke endpoint
+pembayaran, dan gagalnya berupa 401 yang menyesatkan.
 
 Kunci di env, bukan `Setting`: ia rahasia, dan `Setting` terbaca dari panel
 admin. Saklar nyala/mati di `Setting` supaya **owner bisa mematikan QRIS dalam

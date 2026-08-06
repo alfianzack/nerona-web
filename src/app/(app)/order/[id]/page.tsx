@@ -5,7 +5,10 @@ import { getUserOrder } from "@/lib/orders";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { getPaymentSettings, isPaymentConfigured } from "@/lib/payment-settings";
 import { formatRupiah } from "@/lib/money";
+import { prisma } from "@/lib/prisma";
+import { amountForOrder, gatewayEnabled } from "@/lib/payments/orders";
 import { PaymentProofUpload } from "@/components/order/PaymentProofUpload";
+import { QrisPayButton } from "@/components/order/QrisPayButton";
 
 function statusBanner(status: string, hasProof: boolean) {
   if (status === "fulfilled") {
@@ -56,12 +59,30 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [price, bank] = await Promise.all([priceFor(order), getPaymentSettings()]);
+  const [price, bank, qrisAktif, tagihanHidup] = await Promise.all([
+    priceFor(order),
+    getPaymentSettings(),
+    gatewayEnabled(),
+    prisma.payment.findFirst({
+      where: {
+        orderId: order.id,
+        status: "pending",
+        expiresAt: { gt: new Date() },
+        linkUrl: { not: "" },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { linkUrl: true, expiresAt: true },
+    }),
+  ]);
 
   const hasProof = Boolean(order.proofUploadedAt);
   const banner = statusBanner(order.status, hasProof);
   const isPending = order.status === "pending";
   const bankReady = isPaymentConfigured(bank);
+  // QRIS hanya untuk yang punya harga angka. Paket "Hubungi kami" dan produk di
+  // luar lingkup tetap lewat transfer manual, tanpa tombol yang menjanjikan
+  // sesuatu yang akan gagal saat ditekan.
+  const bisaQris = isPending && qrisAktif && (await amountForOrder(order)) !== null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14 sm:py-16">
@@ -87,10 +108,37 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </a>
       )}
 
+      {bisaQris && (
+        <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+            Bayar otomatis
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            Pindai QRIS dari aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
+            <span className="font-semibold text-ink">{price}</span>, sama dengan transfer manual —
+            tidak ada biaya tambahan.
+          </p>
+          <div className="mt-4">
+            <QrisPayButton
+              orderId={order.id}
+              tautanAktif={tagihanHidup?.linkUrl ?? null}
+              kedaluwarsa={
+                tagihanHidup
+                  ? tagihanHidup.expiresAt.toLocaleString("id-ID", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : null
+              }
+            />
+          </div>
+        </section>
+      )}
+
       {isPending && (
         <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Detail transfer
+            {bisaQris ? "Atau transfer manual" : "Detail transfer"}
           </h2>
           {bankReady ? (
             <dl className="mt-3 space-y-3 text-sm">

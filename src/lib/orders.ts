@@ -318,8 +318,15 @@ export type FulfillOrderResult =
       reason: "order_not_found" | "not_pending" | "plan_not_found" | "grant_failed" | "invalid_topup";
     };
 
+/**
+ * Satu-satunya jalan sebuah order berubah jadi paket aktif atau poin.
+ *
+ * `adminId` `null` berarti pembayaran gateway yang memenuhinya, bukan manusia.
+ * Webhook memanggil fungsi yang sama persis dengan tombol konfirmasi admin —
+ * itu yang membuat tidak ada jalur aktivasi kedua yang harus dijaga ikut benar.
+ */
 export async function fulfillOrderRequest(
-  adminId: string,
+  adminId: string | null,
   orderId: string
 ): Promise<FulfillOrderResult> {
   const order = await prisma.orderRequest.findUnique({

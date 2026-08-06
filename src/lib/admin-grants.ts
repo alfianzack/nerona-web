@@ -22,8 +22,16 @@ export type GrantLicenseResult =
   | { ok: true }
   | { ok: false; reason: "user_not_found" | "plan_not_found" };
 
+/**
+ * `adminId` boleh `null`: pembayaran lewat payment gateway tidak punya admin,
+ * dan `License.grantedById` memang nullable. `null` berarti persis yang
+ * sebenarnya terjadi — tidak ada manusia yang melakukannya. Memakai id
+ * pelanggan sendiri sebagai aktor akan menulis jejak audit yang berbohong
+ * ("pengguna ini memberi lisensi kepada dirinya sendiri"), dan jejak yang
+ * berbohong lebih buruk daripada jejak yang kosong.
+ */
 export async function grantLicense(
-  adminId: string,
+  adminId: string | null,
   userEmail: string,
   planId: string,
   options: GrantOptions = {}

@@ -428,7 +428,50 @@ model OrderRequest {
   proofMime       String?
   proofUploadedAt DateTime?
 
+  payments Payment[]
+
   @@map("order_requests")
+}
+
+/// Satu upaya bayar lewat payment gateway. Tabel sendiri, bukan kolom di
+/// OrderRequest, karena satu order bisa punya BEBERAPA upaya: tautan QRIS
+/// kedaluwarsa dalam <=24 jam, dan pelanggan yang kembali besok butuh tautan
+/// baru sementara riwayat upaya sebelumnya tetap perlu terbaca saat
+/// merekonsiliasi pembayaran yang webhook-nya tidak sampai.
+model Payment {
+  id String @id @default(cuid())
+
+  orderId String
+  order   OrderRequest @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  provider String @default("sumopod")
+
+  /// `payment_id` dari balasan gateway. Null hanya di celah sempit antara
+  /// baris ini dibuat dan balasan diterima.
+  providerPaymentId String? @unique
+
+  /// `order_id` yang KITA kirim ke gateway, dan kunci yang dipakai webhook
+  /// untuk menemukan baris ini kembali. Bukan `orderId` apa adanya: gateway
+  /// memperlakukannya sebagai kunci unik, jadi upaya kedua atas order yang
+  /// sama akan bertabrakan. Formatnya `{orderId}-{urutan}`.
+  reference String @unique
+
+  /// Dibekukan saat pembayaran dibuat. Harga paket dibaca dari DB dan owner
+  /// bisa mengubahnya kapan saja; tanpa dibekukan, pembayaran yang dibuat
+  /// kemarin akan dicocokkan dengan harga hari ini.
+  amount    Int
+  fee       Int?
+  netAmount Int?
+
+  status  String @default("pending") // pending | completed | failed | expired
+  linkUrl String
+
+  expiresAt   DateTime
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([orderId])
+  @@map("payments")
 }
 
 // A customer's own shop: products and sales they manage themselves. Scoped per

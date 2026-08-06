@@ -1,0 +1,199 @@
+import { prisma } from "@/lib/prisma";
+import { fulfillOrderRequest } from "@/lib/orders";
+import { coerceDuration, getDurationDiscounts, priceForDuration } from "@/lib/plan-duration";
+import { createPayment, sumopodConfig, type PaymentEvent } from "@/lib/payments/sumopod";
+
+/**
+ * Menjembatani order Nerona dengan gateway. Berkas ini yang tahu soal harga,
+ * order, dan pemenuhan; `sumopod.ts` tidak tahu apa-apa soal itu.
+ */
+
+export const GATEWAY_SETTING_KEY = "payment_gateway_enabled";
+
+/**
+ * Saklar di `Setting`, bukan env: gunanya supaya owner bisa mematikan QRIS
+ * dalam satu klik tanpa deploy kalau gateway-nya bermasalah — semua pelanggan
+ * langsung jatuh ke transfer manual yang memang tetap ada. Bawaannya MATI:
+ * fitur pembayaran tidak boleh menyala sendiri hanya karena kodenya ter-deploy.
+ */
+export async function gatewayEnabled(): Promise<boolean> {
+  const row = await prisma.setting.findUnique({ where: { key: GATEWAY_SETTING_KEY } });
+  const nilai = (row?.value ?? "").trim().toLowerCase();
+  return nilai === "1" || nilai === "true" || nilai === "on";
+}
+
+export interface OrderForPricing {
+  product: string;
+  planName: string;
+  durationMonths: number;
+  priceAmount: number | null;
+}
+
+/**
+ * Berapa rupiah yang harus ditagih, atau `null` kalau order ini tidak bisa
+ * dibayar lewat QRIS.
+ *
+ * `null` bukan galat — ia keadaan yang sah untuk paket tanpa harga ("Hubungi
+ * kami"), paket gratis, dan produk Agent yang sedang disembunyikan. Yang
+ * memanggil menampilkan transfer manual saja, bukan pesan kesalahan.
+ */
+export async function amountForOrder(order: OrderForPricing): Promise<number | null> {
+  if (order.product === "points") {
+    // Top-up membawa harganya sendiri sejak dibuat, jadi harga poin yang
+    // berubah setelahnya tidak mengubah tagihan yang sudah disepakati.
+    return order.priceAmount && order.priceAmount > 0 ? order.priceAmount : null;
+  }
+  if (order.product !== "metadata") return null;
+
+  const plan = await prisma.plan.findFirst({ where: { name: order.planName } });
+  if (!plan || plan.priceMonthly === null || plan.priceMonthly <= 0) return null;
+
+  const months = coerceDuration(order.durationMonths);
+  const discounts = await getDurationDiscounts();
+  const total = priceForDuration(plan.priceMonthly, months, discounts[months] ?? 0);
+  return total > 0 ? total : null;
+}
+
+export type StartPaymentResult =
+  | { ok: true; linkUrl: string; expiresAt: Date; reused: boolean }
+  | {
+      ok: false;
+      reason: "disabled" | "not_configured" | "order_not_found" | "not_pending" | "no_price" | "gateway_error";
+      detail?: string;
+    };
+
+/**
+ * Membuat (atau memakai ulang) satu pembayaran QRIS untuk sebuah order.
+ *
+ * `userId` ikut jadi syarat pencarian, bukan diperiksa setelahnya: order milik
+ * orang lain harus tampak seperti order yang tidak ada.
+ */
+export async function startPaymentForOrder(
+  userId: string,
+  orderId: string,
+  opts: { successUrl?: string; cancelUrl?: string } = {}
+): Promise<StartPaymentResult> {
+  if (!(await gatewayEnabled())) return { ok: false, reason: "disabled" };
+
+  const cfg = sumopodConfig();
+  if (!cfg) return { ok: false, reason: "not_configured" };
+
+  const order = await prisma.orderRequest.findFirst({
+    where: { id: orderId, userId },
+    select: { id: true, product: true, planName: true, durationMonths: true, priceAmount: true, status: true },
+  });
+  if (!order) return { ok: false, reason: "order_not_found" };
+  if (order.status !== "pending") return { ok: false, reason: "not_pending" };
+
+  // Tautan yang masih hidup dipakai ulang. Membuat yang baru setiap kali tombol
+  // ditekan meninggalkan beberapa tagihan terbuka untuk satu order — dan kalau
+  // dua-duanya sempat dibayar, hanya satu yang bisa memenuhi ordernya.
+  const hidup = await prisma.payment.findFirst({
+    where: { orderId: order.id, status: "pending", expiresAt: { gt: new Date() }, linkUrl: { not: "" } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (hidup) {
+    return { ok: true, linkUrl: hidup.linkUrl, expiresAt: hidup.expiresAt, reused: true };
+  }
+
+  const amount = await amountForOrder(order);
+  if (amount === null) return { ok: false, reason: "no_price" };
+
+  const urutan = (await prisma.payment.count({ where: { orderId: order.id } })) + 1;
+  const reference = `${order.id}-${urutan}`;
+
+  // Barisnya dibuat SEBELUM memanggil gateway, walau nilainya belum lengkap:
+  // webhook mencari lewat `reference`, dan urutan sebaliknya membuka celah
+  // pembayaran yang tiba sebelum barisnya ada — webhook itu akan dijawab 404
+  // dan hanya bisa dipulihkan dengan kirim ulang manual.
+  const sementara = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const baris = await prisma.payment.create({
+    data: { orderId: order.id, reference, amount, linkUrl: "", expiresAt: sementara },
+  });
+
+  const hasil = await createPayment(cfg, {
+    reference,
+    amount,
+    successUrl: opts.successUrl,
+    cancelUrl: opts.cancelUrl,
+  });
+
+  if (!hasil.ok) {
+    await prisma.payment.update({ where: { id: baris.id }, data: { status: "failed" } });
+    return { ok: false, reason: "gateway_error", detail: hasil.detail };
+  }
+
+  await prisma.payment.update({
+    where: { id: baris.id },
+    data: {
+      providerPaymentId: hasil.payment.paymentId,
+      linkUrl: hasil.payment.linkUrl,
+      expiresAt: hasil.payment.expiresAt,
+      fee: hasil.payment.fee,
+      netAmount: hasil.payment.netAmount,
+    },
+  });
+
+  return { ok: true, linkUrl: hasil.payment.linkUrl, expiresAt: hasil.payment.expiresAt, reused: false };
+}
+
+export type HandleEventResult =
+  | { ok: true; note: "test" | "already" | "fulfilled" | "recorded" }
+  | { ok: false; reason: "unknown_reference" | "amount_mismatch" | "fulfil_failed"; detail?: string };
+
+/**
+ * Memproses satu webhook yang tanda tangannya SUDAH terbukti sah.
+ *
+ * Idempoten karena webhook memang dikirim ulang — itu bagian desain SumoPod,
+ * bukan kegagalan.
+ */
+export async function handlePaymentEvent(event: PaymentEvent): Promise<HandleEventResult> {
+  if (event.eventType === "payment.test") return { ok: true, note: "test" };
+
+  const payment = await prisma.payment.findUnique({ where: { reference: event.reference } });
+  if (!payment) return { ok: false, reason: "unknown_reference" };
+
+  // Tanda tangannya sudah membuktikan pesan ini dari SumoPod, jadi ini bukan
+  // penjaga terhadap pemalsuan — ia penjaga terhadap kesalahan pemetaan di sisi
+  // kita sendiri, yang akibatnya paket mahal aktif atas pembayaran murah.
+  if (event.amount !== null && event.amount !== payment.amount) {
+    return { ok: false, reason: "amount_mismatch", detail: `${event.amount} != ${payment.amount}` };
+  }
+
+  if (event.eventType !== "payment.completed") {
+    // failed / expired: hanya menyentuh baris yang masih menggantung, supaya
+    // event yang datang terlambat tidak menghapus keberhasilan yang sudah tercatat.
+    const status = event.eventType === "payment.expired" ? "expired" : "failed";
+    await prisma.payment.updateMany({
+      where: { id: payment.id, status: "pending" },
+      data: { status, providerPaymentId: payment.providerPaymentId ?? (event.paymentId || null) },
+    });
+    return { ok: true, note: "recorded" };
+  }
+
+  if (payment.status === "completed") return { ok: true, note: "already" };
+
+  // Penuhi DULU, tandai lunas SESUDAHNYA. Kalau dibalik, kegagalan di tengah
+  // meninggalkan pembayaran yang tercatat lunas sementara paketnya tidak pernah
+  // aktif — dan setiap kiriman ulang berikutnya akan diam saja.
+  const hasil = await fulfillOrderRequest(null, payment.orderId);
+  if (!hasil.ok && hasil.reason !== "not_pending") {
+    return { ok: false, reason: "fulfil_failed", detail: hasil.reason };
+  }
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: {
+      status: "completed",
+      completedAt: event.completedAt ?? new Date(),
+      fee: event.fee ?? payment.fee,
+      netAmount: event.netAmount ?? payment.netAmount,
+      providerPaymentId: payment.providerPaymentId ?? (event.paymentId || null),
+    },
+  });
+
+  // `not_pending` berarti order itu sudah dipenuhi lebih dulu — admin menekan
+  // tombol konfirmasi sebelum webhook sampai. Pembayarannya tetap ditandai
+  // lunas; yang tidak boleh terjadi cuma memenuhinya dua kali.
+  return { ok: true, note: hasil.ok ? "fulfilled" : "already" };
+}
