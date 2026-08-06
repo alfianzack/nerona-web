@@ -255,13 +255,13 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
       */}
       {!extVersion && (
         <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
-              <p className="mt-0.5 text-xs text-muted">
-                Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
-              </p>
-            </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
+            </p>
+          </div>
+          <div className="mt-3 flex justify-center">
             <TombolUnduhZip url={unduhUrl} />
           </div>
           <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
@@ -323,7 +323,7 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
             <code>chrome://extensions</code>. Jangan pilih Load unpacked lagi — Chrome sudah
             memuat folder itu.
           </p>
-          <div className="mt-3">
+          <div className="mt-3 flex justify-center">
             <TombolUnduhZip url={unduhUrl} />
           </div>
         </div>
@@ -456,7 +456,7 @@ function TombolUnduhZip({ url }: { url: string | null }) {
       download
       className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
     >
-      Unduh ZIP
+      Download Nerona Metadata
     </a>
   );
 }
