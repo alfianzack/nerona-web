@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { labelPerangkat, pisahLabelPerangkat } from "@/lib/device-label";
 import { butuhPembaruan } from "@/lib/unduhan";
+import { bolehSambungOtomatis } from "@/lib/auto-sambung";
 
 interface TokenRow {
   id: string;
@@ -34,6 +35,12 @@ const AWALAN_LABEL_EXT = "Extension";
  */
 export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConnectPanelProps) {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
+  // Apakah daftar di atas benar-benar DATANG dari server. Dibedakan dari
+  // `tokens.length === 0` karena keduanya tidak sama: daftar kosong di render
+  // pertama dan daftar kosong karena permintaannya gagal sama-sama terlihat
+  // seperti "akun ini belum punya token". Penyambungan otomatis tidak boleh
+  // berjalan di atas ketidaktahuan itu.
+  const [tokensDimuat, setTokensDimuat] = useState(false);
   const [extVersion, setExtVersion] = useState<string | null>(null);
   // Apakah browser INI memegang token, seperti dilaporkan HADIR. `null` berarti
   // extension-nya build lama yang belum melaporkannya sama sekali — dibedakan
@@ -66,11 +73,19 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
   // mencabutnya lagi: tokennya sudah terlanjur ada di server sebelum extension
   // sempat diam.
   const idBaruRef = useRef<string | null>(null);
+  // Penyambungan otomatis menembak SEKALI per muat halaman. Di ref, bukan state,
+  // karena ia harus berubah seketika: `tokens` diperbarui beberapa kali dalam
+  // satu kunjungan (muat awal, lalu muat ulang sesudah TERSAMBUNG), dan tiap
+  // perubahan itu menjalankan ulang effect di bawah.
+  const otoRef = useRef(false);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/extension/tokens");
     const data = await res.json().catch(() => null);
-    if (res.ok && data?.ok) setTokens(data.tokens);
+    if (res.ok && data?.ok) {
+      setTokens(data.tokens);
+      setTokensDimuat(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -142,7 +157,7 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
     [load]
   );
 
-  async function hubungkanExtension() {
+  const hubungkanExtension = useCallback(async () => {
     if (kirimRef.current) return;
     kirimRef.current = true;
     setError("");
@@ -201,7 +216,32 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
       idBaruRef.current = null;
       if (id) void cabutDiamDiam(id);
     }, 10_000);
-  }
+  }, [instalasi, cabutDiamDiam]);
+
+  /**
+   * Penyambungan tanpa klik saat penggunanya sudah login.
+   *
+   * Aturannya tinggal di `bolehSambungOtomatis`, bukan sebagai rantai `if` di
+   * sini: setiap syaratnya mencegah satu cara mencetak kredensial permanen yang
+   * tidak diminta siapa pun, dan komponen ini tidak punya tes sama sekali.
+   *
+   * Penandanya diset SEBELUM memanggil, bukan sesudah. `hubungkanExtension`
+   * async, dan effect ini berjalan lagi begitu `sibuk` berubah — penanda yang
+   * baru berubah setelah await selesai membiarkan satu kunjungan mencetak dua
+   * token.
+   */
+  useEffect(() => {
+    const boleh = bolehSambungOtomatis({
+      tokensDimuat,
+      instalasi,
+      tokens,
+      sibuk,
+      sudahDicoba: otoRef.current,
+    });
+    if (!boleh) return;
+    otoRef.current = true;
+    void hubungkanExtension();
+  }, [tokensDimuat, instalasi, tokens, sibuk, hubungkanExtension]);
 
   async function createToken() {
     setError("");
