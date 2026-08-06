@@ -175,6 +175,32 @@ export interface VerifyInput {
   now?: Date;
 }
 
+/**
+ * Nama header tanda tangan, dua ejaan, dicoba berurutan.
+ *
+ * Spesifikasi Standard Webhooks (yang lahir dari Svix) memakai `webhook-*`,
+ * sementara Svix yang dihosting memakai `svix-*` — dan pustaka resmi Svix
+ * menerima keduanya. Contoh kode SumoPod menulis `svix-*`, tapi pengirimnya
+ * ternyata tidak selalu memakai ejaan yang sama dengan contohnya. Menerima
+ * keduanya bukan pelonggaran keamanan: yang diverifikasi tetap HMAC yang sama
+ * atas isi yang sama.
+ */
+export const HEADER_ID = ["svix-id", "webhook-id"] as const;
+export const HEADER_TIMESTAMP = ["svix-timestamp", "webhook-timestamp"] as const;
+export const HEADER_SIGNATURE = ["svix-signature", "webhook-signature"] as const;
+
+/** Nilai header pertama yang ada, dari daftar ejaan yang setara. */
+export function headerPertama(
+  ambil: (nama: string) => string | null,
+  namaBerurutan: readonly string[]
+): string | null {
+  for (const nama of namaBerurutan) {
+    const nilai = ambil(nama);
+    if (nilai) return nilai;
+  }
+  return null;
+}
+
 export type VerifyResult =
   | { ok: true }
   | { ok: false; reason: "missing_headers" | "bad_timestamp" | "stale" | "mismatch" };
@@ -221,6 +247,26 @@ export function verifyWebhookSignature(input: VerifyInput): VerifyResult {
     if (samaAman(kandidat, diharapkan)) return { ok: true };
   }
   return { ok: false, reason: "mismatch" };
+}
+
+/**
+ * Verifikasi lewat `X-Webhook-Token` — cadangan untuk pengirim yang tidak
+ * menandatangani permintaannya.
+ *
+ * **Lebih lemah daripada tanda tangan, dan itu bukan pendapat**: tokennya
+ * string tetap yang sama di setiap permintaan, tanpa timestamp dan tanpa
+ * kaitan apa pun dengan isi badan. Siapa pun yang memilikinya bisa mengarang
+ * `payment.completed` untuk order mana pun, kapan pun.
+ *
+ * Karena itu ia hanya hidup kalau `SUMOPOD_PAY_WEBHOOK_TOKEN` diisi dengan
+ * sengaja. Tidak ada pelemahan yang terjadi diam-diam: server yang tidak
+ * mengisinya tetap menolak semua permintaan tanpa tanda tangan.
+ */
+export function verifyWebhookToken(diterima: string | null, diharapkan: string): boolean {
+  const a = bersihkan(diterima ?? "");
+  const b = bersihkan(diharapkan);
+  if (!a || !b) return false;
+  return samaAman(a, b);
 }
 
 /** Panjang dibandingkan lebih dulu karena `timingSafeEqual` melempar kalau beda. */

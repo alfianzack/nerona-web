@@ -72,6 +72,34 @@ riwayat browser), siapa pun bisa mengulang permintaan palsu selamanya, dan
 tidak ada apa pun di permintaan itu yang bisa kita tolak. Skema Svix membawa
 timestamp, jadi permintaan lama bisa ditolak.
 
+**Dua ejaan header diterima:** `svix-id`/`svix-timestamp`/`svix-signature` dan
+`webhook-id`/`webhook-timestamp`/`webhook-signature`. Spesifikasi Standard
+Webhooks memakai yang kedua, Svix yang dihosting memakai yang pertama, dan
+pustaka resmi Svix menerima keduanya. Yang diverifikasi tetap HMAC yang sama.
+
+### Cadangan `X-Webhook-Token` (ditambahkan 2026-08-06)
+
+Log produksi menunjukkan `missing_headers` dengan rahasia yang sudah benar
+bentuknya — pengirim SumoPod ternyata tidak selalu menyertakan header tanda
+tangan. Jalur token dipasang sebagai cadangan, dengan tiga batasan supaya ia
+tidak diam-diam menggantikan yang kuat:
+
+1. **Hanya hidup kalau `SUMOPOD_PAY_WEBHOOK_TOKEN` diisi dengan sengaja.**
+   Server yang tidak mengisinya tetap menolak semua permintaan tanpa tanda
+   tangan.
+2. **Hanya dipakai saat header tanda tangan memang TIDAK ADA.** Tanda tangan
+   yang ada tapi tidak cocok tetap ditolak — keadaan itu cuma punya dua sebab,
+   salah konfigurasi atau serangan, dan keduanya tidak boleh diselamatkan jalur
+   yang lebih lemah.
+3. **Setiap pemakaiannya dicatat ke log**, bukan sekali di awal. Satu-satunya
+   hal yang mencegahnya jadi normal baru tanpa disadari adalah ia terlihat
+   setiap kali.
+
+Yang hilang dengan jalur ini jujur saja: token tidak membawa timestamp dan
+tidak terikat isi badan, jadi siapa pun yang memilikinya bisa mengarang
+`payment.completed` untuk order mana pun. Idempotensi tidak menolong di sini —
+ia mencegah pemenuhan ganda, bukan pemenuhan palsu yang pertama.
+
 Dua hal yang gampang salah dan keduanya membuat verifikasi **selalu gagal atau,
 lebih buruk, selalu lolos**:
 

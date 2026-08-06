@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { catatWebhookTerverifikasi, handlePaymentEvent } from "@/lib/payments/orders";
-import { parsePaymentEvent, verifyWebhookSignature } from "@/lib/payments/sumopod";
+import {
+  HEADER_ID,
+  HEADER_SIGNATURE,
+  HEADER_TIMESTAMP,
+  headerPertama,
+  parsePaymentEvent,
+  verifyWebhookSignature,
+  verifyWebhookToken,
+} from "@/lib/payments/sumopod";
 
 /**
  * Webhook SumoPod. Tanpa sesi dan tanpa token — yang membuktikan asalnya adalah
@@ -23,35 +31,59 @@ export async function POST(request: Request) {
   // pernah cocok.
   const rawBody = await request.text();
 
+  const ambil = (nama: string) => request.headers.get(nama);
   const secret = (process.env.SUMOPOD_PAY_WEBHOOK_SECRET || "").trim();
   const verifikasi = verifyWebhookSignature({
     secret,
-    svixId: request.headers.get("svix-id"),
-    svixTimestamp: request.headers.get("svix-timestamp"),
-    svixSignature: request.headers.get("svix-signature"),
+    svixId: headerPertama(ambil, HEADER_ID),
+    svixTimestamp: headerPertama(ambil, HEADER_TIMESTAMP),
+    svixSignature: headerPertama(ambil, HEADER_SIGNATURE),
     rawBody,
   });
-  if (!verifikasi.ok) {
+
+  // Cadangan token, dan HANYA saat header tanda tangannya memang tidak ada.
+  // Tanda tangan yang ADA tapi tidak cocok tetap ditolak mentah-mentah — itu
+  // keadaan yang hanya punya dua sebab, salah konfigurasi atau serangan, dan
+  // keduanya tidak boleh diselamatkan oleh jalur yang lebih lemah.
+  const tokenDiharapkan = (process.env.SUMOPOD_PAY_WEBHOOK_TOKEN || "").trim();
+  const lewatToken =
+    !verifikasi.ok &&
+    verifikasi.reason === "missing_headers" &&
+    Boolean(tokenDiharapkan) &&
+    verifyWebhookToken(ambil("x-webhook-token"), tokenDiharapkan);
+
+  if (lewatToken) {
+    // Dicatat setiap kali, bukan sekali: jalur ini lebih lemah, dan satu-satunya
+    // hal yang mencegahnya jadi normal baru tanpa disadari adalah ia terlihat
+    // di log setiap kali dipakai.
+    console.warn(
+      "[webhook sumopod] diterima lewat X-Webhook-Token, bukan tanda tangan — " +
+        "jalur ini tanpa timestamp dan tidak terikat isi badan"
+    );
+  }
+
+  if (!verifikasi.ok && !lewatToken) {
     // Balasannya tetap 401 polos untuk semua sebab — membedakannya di sana
     // berarti memberi tahu penyerang keadaan server kita. Tapi sebabnya WAJIB
     // terlihat di log, karena tanpa itu satu-satunya gejala dari rahasia yang
     // salah tempel dan tanda tangan yang benar-benar palsu adalah 401 yang
     // sama persis, dan tidak ada cara membedakannya dari luar.
-    console.warn("[webhook sumopod] ditolak", {
-      alasan: verifikasi.reason,
-      // Awalan saja, tidak pernah nilainya. `whtok_` di sini berarti yang
-      // tertempel adalah Webhook Token, bukan Signing Secret — dua nilai
-      // berbeda yang duduk bersebelahan di tab Settings SumoPod.
-      awalanRahasia: secret ? secret.slice(0, 6) : "(kosong)",
-      panjangRahasia: secret.length,
-      header: {
-        svixId: Boolean(request.headers.get("svix-id")),
-        svixTimestamp: request.headers.get("svix-timestamp") ?? null,
-        svixSignature: Boolean(request.headers.get("svix-signature")),
-        webhookToken: Boolean(request.headers.get("x-webhook-token")),
-      },
-      panjangBadan: rawBody.length,
-    });
+    //
+    // Satu baris datar, bukan objek bersarang: konsol Vercel melipat objek jadi
+    // `{…}`, dan yang terlipat kemarin justru satu-satunya bagian yang
+    // menjawab pertanyaannya.
+    //
+    // NAMA header, bukan nilainya. Nama tidak rahasia, dan tanpa daftar ini
+    // menebak ejaan yang dipakai pengirim adalah satu-satunya cara maju.
+    const namaHeader = [...request.headers.keys()].sort().join(",");
+    console.warn(
+      `[webhook sumopod] ditolak alasan=${verifikasi.ok ? "-" : verifikasi.reason} ` +
+        `awalanRahasia=${secret ? secret.slice(0, 6) : "(kosong)"} ` +
+        `panjangRahasia=${secret.length} panjangBadan=${rawBody.length} ` +
+        `tokenDisetel=${Boolean(tokenDiharapkan)} ` +
+        `tokenDikirim=${Boolean(ambil("x-webhook-token"))} ` +
+        `headerMasuk=[${namaHeader}]`
+    );
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

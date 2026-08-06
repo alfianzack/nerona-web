@@ -33,7 +33,11 @@ function postCreate(body: unknown, headers: Record<string, string> = {}) {
   });
 }
 
-function postWebhook(rawBody: string, over: Record<string, string> = {}) {
+function postWebhook(
+  rawBody: string,
+  over: Record<string, string> = {},
+  ejaan: "svix" | "webhook" = "svix"
+) {
   const id = "msg_1";
   const ts = String(Math.floor(Date.now() / 1000));
   const kunci = Buffer.from(SECRET.replace(/^whsec_/, ""), "base64");
@@ -42,9 +46,9 @@ function postWebhook(rawBody: string, over: Record<string, string> = {}) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "svix-id": id,
-      "svix-timestamp": ts,
-      "svix-signature": `v1,${sig}`,
+      [`${ejaan}-id`]: id,
+      [`${ejaan}-timestamp`]: ts,
+      [`${ejaan}-signature`]: `v1,${sig}`,
       ...over,
     },
     body: rawBody,
@@ -63,6 +67,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.SUMOPOD_PAY_WEBHOOK_SECRET;
+  delete process.env.SUMOPOD_PAY_WEBHOOK_TOKEN;
 });
 
 describe("POST /api/payments/create", () => {
@@ -143,6 +148,59 @@ describe("POST /api/webhooks/sumopod", () => {
     expect(handlePaymentEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ reference: "ord1-1", amount: 29000 })
     );
+  });
+
+  // Spesifikasi Standard Webhooks memakai `webhook-*`, Svix yang dihosting
+  // memakai `svix-*`, dan pustaka resmi Svix menerima keduanya. Contoh kode
+  // SumoPod menulis `svix-*`, tapi log produksi menunjukkan `missing_headers`
+  // dengan rahasia yang sudah benar — jadi ejaan yang dikirim tidak boleh
+  // diasumsikan.
+  it("menerima ejaan header webhook-* selain svix-*", async () => {
+    handlePaymentEventMock.mockResolvedValue({ ok: true, note: "fulfilled" });
+    const res = await WEBHOOK(postWebhook(EVENT, {}, "webhook"));
+    expect(res.status).toBe(200);
+  });
+
+  describe("cadangan X-Webhook-Token", () => {
+    const TOKEN = "whtok_rahasia-token-uji";
+
+    function tanpaTandaTangan(headers: Record<string, string> = {}) {
+      return new Request("http://t/api/webhooks/sumopod", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: EVENT,
+      });
+    }
+
+    it("menolak permintaan tanpa tanda tangan selama token belum disetel", async () => {
+      delete process.env.SUMOPOD_PAY_WEBHOOK_TOKEN;
+      expect((await WEBHOOK(tanpaTandaTangan({ "x-webhook-token": TOKEN }))).status).toBe(401);
+      expect(handlePaymentEventMock).not.toHaveBeenCalled();
+    });
+
+    it("menerima token yang cocok saat header tanda tangan memang tidak ada", async () => {
+      process.env.SUMOPOD_PAY_WEBHOOK_TOKEN = TOKEN;
+      handlePaymentEventMock.mockResolvedValue({ ok: true, note: "fulfilled" });
+      expect((await WEBHOOK(tanpaTandaTangan({ "x-webhook-token": TOKEN }))).status).toBe(200);
+    });
+
+    it("menolak token yang salah", async () => {
+      process.env.SUMOPOD_PAY_WEBHOOK_TOKEN = TOKEN;
+      expect((await WEBHOOK(tanpaTandaTangan({ "x-webhook-token": "salah" }))).status).toBe(401);
+      expect(handlePaymentEventMock).not.toHaveBeenCalled();
+    });
+
+    // Tanda tangan yang ADA tapi tidak cocok cuma punya dua sebab — salah
+    // konfigurasi atau serangan — dan keduanya tidak boleh diselamatkan oleh
+    // jalur yang lebih lemah.
+    it("token tidak menyelamatkan tanda tangan yang ada tapi salah", async () => {
+      process.env.SUMOPOD_PAY_WEBHOOK_TOKEN = TOKEN;
+      const res = await WEBHOOK(
+        postWebhook(EVENT, { "svix-signature": "v1,palsu", "x-webhook-token": TOKEN })
+      );
+      expect(res.status).toBe(401);
+      expect(handlePaymentEventMock).not.toHaveBeenCalled();
+    });
   });
 
   it("401 untuk tanda tangan salah, dan pemrosesan tidak pernah dipanggil", async () => {
