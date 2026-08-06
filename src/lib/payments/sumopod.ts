@@ -12,17 +12,18 @@ import { createHmac, timingSafeEqual } from "crypto";
 /**
  * `payment_method_type_code` untuk QRIS.
  *
- * **Huruf kecil `qris`, bukan `QRIS`.** Contoh curl di dokumentasi menulis
- * `"QRIS"`, tapi komentarnya sendiri berkata "get it from the Supported Payment
- * Methods list" — dan daftar itu menampilkan kodenya sebagai `qris`. Payload
- * webhook mereka juga memakai `"payment_method": "qris"`. Jadi yang di contoh
- * itu nama metodenya, bukan kodenya.
+ * **`QRIS` huruf besar** — mengikuti contoh permintaan di dokumentasi, yang
+ * menuliskannya begitu. Sempat saya ubah jadi `qris` karena daftar Supported
+ * Payment Methods menampilkan chip `qris` dan payload webhook memakai
+ * `"payment_method": "qris"`; itu keliru. Contoh PERMINTAAN adalah tempat yang
+ * berwenang soal field permintaan, dan dua tempat lain itu bicara soal hal yang
+ * berbeda (kode metode di daftar, dan nama metode di balasan webhook).
  *
- * Bisa ditimpa env supaya salah baca di sini tidak menuntut deploy kode:
- * `SUMOPOD_PAY_METHOD_CODE`.
+ * Tetap bisa ditimpa `SUMOPOD_PAY_METHOD_CODE`, supaya bacaan yang salah di
+ * sini tidak pernah lagi menuntut deploy kode untuk membetulkannya.
  */
 export function qrisMethodCode(): string {
-  return bersihkan(process.env.SUMOPOD_PAY_METHOD_CODE) || "qris";
+  return bersihkan(process.env.SUMOPOD_PAY_METHOD_CODE) || "QRIS";
 }
 
 /** Batas maksimal yang diterima SumoPod. Lebih dari ini ditolak di sisi mereka. */

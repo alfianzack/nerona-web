@@ -211,7 +211,12 @@ describe("startPaymentForOrder", () => {
       ok: false,
       reason: "gateway_error",
     });
-    expect((prisma.payment.update as any).mock.calls[0][0].data).toEqual({ status: "failed" });
+    const data = (prisma.payment.update as any).mock.calls[0][0].data;
+    expect(data.status).toBe("failed");
+    // Sebabnya disimpan, bukan cuma dicatat ke log: pelanggan hanya melihat 502,
+    // dan tanpa baris ini admin harus memburu log Vercel untuk tahu apa-apa.
+    expect(data.lastError).toContain("rejected");
+    expect(data.lastError).toContain("400");
   });
 
   it("menolak order yang tidak punya harga tanpa membuat baris apa pun", async () => {

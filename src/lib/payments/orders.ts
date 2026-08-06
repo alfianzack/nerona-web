@@ -40,6 +40,26 @@ export async function webhookTerakhirOk(): Promise<string | null> {
 }
 
 /**
+ * Kegagalan gateway terakhir, untuk ditampilkan di panel admin.
+ *
+ * Pelanggan hanya melihat 502 dan itu memang benar — pesan galat mentah dari
+ * pihak ketiga tidak boleh sampai ke browser mereka. Tapi seseorang harus bisa
+ * melihatnya tanpa memburu log, kalau tidak setiap kegagalan menjadi satu
+ * putaran tebak-menebak lagi.
+ */
+export async function kegagalanGatewayTerakhir(): Promise<
+  { waktu: string; pesan: string } | null
+> {
+  const row = await prisma.payment.findFirst({
+    where: { status: "failed", lastError: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true, lastError: true },
+  });
+  if (!row?.lastError) return null;
+  return { waktu: row.createdAt.toISOString(), pesan: row.lastError };
+}
+
+/**
  * Saklar di `Setting`, bukan env: gunanya supaya owner bisa mematikan QRIS
  * dalam satu klik tanpa deploy kalau gateway-nya bermasalah — semua pelanggan
  * langsung jatuh ke transfer manual yang memang tetap ada. Bawaannya MATI:
@@ -167,7 +187,15 @@ export async function startPaymentForOrder(
       `[bayar sumopod] gagal membuat pembayaran reference=${reference} ` +
         `amount=${amount} jenis=${hasil.reason} detail=${hasil.detail}`
     );
-    await prisma.payment.update({ where: { id: baris.id }, data: { status: "failed" } });
+    await prisma.payment.update({
+      where: { id: baris.id },
+      data: {
+        status: "failed",
+        // Dipotong 500 karakter: badan galat HTML dari proxy bisa puluhan
+        // kilobyte, dan yang berguna selalu di awal.
+        lastError: `${hasil.reason}: ${hasil.detail}`.slice(0, 500),
+      },
+    });
     return { ok: false, reason: "gateway_error", detail: hasil.detail };
   }
 

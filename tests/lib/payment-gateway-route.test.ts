@@ -4,6 +4,7 @@ const getServerSessionMock = vi.fn();
 const gatewayEnabledMock = vi.fn();
 const setGatewayEnabledMock = vi.fn();
 const sumopodConfigMock = vi.fn();
+const kegagalanMock = vi.fn();
 
 vi.mock("next-auth", () => ({
   getServerSession: (...a: unknown[]) => getServerSessionMock(...a),
@@ -14,6 +15,7 @@ vi.mock("@/lib/payments/orders", () => ({
   gatewayEnabled: () => gatewayEnabledMock(),
   setGatewayEnabled: (...a: unknown[]) => setGatewayEnabledMock(...a),
   webhookTerakhirOk: () => webhookTerakhirOkMock(),
+  kegagalanGatewayTerakhir: () => kegagalanMock(),
 }));
 vi.mock("@/lib/payments/sumopod", () => ({ sumopodConfig: () => sumopodConfigMock() }));
 
@@ -31,6 +33,7 @@ beforeEach(() => {
   gatewayEnabledMock.mockResolvedValue(false);
   sumopodConfigMock.mockReturnValue(null);
   webhookTerakhirOkMock.mockResolvedValue(null);
+  kegagalanMock.mockResolvedValue(null);
 });
 
 describe("/api/admin/payment-gateway", () => {
@@ -76,6 +79,23 @@ describe("/api/admin/payment-gateway", () => {
 
     webhookTerakhirOkMock.mockResolvedValue("2026-08-06T09:13:21.000Z");
     expect((await (await GET()).json()).webhookLastOk).toBe("2026-08-06T09:13:21.000Z");
+  });
+
+  // Pelanggan hanya melihat 502. Kalau sebabnya juga tidak terlihat admin,
+  // setiap kegagalan jadi satu putaran tebak-menebak lewat log.
+  it("meneruskan kegagalan gateway terakhir untuk admin", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: "admin" } });
+    kegagalanMock.mockResolvedValue({
+      waktu: "2026-08-06T10:00:00.000Z",
+      pesan: "rejected: 401 {\"error\":\"invalid api key\"}",
+    });
+
+    const body = await (await GET()).json();
+
+    expect(body.lastFailure).toEqual({
+      waktu: "2026-08-06T10:00:00.000Z",
+      pesan: 'rejected: 401 {"error":"invalid api key"}',
+    });
   });
 
   it("live saat base URL bukan sandbox", async () => {

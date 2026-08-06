@@ -9,6 +9,8 @@ interface Keadaan {
   sandbox: boolean;
   /** ISO waktu webhook terakhir yang lolos verifikasi; `null` = belum pernah. */
   webhookLastOk: string | null;
+  /** Kegagalan gateway terakhir apa adanya. Hanya admin yang melihat ini. */
+  lastFailure: { waktu: string; pesan: string } | null;
 }
 
 /**
@@ -35,6 +37,7 @@ export function AdminPaymentGatewayPanel() {
       configured: data.configured,
       sandbox: data.sandbox,
       webhookLastOk: data.webhookLastOk ?? null,
+      lastFailure: data.lastFailure ?? null,
     });
   }
 
@@ -168,6 +171,30 @@ export function AdminPaymentGatewayPanel() {
                 ? "Mode SANDBOX — pembayaran tidak nyata dan tidak ada uang yang masuk."
                 : "Mode LIVE — pembayaran menagih uang sungguhan."}
             </p>
+          )}
+
+          {/*
+            Pelanggan hanya melihat 502, dan itu memang benar — pesan galat
+            mentah pihak ketiga tidak boleh sampai ke browser mereka. Tapi
+            seseorang harus bisa melihatnya tanpa memburu log Vercel, kalau
+            tidak setiap kegagalan jadi satu putaran tebak-menebak lagi.
+          */}
+          {keadaan.lastFailure && (
+            <div className="mt-3 rounded-xl bg-navy-900/[0.03] p-3 ring-1 ring-navy-900/10">
+              <p className="text-[11px] font-semibold text-ink">
+                Kegagalan terakhir dari gateway ·{" "}
+                {new Date(keadaan.lastFailure.waktu).toLocaleString("id-ID")}
+              </p>
+              <code className="mt-1 block break-all text-[11px] leading-relaxed text-muted">
+                {keadaan.lastFailure.pesan}
+              </code>
+              <p className="mt-1.5 text-[11px] text-muted/80">
+                <b>401</b> biasanya kunci API salah, atau kunci sandbox dipakai ke alamat live
+                (dan sebaliknya). <b>400</b> biasanya jumlah atau{" "}
+                <code>payment_method_type_code</code> — bisa ditimpa lewat{" "}
+                <code>SUMOPOD_PAY_METHOD_CODE</code> tanpa deploy kode.
+              </p>
+            </div>
           )}
 
           <p className="mt-3 text-[11px] text-muted/80">

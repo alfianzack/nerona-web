@@ -317,10 +317,11 @@ describe("createPayment", () => {
       order_id: "abc-1",
       amount: 29000,
       currency: "IDR",
-      // Huruf kecil: daftar Supported Payment Methods di dashboard menampilkan
-      // kodenya sebagai `qris`, dan payload webhook mereka juga memakai itu.
-      // Yang tertulis "QRIS" di contoh curl adalah nama metodenya.
-      payment_method_type_code: "qris",
+      // Huruf besar, mengikuti contoh PERMINTAAN di dokumentasi — tempat yang
+      // berwenang soal field permintaan. Chip `qris` di daftar Supported
+      // Payment Methods dan `"payment_method": "qris"` di webhook bicara soal
+      // hal yang berbeda, dan mengikuti keduanya sempat membuat gateway menolak.
+      payment_method_type_code: "QRIS",
     });
   });
 

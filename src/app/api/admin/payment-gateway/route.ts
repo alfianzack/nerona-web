@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { gatewayEnabled, setGatewayEnabled, webhookTerakhirOk } from "@/lib/payments/orders";
+import {
+  gatewayEnabled,
+  kegagalanGatewayTerakhir,
+  setGatewayEnabled,
+  webhookTerakhirOk,
+} from "@/lib/payments/orders";
 import { sumopodConfig } from "@/lib/payments/sumopod";
 
 /**
@@ -25,6 +30,8 @@ export async function GET() {
     // dalam keadaan itu berarti pelanggan membayar sungguhan dan paketnya tidak
     // pernah aktif, karena yang mengaktifkannya adalah webhook.
     webhookLastOk: await webhookTerakhirOk(),
+    // Hanya untuk admin, dan sengaja tidak pernah ke halaman pelanggan.
+    lastFailure: await kegagalanGatewayTerakhir(),
     // Nilainya tidak pernah ikut dikirim — cuma jawaban ya/tidak atas
     // pertanyaan yang perlu dijawab: ini menagih uang sungguhan atau tidak.
     sandbox: cfg !== null && cfg.baseUrl.includes("sandbox"),

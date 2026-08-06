@@ -473,6 +473,13 @@ model Payment {
   paymentCode     String?
   paymentCodeType String?
 
+  /// Sebab kegagalan terakhir dari gateway, apa adanya (status HTTP + badan
+  /// balasan). Disimpan supaya panel admin bisa menampilkannya: pelanggan hanya
+  /// melihat 502, dan pesan galat mentah pihak ketiga memang tidak boleh sampai
+  /// ke browser mereka — tapi tanpa disimpan di mana pun, sebabnya cuma hidup di
+  /// log yang harus diburu.
+  lastError String?
+
   expiresAt   DateTime
   completedAt DateTime?
   createdAt   DateTime  @default(now())
