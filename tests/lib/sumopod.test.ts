@@ -340,6 +340,49 @@ describe("createPayment", () => {
     delete process.env.SUMOPOD_PAY_METHOD_CODE;
   });
 
+  // SumoPod memvalidasi kedua field ini dengan tag `redirecturl` dan menolak
+  // SELURUH permintaan dengan 400 kalau URL-nya tidak cocok dengan yang
+  // dikonfigurasi di proyek — bukan mengabaikan field-nya. Karena opsional,
+  // bawaannya tidak dikirim sama sekali.
+  it("tidak mengirim URL kembali kecuali dinyalakan sengaja", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(BALASAN), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    delete process.env.SUMOPOD_PAY_SEND_RETURN_URLS;
+
+    await createPayment(cfg, {
+      reference: "abc-1",
+      amount: 29000,
+      successUrl: "https://nerona-web.vercel.app/order/abc",
+      cancelUrl: "https://nerona-web.vercel.app/order/abc",
+    });
+
+    const dikirim = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(dikirim).not.toHaveProperty("success_return_url");
+    expect(dikirim).not.toHaveProperty("cancel_return_url");
+  });
+
+  it("mengirim URL kembali setelah dinyalakan", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(BALASAN), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.SUMOPOD_PAY_SEND_RETURN_URLS = "1";
+
+    await createPayment(cfg, {
+      reference: "abc-1",
+      amount: 29000,
+      successUrl: "https://nerona-web.vercel.app/order/abc",
+      cancelUrl: "https://nerona-web.vercel.app/order/abc",
+    });
+
+    const dikirim = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(dikirim.success_return_url).toBe("https://nerona-web.vercel.app/order/abc");
+    expect(dikirim.cancel_return_url).toBe("https://nerona-web.vercel.app/order/abc");
+    delete process.env.SUMOPOD_PAY_SEND_RETURN_URLS;
+  });
+
   it("membatasi expires_in_hours ke 24", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(BALASAN), { status: 200 })

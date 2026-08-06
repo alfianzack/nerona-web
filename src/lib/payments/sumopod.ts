@@ -98,6 +98,25 @@ export interface CreatePaymentInput {
   cancelUrl?: string;
 }
 
+/**
+ * Apakah `success_return_url`/`cancel_return_url` ikut dikirim.
+ *
+ * **Bawaannya TIDAK.** SumoPod memvalidasi kedua field itu dengan tag
+ * `redirecturl` dan menolak URL yang tidak cocok dengan URL kembali yang
+ * dikonfigurasi di proyek — seluruh permintaan gagal 400, bukan cuma field-nya
+ * diabaikan. Keduanya memang opsional: dokumentasinya menyebut fungsinya
+ * "override your project's configured return URLs", dan kita tidak punya alasan
+ * menimpanya karena QR digambar di halaman order kita sendiri, jadi pelanggan
+ * jarang berada di halaman SumoPod untuk perlu dipulangkan.
+ *
+ * Nyalakan `SUMOPOD_PAY_SEND_RETURN_URLS=1` hanya SETELAH domain kembali
+ * didaftarkan di pengaturan proyek SumoPod.
+ */
+export function kirimReturnUrl(): boolean {
+  const nilai = bersihkan(process.env.SUMOPOD_PAY_SEND_RETURN_URLS).toLowerCase();
+  return nilai === "1" || nilai === "true" || nilai === "on";
+}
+
 export interface CreatedPayment {
   paymentId: string;
   linkUrl: string;
@@ -147,8 +166,13 @@ export async function createPayment(
         currency: "IDR",
         expires_in_hours: jam,
         payment_method_type_code: qrisMethodCode(),
-        ...(input.successUrl ? { success_return_url: input.successUrl } : {}),
-        ...(input.cancelUrl ? { cancel_return_url: input.cancelUrl } : {}),
+        // Dijaga di sini, bukan di pemanggil: satu pemanggil yang lupa akan
+        // menggagalkan SELURUH permintaan dengan 400, bukan sekadar kehilangan
+        // satu field.
+        ...(kirimReturnUrl() && input.successUrl
+          ? { success_return_url: input.successUrl }
+          : {}),
+        ...(kirimReturnUrl() && input.cancelUrl ? { cancel_return_url: input.cancelUrl } : {}),
       }),
     });
   } catch (err) {
