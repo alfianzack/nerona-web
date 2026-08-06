@@ -466,6 +466,13 @@ model Payment {
   status  String @default("pending") // pending | completed | failed | expired
   linkUrl String
 
+  /// Isi `payment_code` dari gateway. Untuk QRIS ini muatan EMVCo yang bisa
+  /// digambar jadi QR sendiri, jadi pelanggan tidak perlu meninggalkan halaman
+  /// order. Untuk VA ia nomor rekening. Disimpan apa adanya — yang menentukan
+  /// cara menampilkannya adalah `paymentCodeType` plus bentuk isinya.
+  paymentCode     String?
+  paymentCodeType String?
+
   expiresAt   DateTime
   completedAt DateTime?
   createdAt   DateTime  @default(now())

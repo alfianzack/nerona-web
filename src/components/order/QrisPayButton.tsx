@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const PESAN: Record<string, string> = {
   disabled: "Pembayaran QRIS sedang dimatikan. Pakai transfer manual di bawah.",
@@ -28,6 +29,7 @@ export function QrisPayButton({
   tautanAktif: string | null;
   kedaluwarsa: string | null;
 }) {
+  const router = useRouter();
   const [sibuk, setSibuk] = useState(false);
   const [galat, setGalat] = useState("");
 
@@ -52,14 +54,25 @@ export function QrisPayButton({
       setGalat("Koneksi bermasalah. Coba lagi, atau pakai transfer manual di bawah.");
       return;
     }
-    // `sibuk` sengaja dibiarkan menyala: tabnya sedang dibuka, dan tombol yang
-    // hidup kembali di detik itu mengundang klik kedua yang membuat tagihan
-    // kedua untuk order yang sama.
-    window.open(data.linkUrl, "_blank", "noopener,noreferrer");
+    // Muat ulang halaman ini, bukan buka tab SumoPod: begitu tagihannya ada,
+    // server bisa menggambar QR-nya sendiri di sini. Pengguna tidak perlu
+    // meninggalkan halaman order untuk membayar, dan tidak perlu kembali untuk
+    // melihat hasilnya.
+    //
+    // `sibuk` dibiarkan menyala sampai render berikutnya selesai — tombol yang
+    // hidup kembali di detik ini mengundang klik kedua yang membuat tagihan
+    // kedua untuk satu order.
+    router.refresh();
   }
 
   return (
     <div>
+      {/*
+        Tautan hanya muncul kalau tagihannya ada TAPI QR-nya tidak bisa digambar
+        — misalnya gateway mengembalikan nomor VA alih-alih muatan QRIS. Kalau
+        QR-nya ada, halaman order menggambarnya sendiri dan tombol ini tidak
+        dirender sama sekali.
+      */}
       {tautanAktif ? (
         <a
           href={tautanAktif}
@@ -67,7 +80,7 @@ export function QrisPayButton({
           rel="noopener noreferrer"
           className="inline-block rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2.5 text-sm font-semibold text-navy-900 transition hover:brightness-110"
         >
-          Lanjutkan pembayaran QRIS ↗
+          Buka halaman bayar ↗
         </a>
       ) : (
         <button
@@ -76,7 +89,7 @@ export function QrisPayButton({
           disabled={sibuk}
           className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
         >
-          {sibuk ? "Menyiapkan..." : "Bayar dengan QRIS"}
+          {sibuk ? "Menyiapkan QRIS..." : "Tampilkan QRIS"}
         </button>
       )}
 

@@ -55,30 +55,26 @@ export function CheckoutView({
     }
 
     if (metode === "qris") {
-      // Ordernya SUDAH ada di titik ini. Apa pun yang gagal setelah baris di
-      // atas tidak boleh membuat pengguna kehilangan jejaknya — jadi setiap
-      // jalan keluar di bawah berakhir di halaman order itu, tempat tombol QRIS
-      // dan detail transfer manual sama-sama tersedia.
+      // Tagihannya dibuat SEKARANG supaya halaman order berikutnya sudah bisa
+      // menggambar QR-nya langsung — bukan menyuguhkan satu tombol lagi.
+      //
+      // Ordernya sudah ada di titik ini, jadi apa pun yang gagal di bawah tidak
+      // boleh membuat pengguna kehilangan jejaknya: setiap jalan keluar berakhir
+      // di halaman order itu, tempat QRIS dan transfer manual sama-sama ada.
       try {
-        const bayar = await fetch("/api/payments/create", {
+        await fetch("/api/payments/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: data.orderId }),
         });
-        const hasil = await bayar.json().catch(() => null);
-        if (bayar.ok && hasil?.ok && hasil.linkUrl) {
-          // Tab yang sama, bukan tab baru: halaman bayar SumoPod tahu jalan
-          // pulang lewat success/cancel return URL yang kita kirim, dan
-          // keduanya menunjuk halaman order ini.
-          window.location.href = hasil.linkUrl;
-          return;
-        }
       } catch {
-        /* jaringan putus — jatuh ke halaman order di bawah */
+        /* jaringan putus — halaman order tetap menyediakan tombol coba lagi */
       }
+      router.push(`/order/${data.orderId}?bayar=qris`);
+      return;
     }
 
-    router.push(`/order/${data.orderId}`);
+    router.push(`/order/${data.orderId}?bayar=transfer`);
   }
 
   return (

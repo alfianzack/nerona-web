@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { fulfillOrderRequest } from "@/lib/orders";
 import { coerceDuration, getDurationDiscounts, priceForDuration } from "@/lib/plan-duration";
-import { createPayment, sumopodConfig, type PaymentEvent } from "@/lib/payments/sumopod";
+import {
+  createPayment,
+  sumopodConfig,
+  tampakMuatanQris,
+  type PaymentEvent,
+} from "@/lib/payments/sumopod";
 
 /**
  * Menjembatani order Nerona dengan gateway. Berkas ini yang tahu soal harga,
@@ -174,8 +179,20 @@ export async function startPaymentForOrder(
       expiresAt: hasil.payment.expiresAt,
       fee: hasil.payment.fee,
       netAmount: hasil.payment.netAmount,
+      paymentCode: hasil.payment.paymentCode,
+      paymentCodeType: hasil.payment.paymentCodeType,
     },
   });
+
+  // Bentuk balasan QRIS tidak ada contohnya di dokumentasi — yang ada contoh VA.
+  // Satu baris ini yang membuktikan apakah `payment_code` benar-benar muatan
+  // EMVCo yang bisa digambar sendiri, tanpa perlu menebak.
+  console.info(
+    `[bayar sumopod] pembayaran dibuat reference=${reference} ` +
+      `codeType=${hasil.payment.paymentCodeType ?? "-"} ` +
+      `codeAwalan=${(hasil.payment.paymentCode ?? "").slice(0, 8) || "-"} ` +
+      `qrisTerbaca=${tampakMuatanQris(hasil.payment.paymentCode)}`
+  );
 
   return { ok: true, linkUrl: hasil.payment.linkUrl, expiresAt: hasil.payment.expiresAt, reused: false };
 }

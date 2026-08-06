@@ -7,7 +7,10 @@ import { getPaymentSettings, isPaymentConfigured } from "@/lib/payment-settings"
 import { formatRupiah } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { amountForOrder, gatewayEnabled } from "@/lib/payments/orders";
+import { tampakMuatanQris } from "@/lib/payments/sumopod";
+import { qrisSvg } from "@/lib/payments/qr";
 import { PaymentProofUpload } from "@/components/order/PaymentProofUpload";
+import { PilihanPembayaran } from "@/components/order/PilihanPembayaran";
 import { QrisPayButton } from "@/components/order/QrisPayButton";
 
 function statusBanner(status: string, hasProof: boolean) {
@@ -52,7 +55,13 @@ function orderTitle(product: string, planName: string): string {
   return `${product === "metadata" ? "Nerona Metadata" : "Nerona Agent"} — ${planName}`;
 }
 
-export default async function OrderDetailPage({ params }: { params: { id: string } }) {
+export default async function OrderDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { bayar?: string };
+}) {
   const session = await requireUser();
   const order = await getUserOrder(session.user.id, params.id);
   if (!order) {
@@ -71,9 +80,17 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         linkUrl: { not: "" },
       },
       orderBy: { createdAt: "desc" },
-      select: { linkUrl: true, expiresAt: true },
+      select: { linkUrl: true, expiresAt: true, paymentCode: true },
     }),
   ]);
+
+  // QR digambar di server, jadi halaman order tidak menambah satu kilobyte pun
+  // JavaScript untuk ini. `null` kalau kodenya bukan muatan QRIS — pemeriksaan
+  // bentuk, bukan kepercayaan pada nama tipe.
+  const qrSvg =
+    tagihanHidup && tampakMuatanQris(tagihanHidup.paymentCode)
+      ? await qrisSvg(tagihanHidup.paymentCode!)
+      : null;
 
   const hasProof = Boolean(order.proofUploadedAt);
   const banner = statusBanner(order.status, hasProof);
@@ -108,70 +125,117 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </a>
       )}
 
-      {bisaQris && (
-        <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Bayar otomatis
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Pindai QRIS dari aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
-            <span className="font-semibold text-ink">{price}</span>, sama dengan transfer manual —
-            tidak ada biaya tambahan.
-          </p>
-          <div className="mt-4">
-            <QrisPayButton
-              orderId={order.id}
-              tautanAktif={tagihanHidup?.linkUrl ?? null}
-              kedaluwarsa={
-                tagihanHidup
-                  ? tagihanHidup.expiresAt.toLocaleString("id-ID", {
+      {isPending && (
+        <PilihanPembayaran
+          qrisTersedia={bisaQris}
+          awal={searchParams.bayar === "transfer" ? "transfer" : "qris"}
+          panelQris={
+            <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+              {qrSvg ? (
+                <>
+                  <p className="text-sm text-muted">
+                    Pindai dengan aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
+                    <span className="font-semibold text-ink">{price}</span> — tidak ada biaya
+                    tambahan.
+                  </p>
+                  {/*
+                    Latar putih di bawah QR bukan pilihan gaya: kamera memindai
+                    kontras, dan QR di atas kartu bergradien gagal terbaca di
+                    sebagian perangkat.
+                  */}
+                  <div
+                    className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 ring-1 ring-navy-900/10 [&>svg]:block [&>svg]:h-auto [&>svg]:w-[240px]"
+                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+                  />
+                  <p className="mt-4 text-center text-xs text-muted">
+                    Berlaku sampai{" "}
+                    {tagihanHidup!.expiresAt.toLocaleString("id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
-                    })
-                  : null
-              }
-            />
-          </div>
-        </section>
-      )}
-
-      {isPending && (
-        <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            {bisaQris ? "Atau transfer manual" : "Detail transfer"}
-          </h2>
-          {bankReady ? (
-            <dl className="mt-3 space-y-3 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Bank</dt>
-                <dd className="font-medium text-ink">{bank.bankName}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Nomor rekening</dt>
-                <dd className="rounded-lg bg-navy-900/5 px-2.5 py-1 font-mono text-ink ring-1 ring-navy-900/10">
-                  {bank.accountNumber}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Atas nama</dt>
-                <dd className="font-medium text-ink">{bank.accountHolder}</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-t border-navy-900/10 pt-3">
-                <dt className="text-muted">Jumlah transfer</dt>
-                <dd className="text-lg font-extrabold text-brand-blue">{price}</dd>
-              </div>
-              {bank.instructions && (
-                <p className="border-t border-navy-900/10 pt-3 text-xs text-muted">
-                  {bank.instructions}
+                    })}
+                    . Paket aktif sendiri beberapa detik setelah pembayaran masuk — tidak perlu
+                    mengunggah bukti.
+                  </p>
+                  <p className="mt-2 text-center text-xs text-muted/80">
+                    Tidak bisa memindai dari perangkat ini?{" "}
+                    <a
+                      href={tagihanHidup!.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-brand-blue hover:underline"
+                    >
+                      Buka halaman bayar ↗
+                    </a>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted">
+                    Pindai QRIS dari aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
+                    <span className="font-semibold text-ink">{price}</span> — tidak ada biaya
+                    tambahan.
+                  </p>
+                  <div className="mt-4">
+                    <QrisPayButton
+                      orderId={order.id}
+                      tautanAktif={tagihanHidup?.linkUrl ?? null}
+                      kedaluwarsa={
+                        tagihanHidup
+                          ? tagihanHidup.expiresAt.toLocaleString("id-ID", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
+                          : null
+                      }
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          }
+          panelTransfer={
+            <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                Detail transfer
+              </h2>
+              {bankReady ? (
+                <dl className="mt-3 space-y-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Bank</dt>
+                    <dd className="font-medium text-ink">{bank.bankName}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Nomor rekening</dt>
+                    <dd className="rounded-lg bg-navy-900/5 px-2.5 py-1 font-mono text-ink ring-1 ring-navy-900/10">
+                      {bank.accountNumber}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Atas nama</dt>
+                    <dd className="font-medium text-ink">{bank.accountHolder}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-navy-900/10 pt-3">
+                    <dt className="text-muted">Jumlah transfer</dt>
+                    <dd className="text-lg font-extrabold text-brand-blue">{price}</dd>
+                  </div>
+                  {bank.instructions && (
+                    <p className="border-t border-navy-900/10 pt-3 text-xs text-muted">
+                      {bank.instructions}
+                    </p>
+                  )}
+                  <p className="border-t border-navy-900/10 pt-3 text-xs text-muted">
+                    Setelah transfer, unggah buktinya di bawah. Paket aktif setelah admin
+                    mengonfirmasi.
+                  </p>
+                </dl>
+              ) : (
+                <p className="mt-3 text-sm text-muted">
+                  Rekening pembayaran belum diatur. Silakan hubungi admin Nerona.
                 </p>
               )}
-            </dl>
-          ) : (
-            <p className="mt-3 text-sm text-muted">
-              Rekening pembayaran belum diatur. Silakan hubungi admin Nerona.
-            </p>
-          )}
-        </section>
+            </div>
+          }
+        />
       )}
 
       <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">

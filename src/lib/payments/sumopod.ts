@@ -105,6 +105,24 @@ export interface CreatedPayment {
   netAmount: number | null;
   status: string;
   expiresAt: Date;
+  /** `payment_code` — muatan QRIS untuk QRIS, nomor rekening untuk VA. */
+  paymentCode: string | null;
+  paymentCodeType: string | null;
+}
+
+/**
+ * Apakah sebuah `payment_code` benar-benar muatan QRIS yang bisa digambar.
+ *
+ * Muatan EMVCo selalu dimulai `000201` (tag 00 "Payload Format Indicator",
+ * panjang 02, nilai 01). Diperiksa dari BENTUK isinya, bukan dari
+ * `payment_code_type` yang namanya bisa apa saja dan tidak terdokumentasi untuk
+ * QRIS — menggambar QR dari nomor rekening menghasilkan kode yang terpindai
+ * rapi lalu gagal di aplikasi bank, kegagalan yang jauh lebih membingungkan
+ * daripada tidak ada QR sama sekali.
+ */
+export function tampakMuatanQris(kode: string | null | undefined): boolean {
+  const teks = (kode || "").trim();
+  return teks.startsWith("000201") && teks.length >= 30;
 }
 
 export type CreatePaymentResult =
@@ -170,6 +188,9 @@ export async function createPayment(
       netAmount: angka(body.net_amount),
       status: typeof body.status === "string" ? body.status : "pending",
       expiresAt,
+      paymentCode: typeof body.payment_code === "string" ? body.payment_code : null,
+      paymentCodeType:
+        typeof body.payment_code_type === "string" ? body.payment_code_type : null,
     },
   };
 }
