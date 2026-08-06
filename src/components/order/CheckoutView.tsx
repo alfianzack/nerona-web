@@ -12,7 +12,11 @@ interface CheckoutViewProps {
   priceLabel: string;
   savingsLabel?: string | null;
   features: PricingTierFeature[];
+  /** Saklar QRIS menyala DAN paket ini punya harga angka. */
+  qrisTersedia?: boolean;
 }
+
+type Metode = "qris" | "bank";
 
 export function CheckoutView({
   product,
@@ -22,11 +26,13 @@ export function CheckoutView({
   priceLabel,
   savingsLabel,
   features,
+  qrisTersedia = false,
 }: CheckoutViewProps) {
   const router = useRouter();
   const [contactNote, setContactNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [metode, setMetode] = useState<Metode>(qrisTersedia ? "qris" : "bank");
 
   async function handleBuy() {
     setError("");
@@ -47,6 +53,31 @@ export function CheckoutView({
       setError(data?.message || "Gagal membuat order. Coba lagi.");
       return;
     }
+
+    if (metode === "qris") {
+      // Ordernya SUDAH ada di titik ini. Apa pun yang gagal setelah baris di
+      // atas tidak boleh membuat pengguna kehilangan jejaknya — jadi setiap
+      // jalan keluar di bawah berakhir di halaman order itu, tempat tombol QRIS
+      // dan detail transfer manual sama-sama tersedia.
+      try {
+        const bayar = await fetch("/api/payments/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: data.orderId }),
+        });
+        const hasil = await bayar.json().catch(() => null);
+        if (bayar.ok && hasil?.ok && hasil.linkUrl) {
+          // Tab yang sama, bukan tab baru: halaman bayar SumoPod tahu jalan
+          // pulang lewat success/cancel return URL yang kita kirim, dan
+          // keduanya menunjuk halaman order ini.
+          window.location.href = hasil.linkUrl;
+          return;
+        }
+      } catch {
+        /* jaringan putus — jatuh ke halaman order di bawah */
+      }
+    }
+
     router.push(`/order/${data.orderId}`);
   }
 
@@ -55,16 +86,23 @@ export function CheckoutView({
       {/* Left — payment method */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">Bayar dengan</p>
-        <div className="mt-3 flex items-center gap-3 rounded-2xl border-2 border-brand-blue bg-brand-blue/5 p-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-blue/15 text-brand-blue">
-            🏦
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-ink">Transfer Bank</p>
-            <p className="text-xs text-muted">
-              Setelah kirim order, kami tampilkan nomor rekening tujuan.
-            </p>
-          </div>
+        <div className="mt-3 space-y-3">
+          {qrisTersedia && (
+            <MetodeKartu
+              dipilih={metode === "qris"}
+              onPilih={() => setMetode("qris")}
+              ikon="📱"
+              judul="QRIS"
+              keterangan="Pindai dari aplikasi bank atau e-wallet apa pun. Paket aktif sendiri begitu pembayaran masuk."
+            />
+          )}
+          <MetodeKartu
+            dipilih={metode === "bank"}
+            onPilih={() => setMetode("bank")}
+            ikon="🏦"
+            judul="Transfer Bank"
+            keterangan="Setelah kirim order, kami tampilkan nomor rekening tujuan. Paket aktif setelah admin mengonfirmasi."
+          />
         </div>
 
         <div className="mt-6">
@@ -127,12 +165,49 @@ export function CheckoutView({
           disabled={submitting}
           className="mt-5 w-full rounded-full bg-gradient-to-br from-gold-500 to-gold-400 py-3 text-sm font-bold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
         >
-          {submitting ? "Memproses..." : "Beli"}
+          {submitting ? "Memproses..." : metode === "qris" ? "Bayar dengan QRIS" : "Beli"}
         </button>
         <p className="mt-3 text-center text-xs text-muted/80">
-          Pembayaran via transfer bank. Paket aktif setelah pembayaran dikonfirmasi admin.
+          {metode === "qris"
+            ? "Anda akan dibawa ke halaman QRIS. Paket aktif sendiri setelah pembayaran masuk."
+            : "Pembayaran via transfer bank. Paket aktif setelah pembayaran dikonfirmasi admin."}
         </p>
       </div>
     </div>
+  );
+}
+
+function MetodeKartu({
+  dipilih,
+  onPilih,
+  ikon,
+  judul,
+  keterangan,
+}: {
+  dipilih: boolean;
+  onPilih: () => void;
+  ikon: string;
+  judul: string;
+  keterangan: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPilih}
+      aria-pressed={dipilih}
+      className={`flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+        dipilih
+          ? "border-brand-blue bg-brand-blue/5"
+          : "border-navy-900/10 bg-transparent hover:border-navy-900/20"
+      }`}
+    >
+      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-blue/15 text-brand-blue">
+        {ikon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">{judul}</p>
+        <p className="text-xs text-muted">{keterangan}</p>
+      </div>
+    </button>
   );
 }

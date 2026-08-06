@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session-guards";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { coerceDuration, DURATION_LABELS } from "@/lib/plan-duration";
 import { AGENT_ENABLED } from "@/lib/features";
+import { amountForOrder, gatewayEnabled } from "@/lib/payments/orders";
 import { CheckoutView } from "@/components/order/CheckoutView";
 import { FreeActivateCard } from "@/components/order/FreeActivateCard";
 
@@ -74,6 +75,19 @@ export default async function OrderPage({
             priceLabel={tier.priceLabel}
             savingsLabel={tier.savingsLabel ?? null}
             features={tier.features}
+            // Dua syarat, dan keduanya diperiksa DI SINI supaya pilihan yang
+            // pasti gagal tidak pernah sampai ke layar: saklarnya menyala, dan
+            // paketnya punya harga angka (paket "Hubungi kami" tidak bisa
+            // ditagih otomatis).
+            qrisTersedia={
+              (await gatewayEnabled()) &&
+              (await amountForOrder({
+                product,
+                planName: tier.name,
+                durationMonths: months,
+                priceAmount: null,
+              })) !== null
+            }
           />
         )}
       </div>
