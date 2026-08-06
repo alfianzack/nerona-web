@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { labelPerangkat, pisahLabelPerangkat } from "@/lib/device-label";
 
 interface TokenRow {
   id: string;
@@ -31,6 +32,9 @@ export function ExtensionConnectPanel() {
   // dari `false` supaya build lama jatuh ke bukti daftar token saja, bukan
   // dinyatakan "tidak tersambung" atas dasar field yang memang tidak ada.
   const [extPunyaToken, setExtPunyaToken] = useState<boolean | null>(null);
+  // Id instalasi extension di browser ini, dari HADIR. `null` = build lama yang
+  // belum mengirimnya; tanpa id, penyambungan TIDAK mencabut apa pun.
+  const [instalasi, setInstalasi] = useState<string | null>(null);
   const [emailTersambung, setEmailTersambung] = useState("");
   // `null` = belum tahu (mis. sesudah muat ulang). Hanya `false` yang perlu
   // dikatakan, dan hanya di detik penyambungan; kartu lisensi di atas panel ini
@@ -75,6 +79,9 @@ export function ExtensionConnectPanel() {
       if (data.type === "HADIR") {
         setExtVersion(String(data.version || "?"));
         setExtPunyaToken(typeof data.tersambung === "boolean" ? data.tersambung : null);
+        setInstalasi(
+          typeof data.instalasi === "string" && data.instalasi.trim() ? data.instalasi.trim() : null
+        );
       }
       if (data.type === "TERSAMBUNG") {
         // Balasan datang — batas waktu tidak boleh menyusul dan menimpa
@@ -133,14 +140,21 @@ export function ExtensionConnectPanel() {
     setError("");
     setSibuk(true);
     let data: { ok?: boolean; id?: string; token?: string } | null = null;
+    // Id instalasi ikut DI DALAM label, bukan cuma di body: label satu-satunya
+    // kolom bebas di `ExtensionToken`, dan server mencabut token lama dengan
+    // mencocokkan akhiran label itu. Tanpa id di sini, `instalasi` di body tidak
+    // pernah cocok dengan apa pun dan setiap klik meninggalkan kredensial penuh
+    // yang tidak dipegang siapa pun.
+    const label = labelPerangkat(`Extension · ${namaBrowser()}`, instalasi);
     try {
       const res = await fetch("/api/extension/tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // `replace` mencabut token lama berlabel sama: extension cuma menyimpan
-        // SATU token, jadi tanpa ini setiap klik meninggalkan kredensial penuh
-        // yang tidak dipegang siapa pun dan tidak bisa dikenali pengguna.
-        body: JSON.stringify({ label: `Extension · ${namaBrowser()}`, replace: true }),
+        // Build extension lama tidak mengirim `instalasi` di HADIR. Ia tetap
+        // boleh menyambung; yang hilang cuma pencabutan token lamanya, dan
+        // token nganggur jauh lebih ringan daripada mencabut token perangkat
+        // lain yang masih dipakai.
+        body: JSON.stringify({ label, instalasi: instalasi ?? undefined }),
       });
       const body = await res.json().catch(() => null);
       if (res.ok && body?.ok) data = body;
@@ -327,15 +341,22 @@ export function ExtensionConnectPanel() {
         {tokens.length === 0 && (
           <li className="py-2 text-sm text-muted">Belum ada perangkat terhubung.</li>
         )}
-        {tokens.map((t) => (
+        {tokens.map((t) => {
+          // Id-nya turun ke baris keterangan, bukan hilang: dua Chrome di dua
+          // mesin menghasilkan nama yang identik, jadi tanpa id pengguna tidak
+          // punya cara tahu baris mana yang ia putuskan. Sebagai judul ia cuma
+          // deretan huruf tanpa arti.
+          const { nama, instalasi: idPerangkat } = pisahLabelPerangkat(t.label);
+          return (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
             <div className="min-w-0">
-              <p className="text-ink">{t.label || "Perangkat"}</p>
+              <p className="text-ink">{nama}</p>
               <p className="text-xs text-muted">
                 Dibuat {new Date(t.createdAt).toLocaleDateString("id-ID")}
                 {t.lastUsedAt
                   ? ` · dipakai ${new Date(t.lastUsedAt).toLocaleDateString("id-ID")}`
                   : " · belum dipakai"}
+                {idPerangkat ? ` · id ${idPerangkat}` : ""}
               </p>
             </div>
             <button
@@ -345,7 +366,8 @@ export function ExtensionConnectPanel() {
               Putuskan
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <details className="mt-4">

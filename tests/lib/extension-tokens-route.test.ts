@@ -32,14 +32,26 @@ describe("extension token routes", () => {
     // `id` travels back so the caller can revoke the token when the handover
     // it is about to attempt goes silent.
     expect(await res.json()).toEqual({ ok: true, id: "t1", token: "nrx_created" });
-    expect(issueExtensionToken).toHaveBeenCalledWith("u1", "Chrome", { replaceSameLabel: false });
+    // No installation id in the body — the manual-token escape hatch, where the
+    // user may be pasting the token into a second machine on purpose.
+    expect(issueExtensionToken).toHaveBeenCalledWith("u1", "Chrome", {
+      replaceInstallation: undefined,
+    });
   });
-  it("POST only replaces same-label tokens when the caller asks", async () => {
+  it("POST passes the installation id through so the old token can be replaced", async () => {
     (getServerSession as any).mockResolvedValue(authed);
     (issueExtensionToken as any).mockResolvedValue({ id: "t2", token: "nrx_x" });
-    await POST(postReq({ label: "Extension · Chrome", replace: true }));
+    await POST(postReq({ label: "Extension · Chrome · a3f9c1d2", instalasi: "a3f9c1d2" }));
+    expect(issueExtensionToken).toHaveBeenCalledWith("u1", "Extension · Chrome · a3f9c1d2", {
+      replaceInstallation: "a3f9c1d2",
+    });
+  });
+  it("POST drops a malformed installation id instead of forwarding it", async () => {
+    (getServerSession as any).mockResolvedValue(authed);
+    (issueExtensionToken as any).mockResolvedValue({ id: "t3", token: "nrx_y" });
+    await POST(postReq({ label: "Extension · Chrome", instalasi: " · " }));
     expect(issueExtensionToken).toHaveBeenCalledWith("u1", "Extension · Chrome", {
-      replaceSameLabel: true,
+      replaceInstallation: undefined,
     });
   });
   it("DELETE revokes scoped to the user, 404 when not found", async () => {

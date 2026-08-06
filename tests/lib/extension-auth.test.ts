@@ -49,19 +49,34 @@ describe("issueExtensionToken", () => {
 
   // The extension stores exactly ONE token, so without this every click of
   // "Hubungkan extension" leaves a live full-access credential nobody holds.
-  it("revokes same-label tokens first when asked to replace", async () => {
+  it("revokes the same INSTALLATION's tokens first when asked to replace", async () => {
     (prisma.extensionToken.create as any).mockResolvedValue({ id: "t2" });
     (prisma.extensionToken.deleteMany as any).mockResolvedValue({ count: 3 });
-    await issueExtensionToken("u1", "Extension · Chrome", { replaceSameLabel: true });
+    await issueExtensionToken("u1", "Extension · Chrome · a3f9c1d2", {
+      replaceInstallation: "a3f9c1d2",
+    });
     expect(prisma.extensionToken.deleteMany).toHaveBeenCalledWith({
-      where: { userId: "u1", label: "Extension · Chrome" },
+      where: { userId: "u1", label: { endsWith: " · a3f9c1d2" } },
     });
   });
 
-  // A missing label would match every unlabelled token of every device.
-  it("never mass-deletes when there is no label to match on", async () => {
+  // Scoping by label instead would be actively destructive: every Chrome on
+  // every machine produces the identical label, so the office PC's live token
+  // would die when the home PC connects, with nothing in the device list to
+  // say which one just lost access.
+  it("never revokes without an installation id", async () => {
     (prisma.extensionToken.create as any).mockResolvedValue({ id: "t3" });
-    await issueExtensionToken("u1", undefined, { replaceSameLabel: true });
+    await issueExtensionToken("u1", "Extension · Chrome");
+    await issueExtensionToken("u1", "Extension · Chrome", { replaceInstallation: "" });
+    expect(prisma.extensionToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  // The id reaches `endsWith` directly. A malformed one must never widen that
+  // filter — " · " alone matches every old-format label the user owns.
+  it("refuses a malformed installation id rather than matching loosely", async () => {
+    (prisma.extensionToken.create as any).mockResolvedValue({ id: "t4" });
+    await issueExtensionToken("u1", "Extension · Chrome", { replaceInstallation: "   " });
+    await issueExtensionToken("u1", "Extension · Chrome", { replaceInstallation: "NOT-HEX" });
     expect(prisma.extensionToken.deleteMany).not.toHaveBeenCalled();
   });
 });
