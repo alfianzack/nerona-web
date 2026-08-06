@@ -12,6 +12,7 @@ import { qrisSvg } from "@/lib/payments/qr";
 import { PaymentProofUpload } from "@/components/order/PaymentProofUpload";
 import { PilihanPembayaran } from "@/components/order/PilihanPembayaran";
 import { QrisPayButton } from "@/components/order/QrisPayButton";
+import { SegarkanSaatFokus } from "@/components/order/SegarkanSaatFokus";
 
 function statusBanner(status: string, hasProof: boolean) {
   if (status === "fulfilled") {
@@ -125,6 +126,13 @@ export default async function OrderDetailPage({
         </a>
       )}
 
+      {/*
+        Hanya selagi menunggu: order yang sudah lunas atau dibatalkan tidak punya
+        apa pun untuk disegarkan, dan pendengar yang tetap hidup di sana cuma
+        memicu permintaan tiap kali tab dipindah.
+      */}
+      {isPending && <SegarkanSaatFokus />}
+
       {isPending && (
         <PilihanPembayaran
           qrisTersedia={bisaQris}
@@ -165,7 +173,8 @@ export default async function OrderDetailPage({
                       className="font-medium text-brand-blue hover:underline"
                     >
                       Buka halaman bayar ↗
-                    </a>
+                    </a>{" "}
+                    — tutup tabnya setelah membayar, halaman ini memperbarui statusnya sendiri.
                   </p>
                 </>
               ) : (

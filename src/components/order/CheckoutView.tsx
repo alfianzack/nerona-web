@@ -55,20 +55,30 @@ export function CheckoutView({
     }
 
     if (metode === "qris") {
-      // Tagihannya dibuat SEKARANG supaya halaman order berikutnya sudah bisa
-      // menggambar QR-nya langsung — bukan menyuguhkan satu tombol lagi.
+      // Tagihannya disiapkan sekarang, lalu pengguna dibawa LANGSUNG ke halaman
+      // bayar — tanpa satu klik tambahan di halaman order.
       //
-      // Ordernya sudah ada di titik ini, jadi apa pun yang gagal di bawah tidak
-      // boleh membuat pengguna kehilangan jejaknya: setiap jalan keluar berakhir
-      // di halaman order itu, tempat QRIS dan transfer manual sama-sama ada.
+      // Tab yang sama, bukan jendela baru: `window.open` setelah rantai `await`
+      // diblokir browser karena sudah lepas dari gestur kliknya. Kembali ke sini
+      // lewat tombol back mendarat di halaman order, yang menyegarkan dirinya
+      // sendiri saat difokuskan.
+      //
+      // Ordernya sudah ada di titik ini, jadi setiap jalan keluar di bawah
+      // berakhir di halaman order — tempat QRIS bisa dicoba lagi dan transfer
+      // manual tetap tersedia. Tidak ada jalan buntu.
       try {
-        await fetch("/api/payments/create", {
+        const bayar = await fetch("/api/payments/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: data.orderId }),
         });
+        const hasil = await bayar.json().catch(() => null);
+        if (bayar.ok && hasil?.ok && hasil.linkUrl) {
+          window.location.href = hasil.linkUrl;
+          return;
+        }
       } catch {
-        /* jaringan putus — halaman order tetap menyediakan tombol coba lagi */
+        /* jaringan putus — jatuh ke halaman order di bawah */
       }
       router.push(`/order/${data.orderId}?bayar=qris`);
       return;
