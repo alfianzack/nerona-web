@@ -7,6 +7,8 @@ interface Keadaan {
   /** Kunci API sudah terpasang di server. */
   configured: boolean;
   sandbox: boolean;
+  /** ISO waktu webhook terakhir yang lolos verifikasi; `null` = belum pernah. */
+  webhookLastOk: string | null;
 }
 
 /**
@@ -28,7 +30,12 @@ export function AdminPaymentGatewayPanel() {
       setGalat("Gagal memuat status pembayaran.");
       return;
     }
-    setKeadaan({ enabled: data.enabled, configured: data.configured, sandbox: data.sandbox });
+    setKeadaan({
+      enabled: data.enabled,
+      configured: data.configured,
+      sandbox: data.sandbox,
+      webhookLastOk: data.webhookLastOk ?? null,
+    });
   }
 
   useEffect(() => {
@@ -117,6 +124,35 @@ export function AdminPaymentGatewayPanel() {
               Kunci API belum terpasang di server. Isi <code>SUMOPOD_PAY_API_BASE</code>,{" "}
               <code>SUMOPOD_PAY_API_KEY</code>, dan <code>SUMOPOD_PAY_WEBHOOK_SECRET</code> di
               environment, lalu deploy ulang. Saklar ini tidak bisa dinyalakan sebelum itu.
+            </p>
+          )}
+
+          {/*
+            Syarat yang paling mudah terlewat, dan akibatnya paling mahal:
+            QRIS yang menyala sementara webhook masih ditolak berarti pelanggan
+            membayar sungguhan dan paketnya tidak pernah aktif — karena yang
+            mengaktifkannya adalah webhook, bukan pembayarannya.
+          */}
+          {keadaan.configured && (
+            <p
+              className={`mt-3 rounded-xl p-3 text-xs ring-1 ${
+                keadaan.webhookLastOk
+                  ? "bg-emerald-500/10 text-ink ring-emerald-500/30"
+                  : "bg-rose-500/10 text-ink ring-rose-500/30"
+              }`}
+            >
+              {keadaan.webhookLastOk ? (
+                <>
+                  Webhook terverifikasi terakhir{" "}
+                  <b>{new Date(keadaan.webhookLastOk).toLocaleString("id-ID")}</b>.
+                </>
+              ) : (
+                <>
+                  <b>Belum ada satu webhook pun yang lolos verifikasi.</b> Kirim{" "}
+                  <code>payment.test</code> dari dashboard SumoPod lebih dulu. Menyalakan QRIS
+                  sekarang berarti pelanggan bisa membayar tanpa paketnya pernah aktif.
+                </>
+              )}
             </p>
           )}
 

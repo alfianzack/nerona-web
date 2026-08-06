@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handlePaymentEvent } from "@/lib/payments/orders";
+import { catatWebhookTerverifikasi, handlePaymentEvent } from "@/lib/payments/orders";
 import { parsePaymentEvent, verifyWebhookSignature } from "@/lib/payments/sumopod";
 
 /**
@@ -54,6 +54,12 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: false }, { status: 401 });
   }
+
+  // Dicatat SEBELUM isinya diproses, dan sengaja begitu: yang ingin dijawab
+  // panel admin adalah "apakah SumoPod bisa mencapai kita dengan rahasia yang
+  // benar", bukan "apakah event terakhir berhasil dipenuhi". Keduanya keadaan
+  // berbeda, dan yang pertama itulah syarat sebelum QRIS boleh dinyalakan.
+  await catatWebhookTerverifikasi();
 
   const event = parsePaymentEvent(rawBody);
   if (!event) return NextResponse.json({ ok: false, reason: "malformed" }, { status: 400 });

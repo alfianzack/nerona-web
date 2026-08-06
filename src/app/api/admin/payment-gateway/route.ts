@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { gatewayEnabled, setGatewayEnabled } from "@/lib/payments/orders";
+import { gatewayEnabled, setGatewayEnabled, webhookTerakhirOk } from "@/lib/payments/orders";
 import { sumopodConfig } from "@/lib/payments/sumopod";
 
 /**
@@ -21,6 +21,10 @@ export async function GET() {
     ok: true,
     enabled: await gatewayEnabled(),
     configured: cfg !== null,
+    // `null` = belum pernah satu webhook pun lolos verifikasi. Menyalakan QRIS
+    // dalam keadaan itu berarti pelanggan membayar sungguhan dan paketnya tidak
+    // pernah aktif, karena yang mengaktifkannya adalah webhook.
+    webhookLastOk: await webhookTerakhirOk(),
     // Nilainya tidak pernah ikut dikirim — cuma jawaban ya/tidak atas
     // pertanyaan yang perlu dijawab: ini menagih uang sungguhan atau tidak.
     sandbox: cfg !== null && cfg.baseUrl.includes("sandbox"),

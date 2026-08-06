@@ -11,6 +11,30 @@ import { createPayment, sumopodConfig, type PaymentEvent } from "@/lib/payments/
 export const GATEWAY_SETTING_KEY = "payment_gateway_enabled";
 
 /**
+ * Kapan terakhir kali sebuah webhook LOLOS verifikasi tanda tangan.
+ *
+ * Bukan hiasan: menyalakan QRIS sementara webhook masih ditolak berarti
+ * pelanggan membayar sungguhan dan paketnya tidak pernah aktif — karena yang
+ * mengaktifkannya adalah webhook. Sebelum ini tidak ada apa pun di sisi kita
+ * yang bisa menjawab "apakah jalur itu pernah bekerja sekali pun".
+ */
+export const WEBHOOK_LAST_OK_KEY = "payment_webhook_last_ok";
+
+export async function catatWebhookTerverifikasi(waktu: Date = new Date()): Promise<void> {
+  const value = waktu.toISOString();
+  await prisma.setting.upsert({
+    where: { key: WEBHOOK_LAST_OK_KEY },
+    create: { key: WEBHOOK_LAST_OK_KEY, value },
+    update: { value },
+  });
+}
+
+export async function webhookTerakhirOk(): Promise<string | null> {
+  const row = await prisma.setting.findUnique({ where: { key: WEBHOOK_LAST_OK_KEY } });
+  return row?.value?.trim() || null;
+}
+
+/**
  * Saklar di `Setting`, bukan env: gunanya supaya owner bisa mematikan QRIS
  * dalam satu klik tanpa deploy kalau gateway-nya bermasalah — semua pelanggan
  * langsung jatuh ke transfer manual yang memang tetap ada. Bawaannya MATI:

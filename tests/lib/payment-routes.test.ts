@@ -10,9 +10,11 @@ vi.mock("next-auth", () => ({
 }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/lib/base-url", () => ({ baseUrl: () => "https://nerona-web.vercel.app" }));
+const catatWebhookMock = vi.fn();
 vi.mock("@/lib/payments/orders", () => ({
   startPaymentForOrder: (...a: unknown[]) => startPaymentForOrderMock(...a),
   handlePaymentEvent: (...a: unknown[]) => handlePaymentEventMock(...a),
+  catatWebhookTerverifikasi: (...a: unknown[]) => catatWebhookMock(...a),
 }));
 
 import { POST as CREATE } from "@/app/api/payments/create/route";
@@ -147,6 +149,18 @@ describe("POST /api/webhooks/sumopod", () => {
     const res = await WEBHOOK(postWebhook(EVENT, { "svix-signature": "v1,bukantandatangan" }));
     expect(res.status).toBe(401);
     expect(handlePaymentEventMock).not.toHaveBeenCalled();
+    // Yang ditolak tidak boleh tercatat sebagai bukti jalur webhook bekerja —
+    // panel admin memakai catatan itu untuk memutuskan QRIS boleh dinyalakan.
+    expect(catatWebhookMock).not.toHaveBeenCalled();
+  });
+
+  // Dicatat walau isinya nanti gagal diproses: yang dibuktikan catatan ini
+  // adalah "SumoPod bisa mencapai kita dengan rahasia yang benar", bukan
+  // "event terakhir berhasil dipenuhi".
+  it("mencatat verifikasi yang lolos, termasuk saat pemrosesan gagal", async () => {
+    handlePaymentEventMock.mockResolvedValue({ ok: false, reason: "unknown_reference" });
+    expect((await WEBHOOK(postWebhook(EVENT))).status).toBe(404);
+    expect(catatWebhookMock).toHaveBeenCalled();
   });
 
   // Badan mentah yang dipakai untuk HMAC harus badan yang SAMA dengan yang

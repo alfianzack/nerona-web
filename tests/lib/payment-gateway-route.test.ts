@@ -9,9 +9,11 @@ vi.mock("next-auth", () => ({
   getServerSession: (...a: unknown[]) => getServerSessionMock(...a),
 }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
+const webhookTerakhirOkMock = vi.fn();
 vi.mock("@/lib/payments/orders", () => ({
   gatewayEnabled: () => gatewayEnabledMock(),
   setGatewayEnabled: (...a: unknown[]) => setGatewayEnabledMock(...a),
+  webhookTerakhirOk: () => webhookTerakhirOkMock(),
 }));
 vi.mock("@/lib/payments/sumopod", () => ({ sumopodConfig: () => sumopodConfigMock() }));
 
@@ -28,6 +30,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   gatewayEnabledMock.mockResolvedValue(false);
   sumopodConfigMock.mockReturnValue(null);
+  webhookTerakhirOkMock.mockResolvedValue(null);
 });
 
 describe("/api/admin/payment-gateway", () => {
@@ -61,6 +64,18 @@ describe("/api/admin/payment-gateway", () => {
     // Kunci dan alamat tidak pernah ikut dikirim ke klien.
     expect(JSON.stringify(body)).not.toContain("rahasia");
     expect(JSON.stringify(body)).not.toContain("sumopod.com");
+  });
+
+  // Keadaan yang paling mahal kalau tidak terlihat: QRIS menyala sementara
+  // webhook belum pernah lolos sekali pun berarti pelanggan bisa membayar
+  // tanpa paketnya pernah aktif.
+  it("melaporkan kapan webhook terakhir lolos verifikasi", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: "admin" } });
+
+    expect((await (await GET()).json()).webhookLastOk).toBeNull();
+
+    webhookTerakhirOkMock.mockResolvedValue("2026-08-06T09:13:21.000Z");
+    expect((await (await GET()).json()).webhookLastOk).toBe("2026-08-06T09:13:21.000Z");
   });
 
   it("live saat base URL bukan sandbox", async () => {
