@@ -2,6 +2,7 @@ import { AdminPricingPanel } from "@/components/admin/AdminPricingPanel";
 import { AdminBankSettingsPanel } from "@/components/admin/AdminBankSettingsPanel";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminPlanPointsPanel } from "@/components/admin/AdminPlanPointsPanel";
+import { AdminDownloadSettingsPanel } from "@/components/admin/AdminDownloadSettingsPanel";
 
 export default function AdminSettingsPage() {
   return (
@@ -9,6 +10,7 @@ export default function AdminSettingsPage() {
       <AdminBankSettingsPanel />
       <AdminPricingPanel />
       <AdminPlanPointsPanel />
+      <AdminDownloadSettingsPanel />
       <AdminAiSettingsPanel />
     </div>
   );
