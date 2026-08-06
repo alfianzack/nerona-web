@@ -3,6 +3,7 @@ import { AdminBankSettingsPanel } from "@/components/admin/AdminBankSettingsPane
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminPlanPointsPanel } from "@/components/admin/AdminPlanPointsPanel";
 import { AdminDownloadSettingsPanel } from "@/components/admin/AdminDownloadSettingsPanel";
+import { AdminPaymentGatewayPanel } from "@/components/admin/AdminPaymentGatewayPanel";
 
 /**
  * Kolom CSS, bukan grid.
@@ -25,6 +26,9 @@ function Sel({ children }: { children: React.ReactNode }) {
 export default function AdminSettingsPage() {
   return (
     <div className="columns-1 gap-4 lg:columns-2">
+      <Sel>
+        <AdminPaymentGatewayPanel />
+      </Sel>
       <Sel>
         <AdminBankSettingsPanel />
       </Sel>

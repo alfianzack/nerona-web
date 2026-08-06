@@ -22,6 +22,15 @@ export async function gatewayEnabled(): Promise<boolean> {
   return nilai === "1" || nilai === "true" || nilai === "on";
 }
 
+export async function setGatewayEnabled(nyala: boolean): Promise<void> {
+  const value = nyala ? "1" : "0";
+  await prisma.setting.upsert({
+    where: { key: GATEWAY_SETTING_KEY },
+    create: { key: GATEWAY_SETTING_KEY, value },
+    update: { value },
+  });
+}
+
 export interface OrderForPricing {
   product: string;
   planName: string;
