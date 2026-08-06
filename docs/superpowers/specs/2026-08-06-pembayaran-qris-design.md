@@ -81,9 +81,24 @@ lebih buruk, selalu lolos**:
   cocok.
 - **Bandingkan dengan `timingSafeEqual`**, bukan `===`.
 
-Selain tanda tangan, **timestamp yang lebih tua dari 5 menit ditolak**. Tanpa
-itu, satu permintaan sah yang pernah terekam bisa diputar ulang kapan saja —
-dan tanda tangannya akan tetap cocok selamanya.
+Selain tanda tangan, timestamp di luar jendela toleransi ditolak.
+
+**Koreksi 2026-08-06 — jendelanya 24 jam, bukan 5 menit seperti yang pertama
+ditulis di sini.** Kirim ulang manual dari dashboard adalah satu-satunya jalan
+pemulihan yang SumoPod sediakan, dan kiriman ulang membawa timestamp aslinya.
+Jendela 5 menit menolak hampir setiap pemulihan — manusia harus menyadari
+kegagalannya lebih dulu, dan itu jarang terjadi dalam lima menit. Penjagaan yang
+mematikan satu-satunya jalan pemulihan bukan penjagaan.
+
+Yang hilang karena melebarkannya kecil: penjaga sesungguhnya terhadap pemutaran
+ulang adalah **idempotensi** di bagian 6, bukan jam ini. Memutar ulang
+`payment.completed` yang sah cuma menghasilkan `note: "already"`.
+
+**Nilai env dibersihkan dari tanda kutip dan spasi sebelum dipakai.** Berkas
+`.env` menyimpan nilai di antara tanda kutip dan dotenv membuangnya saat
+membaca; dashboard Vercel menyimpan apa adanya. Nilai yang ditempel lengkap
+dengan kutipnya menghasilkan rahasia yang salah, dan satu-satunya gejalanya
+adalah 401 yang tidak bisa dibedakan dari tanda tangan palsu.
 
 ## 5. Model `Payment`
 

@@ -144,6 +144,43 @@ describe("verifyWebhookSignature", () => {
     });
   });
 
+  // Dashboard Vercel menyimpan nilai apa adanya, sementara berkas .env
+  // menyimpannya di antara tanda kutip. Nilai yang ditempel lengkap dengan
+  // kutipnya menghasilkan 401 yang tidak bisa dibedakan dari tanda tangan
+  // palsu — gejala yang persis sama, sebab yang sama sekali berbeda.
+  it("menerima rahasia yang masih terbawa tanda kutip atau spasi", () => {
+    const sig = `v1,${tandaTangan("msg_1", TS, BODY)}`;
+    for (const varian of [`"${SECRET}"`, `'${SECRET}'`, `  ${SECRET}  `, `"  ${SECRET}  "`]) {
+      expect(
+        verifyWebhookSignature({
+          secret: varian,
+          svixId: "msg_1",
+          svixTimestamp: TS,
+          svixSignature: sig,
+          rawBody: BODY,
+          now: NOW,
+        })
+      ).toEqual({ ok: true });
+    }
+  });
+
+  // Kirim ulang manual dari dashboard adalah SATU-SATUNYA jalan pemulihan yang
+  // SumoPod sediakan, dan ia membawa timestamp aslinya. Jendela sempit menolak
+  // hampir setiap pemulihan — manusia butuh waktu untuk menyadarinya dulu.
+  it("menerima kiriman ulang yang berjam-jam kemudian", () => {
+    const duaJamLalu = String(Math.floor((NOW.getTime() - 2 * 60 * 60 * 1000) / 1000));
+    expect(
+      verifyWebhookSignature({
+        secret: SECRET,
+        svixId: "msg_1",
+        svixTimestamp: duaJamLalu,
+        svixSignature: `v1,${tandaTangan("msg_1", duaJamLalu, BODY)}`,
+        rawBody: BODY,
+        now: NOW,
+      })
+    ).toEqual({ ok: true });
+  });
+
   it("menolak header tanpa awalan versi", () => {
     // "v1,<sig>" — tanpa koma, tidak ada kandidat yang bisa diambil.
     const res = verifyWebhookSignature({
@@ -222,6 +259,18 @@ describe("sumopodConfig", () => {
   it("membuang garis miring di ujung base URL", () => {
     process.env.SUMOPOD_PAY_API_BASE = "https://api-pay-sandbox.sumopod.com/";
     process.env.SUMOPOD_PAY_API_KEY = "kunci";
+    expect(sumopodConfig()).toEqual({
+      baseUrl: "https://api-pay-sandbox.sumopod.com",
+      apiKey: "kunci",
+    });
+  });
+
+  // Bahaya yang sama dengan rahasia webhook: kutip yang ikut tersalin dari
+  // berkas .env ke dashboard Vercel. Di sini akibatnya kunci API salah dan
+  // gateway membalas 401 — sekali lagi tanpa gejala yang menunjuk sebabnya.
+  it("membuang tanda kutip yang ikut tersalin ke dashboard", () => {
+    process.env.SUMOPOD_PAY_API_BASE = '"https://api-pay-sandbox.sumopod.com"';
+    process.env.SUMOPOD_PAY_API_KEY = '"kunci"';
     expect(sumopodConfig()).toEqual({
       baseUrl: "https://api-pay-sandbox.sumopod.com",
       apiKey: "kunci",

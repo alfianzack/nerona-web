@@ -15,12 +15,41 @@ export const QRIS_METHOD_CODE = "QRIS";
 export const MAX_EXPIRES_IN_HOURS = 24;
 
 /**
- * Permintaan yang timestamp-nya lebih tua dari ini ditolak walau tanda
- * tangannya cocok. Tanpa batas ini, satu permintaan sah yang pernah terekam
- * bisa diputar ulang kapan saja — dan tanda tangannya akan tetap cocok
- * selamanya, karena HMAC tidak tahu waktu.
+ * Permintaan yang timestamp-nya di luar jendela ini ditolak walau tanda
+ * tangannya cocok.
+ *
+ * **24 jam, bukan 5 menit seperti rancangan awal.** Satu-satunya jalan
+ * pemulihan yang SumoPod sediakan saat webhook gagal adalah kirim ulang manual
+ * dari dashboard, dan kiriman ulang membawa timestamp aslinya. Jendela 5 menit
+ * berarti setiap pemulihan yang dilakukan lebih dari lima menit setelah
+ * kejadian — yaitu hampir semuanya, karena manusia harus menyadarinya dulu —
+ * ditolak diam-diam sebagai "stale". Penjagaan yang mematikan satu-satunya
+ * jalan pemulihan bukan penjagaan.
+ *
+ * Yang hilang karena melebarkannya kecil: penjaga sesungguhnya terhadap
+ * pemutaran ulang adalah idempotensi di `handlePaymentEvent`, bukan jam ini.
+ * Memutar ulang `payment.completed` yang sah cuma menghasilkan
+ * `{ ok: true, note: "already" }` tanpa menyentuh apa pun.
  */
-export const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
+export const SIGNATURE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Membuang spasi dan tanda kutip yang ikut tersalin.
+ *
+ * Berkas `.env` menyimpan nilai di antara tanda kutip dan dotenv membuangnya
+ * saat membaca — tapi dashboard Vercel menyimpan apa adanya. Nilai yang
+ * ditempel lengkap dengan kutipnya menghasilkan rahasia yang salah tanpa satu
+ * pun gejala selain 401 yang tidak bisa dibedakan dari tanda tangan palsu.
+ */
+function bersihkan(nilai: string | undefined): string {
+  const teks = (nilai || "").trim();
+  const berkutip =
+    teks.length >= 2 &&
+    ((teks.startsWith('"') && teks.endsWith('"')) || (teks.startsWith("'") && teks.endsWith("'")));
+  return berkutip ? teks.slice(1, -1).trim() : teks;
+}
+
+export { bersihkan as bersihkanNilaiEnv };
 
 export interface SumoPodConfig {
   baseUrl: string;
@@ -39,8 +68,8 @@ export interface SumoPodConfig {
  * endpoint pembayaran, dan gagalnya berupa 401 yang menyesatkan.
  */
 export function sumopodConfig(): SumoPodConfig | null {
-  const baseUrl = (process.env.SUMOPOD_PAY_API_BASE || "").trim().replace(/\/+$/, "");
-  const apiKey = (process.env.SUMOPOD_PAY_API_KEY || "").trim();
+  const baseUrl = bersihkan(process.env.SUMOPOD_PAY_API_BASE).replace(/\/+$/, "");
+  const apiKey = bersihkan(process.env.SUMOPOD_PAY_API_KEY);
   if (!baseUrl || !apiKey) return null;
   return { baseUrl, apiKey };
 }
@@ -159,7 +188,8 @@ export type VerifyResult =
  * apa pun di permintaan itu yang bisa kita tolak.
  */
 export function verifyWebhookSignature(input: VerifyInput): VerifyResult {
-  const { secret, svixId, svixTimestamp, svixSignature, rawBody } = input;
+  const { svixId, svixTimestamp, svixSignature, rawBody } = input;
+  const secret = bersihkan(input.secret);
   if (!secret || !svixId || !svixTimestamp || !svixSignature) {
     return { ok: false, reason: "missing_headers" };
   }
