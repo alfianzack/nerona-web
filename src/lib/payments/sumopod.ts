@@ -9,7 +9,21 @@ import { createHmac, timingSafeEqual } from "crypto";
  * basis data dan tanpa HTTP.
  */
 
-export const QRIS_METHOD_CODE = "QRIS";
+/**
+ * `payment_method_type_code` untuk QRIS.
+ *
+ * **Huruf kecil `qris`, bukan `QRIS`.** Contoh curl di dokumentasi menulis
+ * `"QRIS"`, tapi komentarnya sendiri berkata "get it from the Supported Payment
+ * Methods list" — dan daftar itu menampilkan kodenya sebagai `qris`. Payload
+ * webhook mereka juga memakai `"payment_method": "qris"`. Jadi yang di contoh
+ * itu nama metodenya, bukan kodenya.
+ *
+ * Bisa ditimpa env supaya salah baca di sini tidak menuntut deploy kode:
+ * `SUMOPOD_PAY_METHOD_CODE`.
+ */
+export function qrisMethodCode(): string {
+  return bersihkan(process.env.SUMOPOD_PAY_METHOD_CODE) || "qris";
+}
 
 /** Batas maksimal yang diterima SumoPod. Lebih dari ini ditolak di sisi mereka. */
 export const MAX_EXPIRES_IN_HOURS = 24;
@@ -113,7 +127,7 @@ export async function createPayment(
         amount: input.amount,
         currency: "IDR",
         expires_in_hours: jam,
-        payment_method_type_code: QRIS_METHOD_CODE,
+        payment_method_type_code: qrisMethodCode(),
         ...(input.successUrl ? { success_return_url: input.successUrl } : {}),
         ...(input.cancelUrl ? { cancel_return_url: input.cancelUrl } : {}),
       }),

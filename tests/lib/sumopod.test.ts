@@ -317,8 +317,26 @@ describe("createPayment", () => {
       order_id: "abc-1",
       amount: 29000,
       currency: "IDR",
-      payment_method_type_code: "QRIS",
+      // Huruf kecil: daftar Supported Payment Methods di dashboard menampilkan
+      // kodenya sebagai `qris`, dan payload webhook mereka juga memakai itu.
+      // Yang tertulis "QRIS" di contoh curl adalah nama metodenya.
+      payment_method_type_code: "qris",
     });
+  });
+
+  it("kode metode bisa ditimpa env tanpa deploy kode", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(BALASAN), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.SUMOPOD_PAY_METHOD_CODE = "QRIS_STATIC";
+
+    await createPayment(cfg, { reference: "abc-1", amount: 29000 });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).payment_method_type_code).toBe(
+      "QRIS_STATIC"
+    );
+    delete process.env.SUMOPOD_PAY_METHOD_CODE;
   });
 
   it("membatasi expires_in_hours ke 24", async () => {

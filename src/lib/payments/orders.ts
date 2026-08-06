@@ -152,6 +152,16 @@ export async function startPaymentForOrder(
   });
 
   if (!hasil.ok) {
+    // Dicatat DI SINI, satu-satunya tempat yang memegang sebab sesungguhnya.
+    // Rutenya sengaja cuma membalas `gateway_error` tanpa detail — pesan galat
+    // mentah dari pihak ketiga tidak boleh sampai ke browser pelanggan — jadi
+    // tanpa baris ini 502 itu buta total. `detail` memuat status HTTP dan badan
+    // balasan SumoPod, yang menyebut apakah masalahnya kunci, jumlah, atau kode
+    // metode.
+    console.warn(
+      `[bayar sumopod] gagal membuat pembayaran reference=${reference} ` +
+        `amount=${amount} jenis=${hasil.reason} detail=${hasil.detail}`
+    );
     await prisma.payment.update({ where: { id: baris.id }, data: { status: "failed" } });
     return { ok: false, reason: "gateway_error", detail: hasil.detail };
   }
