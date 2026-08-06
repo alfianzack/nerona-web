@@ -1,8 +1,15 @@
-# Membangun ulang public/nerona-metadata.zip dari repo extension.
+# Membangun ZIP extension dari repo nerona_medata, untuk DIUNGGAH ke rilis.
 #
-# Jalankan setiap kali nerona_medata berubah. ZIP itu artefak yang ikut di-commit
-# (Vercel tidak punya akses ke repo extension saat build), jadi kalau skrip ini
-# tidak dijalankan, user mengunduh versi lama tanpa tanda apa pun.
+# Hasilnya masuk dist\ yang di-gitignore, bukan public\ yang ikut di-commit:
+# ZIP-nya sekarang aset rilis di nerona-hub-releases, dan halaman /unduh
+# menautinya lewat Setting `extension_download_url`.
+#
+# Setelah skrip ini jalan, ADA DUA LANGKAH MANUAL yang tidak bisa dilewati:
+#   1. unggah ZIP-nya sebagai aset rilis di nerona-hub-releases;
+#   2. perbarui `extension_download_url` DAN `extension_version` di
+#      /admin/pengaturan.
+# Melewatkan nomor 2 membuat pengguna mengunduh versi lama tanpa tanda apa pun -
+# dan peringatan "versi terpasang X, tersedia Y" di halaman unduh ikut bohong.
 #
 #   powershell -ExecutionPolicy Bypass -File scripts/build-extension.ps1
 #
@@ -16,7 +23,10 @@
 # popup.html, bukan dari manifest.
 param(
   [string]$Source = "..\nerona_medata",
-  [string]$Output = "public\nerona-metadata.zip",
+  # Kosong = dist\nerona-metadata-<versi manifest>.zip. Versinya ikut di nama
+  # berkas supaya yang terunggah ke rilis tidak pernah tertukar dengan build lain
+  # yang masih menganggur di folder yang sama.
+  [string]$Output = "",
   # Semua berkas dibungkus dalam satu folder ini. Tanpa pembungkus, "Extract Here"
   # di 7-Zip/WinRAR menghambur 26 berkas ke folder yang sedang dibuka, dan user
   # kehilangan jejak mana yang harus dipilih saat Load unpacked.
@@ -30,9 +40,15 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path $PSScriptRoot -Parent
 $src = Resolve-Path (Join-Path $root $Source)
-$outPath = Join-Path $root $Output
 
 $manifest = Get-Content (Join-Path $src "manifest.json") -Raw | ConvertFrom-Json
+$version = [string]$manifest.version
+if (-not $version) { throw "manifest.json tidak punya version." }
+
+if (-not $Output) { $Output = "dist" + [System.IO.Path]::DirectorySeparatorChar + "nerona-metadata-$version.zip" }
+$outPath = Join-Path $root $Output
+$outDir = Split-Path $outPath -Parent
+if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
 
 $files = New-Object System.Collections.Generic.List[string]
 $files.Add("manifest.json")
@@ -83,3 +99,7 @@ $fs.Dispose()
 
 $sizeKb = (Get-Item $outPath).Length / 1KB
 Write-Output ("OK: {0} berkas, {1:N0} KB -> {2}" -f $files.Count, $sizeKb, $Output)
+Write-Output ""
+Write-Output "Belum selesai. Dua langkah manual:"
+Write-Output ("  1. unggah berkas ini sebagai aset rilis di nerona-hub-releases")
+Write-Output ("  2. di /admin/pengaturan: extension_download_url = URL aset itu, extension_version = {0}" -f $version)

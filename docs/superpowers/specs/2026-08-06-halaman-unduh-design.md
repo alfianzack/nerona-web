@@ -148,23 +148,28 @@ masuk** — memperbaruinya bagian dari pekerjaan ini, bukan kerusakan.
 
 ## 8. Urutan cutover
 
-`public/nerona-metadata.zip` dihapus **paling akhir**, bukan bersamaan dengan
-halaman baru:
+**Koreksi terhadap urutan yang pertama ditulis di spec ini:** kunci `Setting`
+tidak bisa diisi sebelum deploy, karena panel admin yang mengisinya baru ada
+sesudah deploy. Jadi jendela "Belum tersedia" itu tidak bisa dihilangkan, hanya
+dipendekkan — dan justru itu alasan keadaan tersebut harus jujur, bukan 404.
 
-1. Owner membuat rilis `v0.1.0` di `nerona-hub-releases`, mengunggah tiga aset:
-   `.msi`, `.dmg`, dan `nerona-metadata.zip` hasil build terbaru.
-2. Owner mengisi lima kunci di `/admin/pengaturan` dan mengklik "Uji" di
-   ketiganya.
-3. Baru setelah itu ZIP dihapus dari git, `scripts/build-extension.ps1` menulis
-   ke folder yang di-gitignore, dan `.msi`/`.dmg` yang sekarang menganggur di
-   `public/` (masih untracked) dihapus dari disk.
+1. Owner mengunggah tiga aset ke rilis di `nerona-hub-releases`: `.msi`, `.dmg`,
+   dan `dist/nerona-metadata-<versi>.zip` hasil `scripts/build-extension.ps1`.
+   Ini bisa dan sebaiknya dilakukan **sebelum** deploy.
+2. Deploy `nerona-web`. Sejak titik ini sampai langkah 3 selesai, halaman
+   `/unduh` menampilkan tiga tombol "Belum tersedia".
+3. Owner mengisi lima kunci di `/admin/pengaturan` dan mengklik **Uji** di setiap
+   kolom URL.
 
-Dibalik urutannya, ada jendela waktu ketika ZIP sudah hilang dari `public/` tapi
-`Setting` belum diisi — dan extension tidak punya jalur unduh di mana pun.
+`public/nerona-metadata.zip` dihapus dari git dalam pekerjaan ini, dan
+`scripts/build-extension.ps1` sekarang menulis ke `dist/` yang di-gitignore.
+Sebelum langkah 1 dijalankan, ZIP itu tidak punya rumah di mana pun — itulah
+kenapa langkah 1 mendahului deploy, bukan mengikutinya.
 
 `public/*.msi`, `public/*.dmg`, dan `public/*.zip` masuk `.gitignore` supaya
 berkas 22 MB tidak pernah masuk riwayat git secara tidak sengaja. Sekali
-ter-commit, riwayatnya tidak bisa disusutkan lagi.
+ter-commit, riwayatnya tidak bisa disusutkan lagi. `.msi`/`.dmg` yang sekarang
+menganggur di `public/` boleh dihapus dari disk setelah diunggah ke rilis.
 
 ## 9. Prasyarat: perubahan id instalasi yang setengah jalan
 
