@@ -6,6 +6,7 @@ import { coerceDuration } from "@/lib/plan-duration";
 import { creditPlanPoints, hasEverReceivedPlanGrant } from "@/lib/plan-points";
 import { creditTopupPoints } from "@/lib/points";
 import { getTopupPackages, topupLabel } from "@/lib/topup";
+import { AGENT_ENABLED } from "@/lib/features";
 
 export type Product = "metadata" | "agent";
 
@@ -147,6 +148,19 @@ export async function submitOrder(
   durationMonths?: unknown
 ): Promise<SubmitOrderResult> {
   if (!isProduct(product)) {
+    return { ok: false, reason: "invalid_product" };
+  }
+  // Agent sedang disembunyikan, jadi order baru untuknya ditolak — termasuk
+  // aktivasi Free, yang di bawah ini melompat langsung ke activateFreeAgent.
+  //
+  // Cek terpisah, bukan dijadikan bagian isProduct: isProduct adalah type
+  // guard (`value is Product`), dan membuatnya menjawab "false" untuk sebuah
+  // Product yang sah akan membuat tipenya berbohong.
+  //
+  // Jalur PEMENUHAN order tidak disentuh: order agent yang sudah masuk harus
+  // tetap bisa diverifikasi admin, kalau tidak uang pelanggan tersangkut di
+  // order pending.
+  if (product === "agent" && !AGENT_ENABLED) {
     return { ok: false, reason: "invalid_product" };
   }
   if (!isKnownPlan(planName)) {
@@ -418,7 +432,15 @@ export async function cancelOrderRequest(orderId: string): Promise<CancelOrderRe
 
 export async function listPendingRenewals(userId: string) {
   return prisma.orderRequest.findMany({
-    where: { userId, status: "pending", isRenewal: true },
+    where: {
+      userId,
+      status: "pending",
+      isRenewal: true,
+      // Tagihan perpanjangan Agent tidak ditampilkan selama produknya
+      // disembunyikan — memintanya membayar sesuatu yang tidak bisa dia lihat
+      // di mana pun lebih buruk daripada tidak menagih.
+      ...(AGENT_ENABLED ? {} : { product: "metadata" }),
+    },
     orderBy: { createdAt: "desc" },
     select: { id: true, product: true, planName: true, proofUploadedAt: true },
   });

@@ -7,13 +7,16 @@ export function FaqSection({
   items,
   title = "Pertanyaan umum",
   className = "bg-surface",
+  id,
 }: {
   items: FaqItem[];
   title?: string;
   className?: string;
+  /** Anchor target, so the top nav can link to this section. */
+  id?: string;
 }) {
   return (
-    <section className={`px-6 py-20 ${className}`}>
+    <section id={id} className={`px-6 py-20 ${className}`}>
       <div className="mx-auto max-w-5xl">
         <h2 className="text-balance text-center text-3xl font-semibold tracking-tight text-ink">
           {title}

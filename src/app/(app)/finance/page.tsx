@@ -5,6 +5,7 @@ import { getBalance, listTransactions } from "@/lib/points";
 import { listPendingRenewals } from "@/lib/orders";
 import { isAgentPlanExpired } from "@/lib/agent/admin";
 import { getTopupPackages, perPointLabel } from "@/lib/topup";
+import { AGENT_ENABLED } from "@/lib/features";
 import { formatRupiah } from "@/lib/money";
 import { TopupCard } from "@/components/finance/TopupCard";
 
@@ -44,10 +45,15 @@ export default async function FinancePage() {
       orderBy: { createdAt: "desc" },
       select: { id: true, amount: true, note: true, courseId: true, createdAt: true },
     }),
-    prisma.agentProfile.findUnique({
-      where: { userId: session.user.id },
-      select: { plan: true, status: true, planExpiresAt: true },
-    }),
+    // Di-null-kan saat Agent disembunyikan, bukan disaring di JSX: satu tempat
+    // memutuskan, dan setiap pemakaian agentProfile di bawah — baris paket,
+    // keadaan kosong, hasActivePlan untuk TopupCard — ikut benar sendiri.
+    AGENT_ENABLED
+      ? prisma.agentProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { plan: true, status: true, planExpiresAt: true },
+        })
+      : Promise.resolve(null),
     prisma.license.findFirst({
       where: { userId: session.user.id, status: { in: ["active", "comp"] } },
       orderBy: { createdAt: "desc" },
@@ -122,19 +128,23 @@ export default async function FinancePage() {
         <section className={`mt-8 ${cardClass}`}>
           <h2 className="text-sm font-semibold text-ink">Paket</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            <li className="flex items-center justify-between gap-3">
-              <span className="text-ink">
-                Agent WhatsApp
-                {agentProfile ? <span className="text-muted"> · {agentProfile.plan}</span> : null}
-              </span>
-              <span className="text-xs text-muted">
-                {!agentProfile || agentProfile.plan === "free"
-                  ? "Paket free"
-                  : isAgentPlanExpired(agentProfile)
-                    ? "Berakhir — silakan perpanjang"
-                    : `Berlaku sampai ${fmtDateOrNull(agentProfile.planExpiresAt)}`}
-              </span>
-            </li>
+            {/* Baris Agent hanya ada kalau produknya ditampilkan: agentProfile
+                di-null-kan di atas saat AGENT_ENABLED false. */}
+            {agentProfile && (
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-ink">
+                  Agent WhatsApp
+                  <span className="text-muted"> · {agentProfile.plan}</span>
+                </span>
+                <span className="text-xs text-muted">
+                  {agentProfile.plan === "free"
+                    ? "Paket free"
+                    : isAgentPlanExpired(agentProfile)
+                      ? "Berakhir — silakan perpanjang"
+                      : `Berlaku sampai ${fmtDateOrNull(agentProfile.planExpiresAt)}`}
+                </span>
+              </li>
+            )}
             {license && (
               <li className="flex items-center justify-between gap-3">
                 <span className="text-ink">
@@ -144,6 +154,17 @@ export default async function FinancePage() {
                 <span className="text-xs text-muted">
                   {license.validUntil ? `Berlaku sampai ${fmtDate(license.validUntil)}` : "Aktif"}
                 </span>
+              </li>
+            )}
+            {/* Dengan baris Agent hilang, daftar ini bisa jadi kosong — dulu
+                selalu ada minimal satu baris. Daftar hampa tanpa penjelasan
+                lebih buruk daripada mengakui belum ada paket. */}
+            {!agentProfile && !license && (
+              <li className="flex flex-wrap items-center justify-between gap-2 py-1">
+                <span className="text-muted">Belum ada paket aktif.</span>
+                <Link href="/paket" className="text-xs text-brand-blue hover:underline">
+                  Lihat paket ›
+                </Link>
               </li>
             )}
           </ul>
@@ -169,9 +190,7 @@ export default async function FinancePage() {
               Beli / perpanjang paket
             </Link>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Poin dipakai untuk balasan AI asisten WhatsApp.
-          </p>
+          <p className="mt-1 text-xs text-muted">Poin terpakai setiap kali AI bekerja.</p>
           <ul className="mt-3 divide-y divide-navy-900/10">
             {transactions.length === 0 && (
               <li className="py-2 text-sm text-muted">Belum ada aktivitas poin.</li>

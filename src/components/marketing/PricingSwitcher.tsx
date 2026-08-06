@@ -40,31 +40,35 @@ export function PricingSwitcher({
 
   return (
     <div>
-      <div className="flex justify-center">
-        <div
-          role="tablist"
-          aria-label="Pilih produk"
-          className="flex gap-1 rounded-full bg-surface p-1.5 shadow-md shadow-navy-900/5 ring-1 ring-navy-900/10"
-        >
-          {products.map((product) => (
-            <button
-              key={product.key}
-              role="tab"
-              aria-selected={active === product.key}
-              onClick={() => setActive(product.key)}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                active === product.key
-                  ? ACTIVE_STYLES[product.key] ?? "bg-navy-900/10 text-ink"
-                  : "text-muted hover:text-ink"
-              }`}
-            >
-              {product.label}
-            </button>
-          ))}
+      {/* Satu produk = tidak ada yang bisa dipilih; tablist-nya disembunyikan.
+          Tab durasi tetap, karena itu memang pilihan. */}
+      {products.length > 1 && (
+        <div className="flex justify-center">
+          <div
+            role="tablist"
+            aria-label="Pilih produk"
+            className="flex gap-1 rounded-full bg-surface p-1.5 shadow-md shadow-navy-900/5 ring-1 ring-navy-900/10"
+          >
+            {products.map((product) => (
+              <button
+                key={product.key}
+                role="tab"
+                aria-selected={active === product.key}
+                onClick={() => setActive(product.key)}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+                  active === product.key
+                    ? ACTIVE_STYLES[product.key] ?? "bg-navy-900/10 text-ink"
+                    : "text-muted hover:text-ink"
+                }`}
+              >
+                {product.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="mt-4 flex justify-center">
+      <div className={`${products.length > 1 ? "mt-4 " : ""}flex justify-center`}>
         <div
           role="tablist"
           aria-label="Pilih durasi"

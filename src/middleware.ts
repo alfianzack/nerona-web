@@ -74,7 +74,9 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   // Server components cannot read the request path. requireUser() needs it to
   // build ?callbackUrl= so a deep link survives sign-in.
-  requestHeaders.set("x-pathname", pathname);
+  // Query string ikut: /hubungkan?kode=... kehilangan kodenya
+  // kalau hanya path yang dibawa melewati login.
+  requestHeaders.set("x-pathname", pathname + request.nextUrl.search);
   requestHeaders.set("Content-Security-Policy", csp);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });

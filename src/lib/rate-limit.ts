@@ -62,6 +62,16 @@ export const RATE_LIMITS = {
   accountAction: { limit: 5, windowMs: 10 * 60 * 1000 },
   // Login is a bit more forgiving to tolerate typos: 10 per 10 minutes per IP.
   login: { limit: 10, windowMs: 10 * 60 * 1000 },
+  // Device pairing starts: 20 per 10 minutes per IP.
+  //
+  // Deliberately looser than `accountAction`. Starting a pairing is not a login
+  // attempt against an existing account — it creates a throwaway `pending` row
+  // that is useless until a signed-in user approves it, so the abuse it must
+  // stop is table flooding, not credential guessing. At 5 per 10 minutes the
+  // Hub QA script in nerona-hub/docs/pemasangan.md (nine pairing starts, cancel
+  // and retry paths included) locks itself out partway through, and so does any
+  // real user who cancels a couple of times behind a shared office NAT.
+  pairStart: { limit: 20, windowMs: 10 * 60 * 1000 },
 } as const;
 
 /**

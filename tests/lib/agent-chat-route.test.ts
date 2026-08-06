@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// This suite tests the chat route's real behaviour — auth, validation, rate
+// limiting, metering. The shipped build has AGENT_ENABLED false, which would
+// turn every case into a 403; the hidden position is covered in
+// agent-hidden-routes.test.ts.
+vi.mock("@/lib/features", () => ({ AGENT_ENABLED: true }));
+
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/lib/agent/profile", () => ({ getOwnProfile: vi.fn() }));

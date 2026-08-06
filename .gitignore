@@ -6,3 +6,11 @@ node_modules
 *.tsbuildinfo
 npm-debug.log*
 logs/
+
+# Artefak yang diunggah ke rilis, bukan yang di-commit. Installer 7-15 MB sekali
+# masuk riwayat git tidak bisa dikeluarkan lagi, dan setiap versi menambah satu
+# salinan permanen.
+dist/
+public/*.zip
+public/*.msi
+public/*.dmg

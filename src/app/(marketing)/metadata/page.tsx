@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { AGENT_ENABLED } from "@/lib/features";
 import { Hero } from "@/components/marketing/Hero";
 import { FeatureSection } from "@/components/marketing/FeatureSection";
 import { MarketplaceTabsMockup } from "@/components/marketing/mockups/MarketplaceTabsMockup";
@@ -9,6 +11,11 @@ import { metadataTiers } from "@/lib/pricing-tiers";
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 
 export default async function MetadataPage() {
+  // Isi halaman ini sekarang ada di beranda (HomeMetadataOnly menyerapnya),
+  // jadi tautan lama tetap mendarat di tempat yang benar alih-alih menampilkan
+  // halaman kedua yang bercerita sama.
+  if (!AGENT_ENABLED) redirect("/");
+
   const tiers = await metadataTiers();
 
   return (

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AGENT_ENABLED } from "@/lib/features";
 import { AgentChatMockup } from "@/components/marketing/mockups/AgentChatMockup";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { agentTiers } from "@/lib/pricing-tiers";
@@ -30,6 +32,9 @@ const CAPABILITIES = [
 ];
 
 export default async function AgentMarketingPage() {
+  // Agent sedang tidak dijual; tautan lama mendarat di beranda, bukan 404.
+  if (!AGENT_ENABLED) redirect("/");
+
   const tiers = await agentTiers();
 
   return (

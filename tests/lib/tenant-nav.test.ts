@@ -3,23 +3,26 @@ import { describe, expect, it } from "vitest";
 import { ICON_NAMES } from "@/components/ui/icons";
 import {
   ADMIN_NAV,
-  MARKETING_NAV,
-  TENANT_NAV,
   activeHref,
   flatten,
+  marketingNav,
   pageTitle,
+  tenantNav,
 } from "@/lib/nav";
 
 /**
  * Signing in swaps the marketing nav for the app sidebar. Anything a tenant
  * needs but cannot reach from there is effectively invisible — that has
  * already shipped three times: once for /pricing, once for the agent chat,
- * and once for /agent/dashboard (the WhatsApp connection page that
- * lib/agent/webhook-handler.ts tells users to visit). These tests pin the
- * entry points.
+ * and once for /agent/dashboard.
+ *
+ * Agent is now hidden behind AGENT_ENABLED, so these tests pin BOTH
+ * positions. The agent entry points must exist when the flag is on and be
+ * absent when it is off; asserting only the shipped position would let a
+ * future re-enable ship a sidebar with no way into the agent.
  */
-describe("tenant navigation", () => {
-  const hrefs = flatten(TENANT_NAV).map((item) => item.href);
+describe("tenant navigation, agent enabled", () => {
+  const hrefs = flatten(tenantNav(true)).map((item) => item.href);
 
   it("lets a tenant reach the agent chat", () => {
     expect(hrefs).toContain("/agent/chat");
@@ -29,32 +32,59 @@ describe("tenant navigation", () => {
     expect(hrefs).toContain("/agent/dashboard");
   });
 
-  it("lets a tenant reach the in-app plan page to buy or renew", () => {
-    expect(hrefs).toContain("/paket");
-  });
-
-  it("lets a tenant reach their Nerona billing history", () => {
-    expect(hrefs).toContain("/finance");
-  });
-
-  it("lets a tenant reach their metadata history", () => {
-    // "/metadata" is the public marketing page, so the in-app history must live
-    // somewhere else — a sidebar entry pointing at "/metadata" would send a
-    // signed-in tenant back to the sales page.
-    expect(hrefs).toContain("/riwayat-metadata");
-    expect(hrefs).not.toContain("/metadata");
-  });
-
-  it("has no duplicate destinations", () => {
-    expect(new Set(hrefs).size).toBe(hrefs.length);
-  });
-
   it("keeps the tenant's own shop separate from Nerona billing", () => {
-    const shop = TENANT_NAV.find((s) => s.title === "Toko");
-    const billing = TENANT_NAV.find((s) => s.title === "Akun & Tagihan");
+    const shop = tenantNav(true).find((s) => s.title === "Toko");
+    const billing = tenantNav(true).find((s) => s.title === "Akun & Tagihan");
     expect(shop?.items.map((i) => i.href)).toEqual(["/produk", "/transaksi"]);
     expect(billing?.items.map((i) => i.href)).toEqual(["/paket", "/finance"]);
   });
+});
+
+describe("tenant navigation, agent hidden", () => {
+  const sections = tenantNav(false);
+  const hrefs = flatten(sections).map((item) => item.href);
+
+  it("shows no agent entry points", () => {
+    expect(hrefs).not.toContain("/agent/chat");
+    expect(hrefs).not.toContain("/agent/dashboard");
+    expect(sections.some((s) => s.title === "Agent")).toBe(false);
+  });
+
+  it("hides the shop too — it is the agent's surface", () => {
+    expect(hrefs).not.toContain("/produk");
+    expect(hrefs).not.toContain("/transaksi");
+    expect(sections.some((s) => s.title === "Toko")).toBe(false);
+  });
+
+  it("still reaches the dashboard, metadata history and billing", () => {
+    expect(hrefs).toContain("/dashboard");
+    expect(hrefs).toContain("/riwayat-metadata");
+    expect(hrefs).toContain("/paket");
+    expect(hrefs).toContain("/finance");
+  });
+
+  // /unduh is the ONLY route to the extension and both Hub installers now that
+  // the profile page no longer carries them. Lose the sidebar entry and the page
+  // is reachable only by typing the URL.
+  it("reaches the download page in both positions", () => {
+    expect(hrefs).toContain("/unduh");
+    expect(flatten(tenantNav(true)).map((item) => item.href)).toContain("/unduh");
+  });
+
+  it("never points a signed-in tenant at the public metadata page", () => {
+    // "/metadata" is marketing; a sidebar entry there sends a tenant to the
+    // sales page instead of their history.
+    expect(hrefs).not.toContain("/metadata");
+  });
+});
+
+describe("tenant navigation, both positions", () => {
+  for (const enabled of [true, false]) {
+    it(`has no duplicate destinations (agent ${enabled ? "on" : "off"})`, () => {
+      const hrefs = flatten(tenantNav(enabled)).map((item) => item.href);
+      expect(new Set(hrefs).size).toBe(hrefs.length);
+    });
+  }
 });
 
 describe("admin navigation", () => {
@@ -76,32 +106,55 @@ describe("admin navigation", () => {
 });
 
 describe("marketing navigation", () => {
-  const hrefs = MARKETING_NAV.map((item) => item.href);
+  it("offers the agent page only when agent is enabled", () => {
+    expect(marketingNav(true).map((i) => i.href)).toContain("/agent");
+    expect(marketingNav(false).map((i) => i.href)).not.toContain("/agent");
+  });
 
-  it("gives guests a pricing path from every marketing page", () => {
-    expect(hrefs).toContain("/pricing");
+  it("gives guests a pricing path in both positions", () => {
+    expect(marketingNav(true).map((i) => i.href)).toContain("/pricing");
+    expect(marketingNav(false).map((i) => i.href)).toContain("/pricing");
   });
 
   it("omits Home — the logo is the home link", () => {
-    expect(hrefs).not.toContain("/");
+    expect(marketingNav(true).map((i) => i.href)).not.toContain("/");
+    expect(marketingNav(false).map((i) => i.href)).not.toContain("/");
+  });
+
+  it("drops the Metadata link when it is the home page", () => {
+    // With agent hidden, "/" IS the metadata page, so a "Metadata" nav item
+    // would point at the page the visitor is already on.
+    expect(marketingNav(false).map((i) => i.href)).not.toContain("/metadata");
+  });
+
+  it("offers in-page anchors for the single-product landing", () => {
+    expect(marketingNav(false).map((i) => i.href)).toEqual([
+      "/#fitur",
+      "/pricing",
+      "/#faq",
+    ]);
   });
 });
 
 describe("sidebar glyphs", () => {
   /**
    * Between sm and xl the sidebar is a 56px icon strip with no labels, so a
-   * misspelled icon name renders nothing at all — and stays invisible in
-   * testing because the label covers for it at xl and above.
+   * misspelled icon name renders nothing at all.
    */
   it("gives every sidebar item a glyph that exists", () => {
-    for (const item of [...flatten(TENANT_NAV), ...flatten(ADMIN_NAV)]) {
+    const items = [
+      ...flatten(tenantNav(true)),
+      ...flatten(tenantNav(false)),
+      ...flatten(ADMIN_NAV),
+    ];
+    for (const item of items) {
       expect(ICON_NAMES).toContain(item.icon);
     }
   });
 });
 
 describe("activeHref", () => {
-  const tenant = flatten(TENANT_NAV);
+  const tenant = flatten(tenantNav(true));
 
   it("prefers the longest match so sub-pages do not highlight the parent", () => {
     expect(activeHref("/agent/chat", tenant)).toBe("/agent/chat");
@@ -124,16 +177,16 @@ describe("activeHref", () => {
 
 describe("pageTitle", () => {
   it("names the active nav item", () => {
-    expect(pageTitle("/finance", TENANT_NAV)).toBe("Finance");
-    expect(pageTitle("/agent/dashboard", TENANT_NAV)).toBe("Koneksi WhatsApp");
+    expect(pageTitle("/finance", tenantNav(true))).toBe("Finance");
+    expect(pageTitle("/agent/dashboard", tenantNav(true))).toBe("Koneksi WhatsApp");
   });
 
   it("names app pages that are deliberately absent from the sidebar", () => {
-    expect(pageTitle("/profile", TENANT_NAV)).toBe("Profile");
-    expect(pageTitle("/order/abc123", TENANT_NAV)).toBe("Order");
+    expect(pageTitle("/profile", tenantNav(false))).toBe("Profile");
+    expect(pageTitle("/order/abc123", tenantNav(false))).toBe("Order");
   });
 
   it("falls back to the brand name for anything unmapped", () => {
-    expect(pageTitle("/totally-unknown", TENANT_NAV)).toBe("Nerona");
+    expect(pageTitle("/totally-unknown", tenantNav(false))).toBe("Nerona");
   });
 });

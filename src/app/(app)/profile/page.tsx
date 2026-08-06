@@ -2,8 +2,6 @@ import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { prisma } from "@/lib/prisma";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
-import { LicenseSection } from "@/components/account/LicenseSection";
-import { ExtensionConnectPanel } from "@/components/account/ExtensionConnectPanel";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { PasswordForm } from "@/components/account/PasswordForm";
 
@@ -21,11 +19,6 @@ export default async function ProfilePage() {
       password: true,
     },
   });
-  const license = await prisma.license.findFirst({
-    where: { userId: session.user.id },
-    include: { plan: true },
-  });
-
   return (
     <main className="bg-canvas">
       <div className="mx-auto max-w-3xl px-6 py-20 sm:py-24">
@@ -55,26 +48,25 @@ export default async function ProfilePage() {
 
         {user?.password && <PasswordForm />}
 
-        {license ? (
-          <LicenseSection
-            licenseKey={license.licenseKey}
-            planName={license.plan?.name ?? "Pro"}
-            status={license.status}
-            validUntil={license.validUntil ? license.validUntil.toLocaleDateString("id-ID") : null}
-          />
-        ) : (
-          <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 text-center shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-            <p className="text-sm text-muted">Anda belum punya lisensi aktif.</p>
-            <Link
-              href="/pricing"
-              className="mt-3 inline-block rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110"
-            >
-              Lihat harga
-            </Link>
-          </div>
-        )}
-
-        <ExtensionConnectPanel />
+        {/*
+          Kartu lisensi dan panel extension pindah ke /unduh — tempat orang
+          benar-benar memakainya. Tautan ini bukan hiasan: siapa pun yang
+          terbiasa mencari extension-nya di halaman ini akan menyimpulkan
+          fiturnya dihapus kalau tidak ada penunjuk arah.
+        */}
+        <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+          <p className="font-semibold tracking-tight text-ink">Lisensi &amp; perangkat</p>
+          <p className="mt-1 text-sm text-muted">
+            Kunci lisensi, unduhan extension &amp; Nerona Hub, dan daftar perangkat yang
+            tersambung sekarang ada di satu halaman.
+          </p>
+          <Link
+            href="/unduh"
+            className="mt-3 inline-block rounded-full bg-navy-900/5 px-5 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+          >
+            Buka Unduh &amp; Pasang
+          </Link>
+        </div>
       </div>
     </main>
   );

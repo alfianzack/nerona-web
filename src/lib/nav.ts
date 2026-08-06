@@ -1,4 +1,5 @@
 import type { IconName } from "@/components/ui/icons";
+import { AGENT_ENABLED } from "@/lib/features";
 
 export type NavItem = { href: string; label: string };
 // Sidebar items carry a glyph for the collapsed 56px strip. Requiring it here
@@ -11,46 +12,86 @@ export type NavSection = { title?: string; items: SidebarItem[] };
 // "Harga" is back after plan 2026-07-19 dropped it from the top nav: that
 // decision relied on an in-page PricingTeaser component which no longer
 // exists, leaving /metadata and /agent with no pricing path at all.
-export const MARKETING_NAV: NavItem[] = [
-  { href: "/agent", label: "Agent" },
-  { href: "/metadata", label: "Metadata" },
-  { href: "/pricing", label: "Harga" },
-];
+//
+// With agent hidden, "/" IS the metadata sales page, so a "Metadata" item
+// would point at the page the visitor is standing on. It is replaced by
+// in-page anchors to that page's sections. "Harga" keeps pointing at
+// /pricing rather than the landing's own pricing block, because /pricing is
+// the only place the 3/6/12-month duration switcher lives.
+export function marketingNav(agentEnabled: boolean): NavItem[] {
+  if (!agentEnabled) {
+    return [
+      { href: "/#fitur", label: "Fitur" },
+      { href: "/pricing", label: "Harga" },
+      { href: "/#faq", label: "FAQ" },
+    ];
+  }
+  return [
+    { href: "/agent", label: "Agent" },
+    { href: "/metadata", label: "Metadata" },
+    { href: "/pricing", label: "Harga" },
+  ];
+}
 
 // The tenant app sidebar. "Toko" is the tenant's OWN shop — products they
 // sell and orders they receive. "Akun & Tagihan" is their billing
 // relationship with Nerona. The old flat CUSTOMER_NAV put /transaksi and
 // /finance side by side, which read as one thing; keeping them apart is the
 // point of this grouping.
-export const TENANT_NAV: NavSection[] = [
-  { items: [{ href: "/dashboard", label: "Dashboard", icon: "chart" }] },
-  {
-    title: "Agent",
-    items: [
-      { href: "/agent/chat", label: "Chat", icon: "chat" },
-      { href: "/agent/dashboard", label: "Koneksi WhatsApp", icon: "link" },
-    ],
-  },
-  {
+//
+// Agent and Toko are one world, so they are hidden together: the shop exists
+// to be operated by the agent through add_product and record_sale, and
+// without it those pages are manual bookkeeping. The pages and their queries
+// stay in the codebase, just unreachable.
+export function tenantNav(agentEnabled: boolean): NavSection[] {
+  const sections: NavSection[] = [
+    { items: [{ href: "/dashboard", label: "Dashboard", icon: "chart" }] },
+  ];
+
+  if (agentEnabled) {
+    sections.push({
+      title: "Agent",
+      items: [
+        { href: "/agent/chat", label: "Chat", icon: "chat" },
+        { href: "/agent/dashboard", label: "Koneksi WhatsApp", icon: "link" },
+      ],
+    });
+  }
+
+  sections.push({
     title: "Metadata",
     // Bukan "/metadata" — path itu sudah dipakai halaman marketing publik.
-    items: [{ href: "/riwayat-metadata", label: "Riwayat", icon: "clock" }],
-  },
-  {
-    title: "Toko",
+    // "Unduh & Pasang" ada di sini, bukan di "Akun & Tagihan": isinya kedua
+    // alat metadata (extension + Hub), bukan hubungan tagihan dengan Nerona.
     items: [
-      { href: "/produk", label: "Produk", icon: "box" },
-      { href: "/transaksi", label: "Transaksi", icon: "receipt" },
+      { href: "/riwayat-metadata", label: "Riwayat", icon: "clock" },
+      { href: "/unduh", label: "Unduh & Pasang", icon: "download" },
     ],
-  },
-  {
+  });
+
+  if (agentEnabled) {
+    sections.push({
+      title: "Toko",
+      items: [
+        { href: "/produk", label: "Produk", icon: "box" },
+        { href: "/transaksi", label: "Transaksi", icon: "receipt" },
+      ],
+    });
+  }
+
+  sections.push({
     title: "Akun & Tagihan",
     items: [
       { href: "/paket", label: "Paket & Harga", icon: "tag" },
       { href: "/finance", label: "Finance", icon: "wallet" },
     ],
-  },
-];
+  });
+
+  return sections;
+}
+
+export const MARKETING_NAV: NavItem[] = marketingNav(AGENT_ENABLED);
+export const TENANT_NAV: NavSection[] = tenantNav(AGENT_ENABLED);
 
 export const ADMIN_NAV: NavSection[] = [
   { items: [{ href: "/admin", label: "Dashboard", icon: "chart" }] },

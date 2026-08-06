@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Most of this suite is about agent renewals, which the shipped build skips
+// while AGENT_ENABLED is false. Forced on here so these keep testing the
+// generator's logic; the skipping itself is covered in
+// agent-hidden-orders.test.ts.
+vi.mock("@/lib/features", () => ({ AGENT_ENABLED: true }));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     agentProfile: { findMany: vi.fn() },

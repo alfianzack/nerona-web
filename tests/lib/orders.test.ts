@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// This suite tests order logic for BOTH products, including the free-agent
+// activation path. AGENT_ENABLED is false in the shipped build, which would
+// make those cases assert the guard instead of the logic they were written
+// for; the hidden position is covered separately in agent-hidden-orders.test.ts.
+vi.mock("@/lib/features", () => ({ AGENT_ENABLED: true }));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     plan: { findFirst: vi.fn() },
