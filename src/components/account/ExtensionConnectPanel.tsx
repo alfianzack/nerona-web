@@ -2,12 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { labelPerangkat, pisahLabelPerangkat } from "@/lib/device-label";
+import { butuhPembaruan } from "@/lib/unduhan";
 
 interface TokenRow {
   id: string;
   label: string | null;
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+interface ExtensionConnectPanelProps {
+  /** URL aset ZIP dari `Setting`, sudah lewat `tautanAman`. `null` = belum diisi. */
+  unduhUrl: string | null;
+  /** Versi extension terbaru menurut `Setting`. Kosong = jangan bandingkan apa pun. */
+  versiTerbaru: string;
 }
 
 /**
@@ -24,7 +32,7 @@ const AWALAN_LABEL_EXT = "Extension";
  * panduan pemasangan selalu tampil penuh bahkan untuk yang sudah terpasang —
  * dan token yang dibuat tapi tak pernah ditempel tidak terdeteksi siapa pun.
  */
-export function ExtensionConnectPanel() {
+export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConnectPanelProps) {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [extVersion, setExtVersion] = useState<string | null>(null);
   // Apakah browser INI memegang token, seperti dilaporkan HADIR. `null` berarti
@@ -240,10 +248,10 @@ export function ExtensionConnectPanel() {
       {/*
         Extension Nerona Metadata tidak ada di Chrome Web Store, jadi
         pemasangannya lewat "Muat yang belum dikemas" dan TIDAK ADA pembaruan
-        otomatis. ZIP di /public dibangun dari repo nerona_medata lewat
-        scripts/build-extension.ps1 dan ikut ter-commit — kalau extension
-        berubah tanpa skrip itu dijalankan, user mengunduh versi lama tanpa
-        tanda apa pun.
+        otomatis. ZIP-nya aset rilis di nerona-hub-releases, URL-nya dari
+        Setting — kalau owner mengunggah build baru tanpa memperbarui
+        `extension_version`, tidak ada satu pun tanda bahwa yang terpasang
+        sudah basi.
       */}
       {!extVersion && (
         <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
@@ -254,13 +262,7 @@ export function ExtensionConnectPanel() {
                 Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
               </p>
             </div>
-            <a
-              href="/nerona-metadata.zip"
-              download
-              className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-            >
-              Unduh ZIP
-            </a>
+            <TombolUnduhZip url={unduhUrl} />
           </div>
           <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
           <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
@@ -300,6 +302,30 @@ export function ExtensionConnectPanel() {
             </li>
             <li>Muat ulang halaman ini.</li>
           </ol>
+        </div>
+      )}
+
+      {/*
+        Versi yang BENAR-BENAR terpasang di browser ini vs versi terbaru menurut
+        Setting. Extension tidak punya pembaruan otomatis sama sekali, jadi build
+        basi adalah penyebab paling mungkin dari kegagalan yang tampak seperti
+        "fiturnya rusak" — dan sebelum ini tidak ada apa pun yang memberitahu
+        pengguna bahwa itu yang terjadi.
+      */}
+      {extVersion && butuhPembaruan(extVersion, versiTerbaru) && (
+        <div className="mt-4 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
+          <p className="text-sm text-ink">
+            Versi terpasang {extVersion}, tersedia {versiTerbaru}.
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Unduh lagi, <b>timpa isi folder</b> <code>nerona-metadata</code> yang sudah ada, lalu
+            klik ikon <b>⟳ Reload</b> di kartu Nerona Metadata pada{" "}
+            <code>chrome://extensions</code>. Jangan pilih Load unpacked lagi — Chrome sudah
+            memuat folder itu.
+          </p>
+          <div className="mt-3">
+            <TombolUnduhZip url={unduhUrl} />
+          </div>
         </div>
       )}
 
@@ -404,4 +430,33 @@ function namaBrowser(): string {
   if (ua.includes("OPR/")) return "Opera";
   if (ua.includes("Chrome/")) return "Chrome";
   return "Browser";
+}
+
+/**
+ * Tombol mati saat URL-nya belum diisi di admin, bukan tautan yang berujung 404.
+ * Tanpa `href` tidak ada yang bisa diklik, jadi keadaan "belum ada rilis" tidak
+ * pernah tampak seperti "berkasnya hilang".
+ */
+function TombolUnduhZip({ url }: { url: string | null }) {
+  if (!url) {
+    return (
+      <span
+        className="cursor-not-allowed whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-muted ring-1 ring-navy-900/10"
+        title="Tautan unduhan belum diisi di pengaturan admin."
+      >
+        Belum tersedia
+      </span>
+    );
+  }
+  return (
+    <a
+      href={url}
+      // `download` diabaikan browser untuk URL lintas-origin; aset GitHub tetap
+      // terunduh karena servernya mengirim Content-Disposition: attachment.
+      download
+      className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+    >
+      Unduh ZIP
+    </a>
+  );
 }

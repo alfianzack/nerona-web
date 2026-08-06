@@ -63,6 +63,14 @@ describe("tenant navigation, agent hidden", () => {
     expect(hrefs).toContain("/finance");
   });
 
+  // /unduh is the ONLY route to the extension and both Hub installers now that
+  // the profile page no longer carries them. Lose the sidebar entry and the page
+  // is reachable only by typing the URL.
+  it("reaches the download page in both positions", () => {
+    expect(hrefs).toContain("/unduh");
+    expect(flatten(tenantNav(true)).map((item) => item.href)).toContain("/unduh");
+  });
+
   it("never points a signed-in tenant at the public metadata page", () => {
     // "/metadata" is marketing; a sidebar entry there sends a tenant to the
     // sales page instead of their history.

@@ -23,6 +23,13 @@ const ICONS = {
       <polyline points="12 6 12 12 16 14" />
     </>
   ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <polyline points="7 10 12 15 17 10" />
+      <path d="M5 21h14" />
+    </>
+  ),
   chart: (
     <>
       <line x1="18" y1="20" x2="18" y2="10" />

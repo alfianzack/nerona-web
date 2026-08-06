@@ -61,7 +61,12 @@ export function tenantNav(agentEnabled: boolean): NavSection[] {
   sections.push({
     title: "Metadata",
     // Bukan "/metadata" — path itu sudah dipakai halaman marketing publik.
-    items: [{ href: "/riwayat-metadata", label: "Riwayat", icon: "clock" }],
+    // "Unduh & Pasang" ada di sini, bukan di "Akun & Tagihan": isinya kedua
+    // alat metadata (extension + Hub), bukan hubungan tagihan dengan Nerona.
+    items: [
+      { href: "/riwayat-metadata", label: "Riwayat", icon: "clock" },
+      { href: "/unduh", label: "Unduh & Pasang", icon: "download" },
+    ],
   });
 
   if (agentEnabled) {
