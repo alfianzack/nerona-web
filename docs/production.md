@@ -79,6 +79,23 @@ Buat `.env.local` di server. Daftar lengkap (diambil dari kode, bukan perkiraan)
 | `CRON_SECRET` | `openssl rand -base64 32`. **Kalau kosong, endpoint cron menolak semua request (fail closed)** |
 | `OWNER_ADMIN_EMAIL` | Email pemilik; dipakai `prisma/seed.ts` untuk membuat role `owner_admin` |
 
+### Rilis (Nerona Hub & extension)
+
+| Variabel | Keterangan |
+| --- | --- |
+| `RELEASE_SECRET` | `openssl rand -base64 32`. Dipakai CI kedua repo produk untuk memanggil `POST /api/releases/publish` sesudah installer/ZIP terunggah, supaya kolom URL & versi di `/admin/pengaturan` terisi sendiri. **Kalau kosong, rute itu menolak semua request (fail closed)** — sama seperti `CRON_SECRET` |
+
+Nilainya harus **sama persis** di tiga tempat: env di sini, secret
+`RELEASE_SECRET` di repo `nerona-hub`, dan secret `RELEASE_SECRET` di repo
+`nerona_meta`. Kalau salah satu beda, CI-nya gagal dengan 401 setelah installer
+sudah terlanjur terbit — halaman `/unduh` tetap menawarkan versi lama.
+
+Dua secret sisanya **tidak** tinggal di sini, karena yang memakainya GitHub
+Actions, bukan aplikasi ini: `RELEASES_TOKEN` (PAT `contents:write` ke
+`alfianzack/nerona-hub-releases`) dan, khusus repo `nerona-hub`,
+`TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+Langkah lengkapnya di `nerona-hub/docs/pemasangan.md` bagian "Untuk pemilik".
+
 ### AI (extension + agent)
 
 | Variabel | Keterangan |

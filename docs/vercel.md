@@ -106,6 +106,17 @@ Daftar ini diambil dari kode, bukan perkiraan.
 | `CRON_SECRET` | `openssl rand -base64 32`. **Kalau kosong, endpoint cron menolak semua request (fail closed)** |
 | `OWNER_ADMIN_EMAIL` | Email pemilik, dipakai script seed |
 
+### Rilis (Nerona Hub & extension)
+
+| Variabel | Keterangan |
+| --- | --- |
+| `RELEASE_SECRET` | `openssl rand -base64 32`. Dipakai CI kedua repo produk untuk mengisi sendiri kolom URL & versi di `/admin/pengaturan` sesudah rilis. **Kalau kosong, `/api/releases/publish` menolak semua request (fail closed)** |
+
+Nilainya harus sama persis dengan secret `RELEASE_SECRET` di repo `nerona-hub`
+dan `nerona_meta`. **Tambahkan env-nya lalu redeploy** — env baru tidak masuk ke
+deploy yang sudah berjalan, dan gejalanya persis sama dengan nilai yang salah:
+CI mendapat 401 setelah installer terlanjur terbit.
+
 ### AI (extension + agent)
 
 | Variabel | Keterangan |
