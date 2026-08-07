@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { getAiSettings } from "@/lib/ai-settings";
+import { infoPembaruanExtension } from "@/lib/extension-version";
 
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("authorization") || "";
@@ -17,13 +18,19 @@ export async function GET(request: Request) {
   }
   // Model dikirim terpisah dari `account`: itu setelan global (Setting `ai_model`),
   // bukan atribut lisensi. Hanya nama modelnya — apiKey tidak pernah keluar dari server.
-  const [state, ai] = await Promise.all([
+  //
+  // `update` ikut di sini alih-alih di endpoint sendiri: extension sudah
+  // memanggil rute ini secara berkala, jadi badge versi baru tidak menambah
+  // satu pun permintaan jaringan.
+  const [state, ai, update] = await Promise.all([
     getExtensionAccountState(resolved.userId),
     getAiSettings(),
+    infoPembaruanExtension(),
   ]);
   return NextResponse.json({
     ok: true,
     account: { ...state, validUntil: state.validUntil ? state.validUntil.toISOString() : null },
     ai: { model: ai.model },
+    update,
   });
 }

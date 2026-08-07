@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
 vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/extension-version", () => ({ infoPembaruanExtension: vi.fn() }));
 
 import { GET } from "@/app/api/extension/me/route";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { getAiSettings } from "@/lib/ai-settings";
+import { infoPembaruanExtension } from "@/lib/extension-version";
 
 function req(auth?: string) {
   return new Request("http://test/api/extension/me", { headers: auth ? { authorization: auth } : {} });
@@ -32,6 +34,9 @@ describe("GET /api/extension/me", () => {
     (getAiSettings as any).mockResolvedValue({
       model: "gemini-2.5-flash", apiKey: "sk-secret", pricing: {},
     });
+    (infoPembaruanExtension as any).mockResolvedValue({
+      latest: "1.2.0", min: "1.1.0", url: "https://nerona-web.vercel.app/unduh",
+    });
     const res = await GET(req("Bearer nrx_ok"));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -40,5 +45,22 @@ describe("GET /api/extension/me", () => {
     expect(body.ai).toEqual({ model: "gemini-2.5-flash" });
     // Kunci API tidak boleh ikut keluar ke ekstensi.
     expect(JSON.stringify(body)).not.toContain("sk-secret");
+  });
+
+  it("membawa blok update supaya badge tidak perlu permintaan kedua", async () => {
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({
+      email: "u@x.com", plan: "Pro", licenseStatus: "active",
+      validUntil: null, marketplaces: "*",
+      rejectAnalyzer: false, pointsBalance: 10, active: true,
+    });
+    (getAiSettings as any).mockResolvedValue({ model: "m", apiKey: "k", pricing: {} });
+    (infoPembaruanExtension as any).mockResolvedValue({
+      latest: "1.2.0", min: "", url: "https://nerona-web.vercel.app/unduh",
+    });
+    const body = await (await GET(req("Bearer nrx_ok"))).json();
+    expect(body.update).toEqual({
+      latest: "1.2.0", min: "", url: "https://nerona-web.vercel.app/unduh",
+    });
   });
 });

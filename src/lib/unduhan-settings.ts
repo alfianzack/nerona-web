@@ -19,12 +19,25 @@ export async function getUnduhanSettings(): Promise<UnduhanSettings> {
     hubVersion: map.get(UNDUHAN_KEYS.hubVersion) ?? UNDUHAN_KOSONG.hubVersion,
     extensionUrl: map.get(UNDUHAN_KEYS.extensionUrl) ?? UNDUHAN_KOSONG.extensionUrl,
     extensionVersion: map.get(UNDUHAN_KEYS.extensionVersion) ?? UNDUHAN_KOSONG.extensionVersion,
+    extensionMinVersion:
+      map.get(UNDUHAN_KEYS.extensionMinVersion) ?? UNDUHAN_KOSONG.extensionMinVersion,
   };
 }
 
-export async function updateUnduhanSettings(values: UnduhanSettings): Promise<void> {
+/**
+ * Menulis hanya kunci yang benar-benar disebut.
+ *
+ * `undefined` berarti *jangan sentuh*, `""` berarti *kosongkan*. Bedanya
+ * menentukan sejak CI ikut menulis ke sini: rilis Hub tidak tahu apa-apa
+ * tentang versi extension, dan tidak boleh menghapusnya hanya karena tidak
+ * menyebutnya. Panel admin yang mengirim seluruh objek tetap bekerja apa adanya.
+ */
+export async function updateUnduhanSettings(values: Partial<UnduhanSettings>): Promise<void> {
+  const fields = (Object.keys(UNDUHAN_KEYS) as (keyof UnduhanSettings)[]).filter(
+    (field) => values[field] !== undefined
+  );
   await prisma.$transaction(
-    (Object.keys(UNDUHAN_KEYS) as (keyof UnduhanSettings)[]).map((field) => {
+    fields.map((field) => {
       const value = (values[field] ?? "").trim();
       return prisma.setting.upsert({
         where: { key: UNDUHAN_KEYS[field] },

@@ -34,6 +34,9 @@ export async function POST(request: Request) {
     hubVersion: asString(body.hubVersion),
     extensionUrl: asString(body.extensionUrl),
     extensionVersion: asString(body.extensionVersion),
+    // Satu-satunya kunci di panel ini yang CI tidak pernah boleh tulis: ia
+    // kebijakan, bukan hasil build. Lihat `/api/releases/publish`.
+    extensionMinVersion: asString(body.extensionMinVersion),
   });
 
   return NextResponse.json({ ok: true });

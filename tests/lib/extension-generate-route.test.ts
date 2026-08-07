@@ -8,6 +8,7 @@ vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
 // configured rates actually produce.
 vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
+vi.mock("@/lib/extension-version", () => ({ tolakKalauBasi: vi.fn() }));
 vi.mock("@/lib/extension/prompts", () => ({
   buildMetadataPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
   buildScoringPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
@@ -23,6 +24,7 @@ import { getAiSettings } from "@/lib/ai-settings";
 import { chatCompletion } from "@/lib/agent/claude-client";
 import { spendPoints } from "@/lib/points";
 import { hit } from "@/lib/rate-limit";
+import { tolakKalauBasi } from "@/lib/extension-version";
 import {
   buildMetadataPrompt,
   buildKeywordPrompt,
@@ -70,6 +72,10 @@ beforeEach(() => {
     usage: { promptTokens: 1200, completionTokens: 150 },
   });
   (spendPoints as any).mockResolvedValue(95);
+  // Bawaan: tidak ada gerbang versi. Yang menentukan siapa tertahan diuji di
+  // tests/lib/extension-version.test.ts; di sini yang diuji apa yang dilakukan
+  // rute ini saat gerbangnya menahan.
+  (tolakKalauBasi as any).mockResolvedValue(null);
   (buildMetadataPrompt as any).mockReturnValue({ prompt: "P", maxTokens: 1234 });
   (buildKeywordPrompt as any).mockReturnValue({ prompt: "P", maxTokens: 1234 });
 });
@@ -96,6 +102,29 @@ describe("POST /api/extension/generate", () => {
   it("402 when no points", async () => {
     (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 0 });
     expect((await POST(req(metadataBody))).status).toBe(402);
+  });
+
+  it("403 outdated berisi cara keluarnya, dan tidak membakar apa pun", async () => {
+    (tolakKalauBasi as any).mockResolvedValue({
+      latest: "1.2.0", min: "1.1.0", url: "https://nerona-web.vercel.app/unduh",
+    });
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      ok: false, error: "outdated",
+      latest: "1.2.0", min: "1.1.0", url: "https://nerona-web.vercel.app/unduh",
+    });
+    expect(chatCompletion).not.toHaveBeenCalled();
+    expect(spendPoints).not.toHaveBeenCalled();
+  });
+
+  it("versi basi didahulukan atas poin habis", async () => {
+    // "Poin habis" mengirim pengguna membeli poin untuk masalah yang bukan poin.
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 0 });
+    (tolakKalauBasi as any).mockResolvedValue({ latest: "1.2.0", min: "1.1.0", url: "https://x/unduh" });
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("outdated");
   });
 
   it("400 on unknown feature", async () => {

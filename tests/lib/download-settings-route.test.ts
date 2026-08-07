@@ -38,7 +38,7 @@ describe("/api/admin/download-settings", () => {
     expect(updateUnduhanSettingsMock).not.toHaveBeenCalled();
   });
 
-  it("returns the five keys for an admin", async () => {
+  it("returns the settings for an admin", async () => {
     getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: "support" } });
     getUnduhanSettingsMock.mockResolvedValue({
       hubWindowsUrl: "https://x/y.msi",
@@ -63,6 +63,7 @@ describe("/api/admin/download-settings", () => {
         hubVersion: 0.1,
         extensionUrl: "https://x/e.zip",
         extensionVersion: "1.3",
+        extensionMinVersion: " 1.1 ",
       })
     );
 
@@ -73,7 +74,19 @@ describe("/api/admin/download-settings", () => {
       hubVersion: "",
       extensionUrl: "https://x/e.zip",
       extensionVersion: "1.3",
+      extensionMinVersion: "1.1",
     });
+  });
+
+  it("mengosongkan versi minimum yang tidak dikirim, jadi admin bisa mencabut gerbangnya", async () => {
+    // Panel selalu mengirim keenam kunci. Kolom yang dikosongkan admin harus
+    // benar-benar tersimpan kosong — kalau `undefined` membuatnya dilewati,
+    // gerbang yang sudah dipasang tidak akan pernah bisa dicabut dari sini.
+    getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: "admin" } });
+
+    await POST(post({ extensionMinVersion: "" }));
+
+    expect(updateUnduhanSettingsMock.mock.calls[0][0].extensionMinVersion).toBe("");
   });
 
   it("rejects a body that is not an object", async () => {

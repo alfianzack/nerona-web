@@ -6,6 +6,7 @@ import { chatCompletion } from "@/lib/agent/claude-client";
 import { costForUsage } from "@/lib/agent/pricing";
 import { spendPoints } from "@/lib/points";
 import { hit } from "@/lib/rate-limit";
+import { tolakKalauBasi } from "@/lib/extension-version";
 import {
   buildMetadataPrompt,
   buildScoringPrompt,
@@ -62,6 +63,17 @@ export async function POST(request: Request) {
   const state = await getExtensionAccountState(resolved.userId);
   if (!state.active) {
     return NextResponse.json({ ok: false, error: "inactive" }, { status: 403 });
+  }
+  // Sebelum pemeriksaan poin, bukan sesudah: extension yang terlalu tua harus
+  // membaca "perbarui dulu", bukan "poin habis" — pesan kedua itu mengirim
+  // pengguna membeli poin untuk masalah yang bukan poin.
+  //
+  // Lapis kedua, dan yang berwenang. `assertAccess` di sisi extension menolak
+  // lebih dulu supaya poin tidak terlanjur terbakar, persis seperti kedaluwarsa
+  // sudah bekerja — tapi yang menentukan tetap di sini.
+  const basi = await tolakKalauBasi(request);
+  if (basi) {
+    return NextResponse.json({ ok: false, error: "outdated", ...basi }, { status: 403 });
   }
   if (state.pointsBalance <= 0) {
     return NextResponse.json({ ok: false, error: "no_points" }, { status: 402 });

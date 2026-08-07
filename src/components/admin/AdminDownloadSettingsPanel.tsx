@@ -13,6 +13,8 @@ const FIELDS: {
   /** Kolom URL dapat tautan "Uji"; kolom versi tidak. */
   url?: boolean;
   help?: string;
+  /** Kolom yang mengunci pengguna dari pekerjaannya. Dibingkai merah. */
+  bahaya?: boolean;
 }[] = [
   {
     key: "extensionUrl",
@@ -24,7 +26,14 @@ const FIELDS: {
     key: "extensionVersion",
     label: "Versi extension",
     placeholder: "mis. 1.3",
-    help: "Dibandingkan dengan versi yang benar-benar terpasang di browser pengguna. Beda = halaman unduh menyuruh mereka memperbarui.",
+    help: "Dibandingkan dengan versi yang benar-benar terpasang di browser pengguna. Lebih tua = extension menyalakan badge dan halaman unduh menyuruh mereka memperbarui.",
+  },
+  {
+    key: "extensionMinVersion",
+    label: "Versi extension minimum",
+    placeholder: "biarkan kosong",
+    bahaya: true,
+    help: "Kosong = tidak ada yang diblokir. Begitu diisi, setiap extension yang lebih tua — termasuk semua salinan yang terbit sebelum fitur ini ada — berhenti bisa generate sampai dipasang ulang. Isi hanya saat ada perubahan yang benar-benar memutus kompatibilitas.",
   },
   {
     key: "hubWindowsUrl",
@@ -116,9 +125,13 @@ export function AdminDownloadSettingsPanel() {
       </div>
 
       <p className="mt-3 rounded-xl bg-navy-900/[0.03] p-3 text-[11px] text-muted ring-1 ring-navy-900/10">
-        Kolom kosong membuat tombolnya di halaman <code>/unduh</code> mati dan bertuliskan
-        &quot;Belum tersedia&quot;. Setelah menempel URL, klik <b>Uji</b> — tidak ada
-        pemeriksaan lain yang bisa menangkap salah ketik.
+        Keempat kolom URL dan kedua kolom versi <b>diisi sendiri oleh CI</b> setiap kali
+        tag <code>hub-v*</code> atau <code>ext-v*</code> diterbitkan — suntingan tangan di
+        sini akan tertimpa pada rilis berikutnya. Yang ditulis di sini bertahan hanya untuk
+        menambal keadaan darurat. Kolom kosong membuat tombolnya di halaman{" "}
+        <code>/unduh</code> mati dan bertuliskan &quot;Belum tersedia&quot;. Setelah menempel
+        URL dengan tangan, klik <b>Uji</b> — tidak ada pemeriksaan lain yang bisa menangkap
+        salah ketik.
       </p>
 
       {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
@@ -127,7 +140,14 @@ export function AdminDownloadSettingsPanel() {
         {FIELDS.map((field) => {
           const aman = field.url ? tautanAman(values[field.key]) : null;
           return (
-            <div key={field.key}>
+            <div
+              key={field.key}
+              className={
+                field.bahaya
+                  ? "rounded-xl bg-rose-500/[0.06] p-3 ring-1 ring-rose-500/25"
+                  : undefined
+              }
+            >
               <div className="flex items-baseline justify-between gap-2">
                 <label htmlFor={`unduh-${field.key}`} className="text-xs font-semibold text-ink">
                   {field.label}
@@ -156,7 +176,15 @@ export function AdminDownloadSettingsPanel() {
                 placeholder={field.placeholder}
                 className={`mt-1.5 ${inputClass}`}
               />
-              {field.help && <p className="mt-1 text-[11px] text-muted/80">{field.help}</p>}
+              {field.help && (
+                <p
+                  className={`mt-1 text-[11px] ${
+                    field.bahaya ? "text-rose-700" : "text-muted/80"
+                  }`}
+                >
+                  {field.help}
+                </p>
+              )}
             </div>
           );
         })}
