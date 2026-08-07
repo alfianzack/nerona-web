@@ -128,6 +128,10 @@ Aturannya:
 - Rute **menolak** upaya menulis `extension_min_version`. Itu kebijakan, bukan
   fakta build.
 - Langkah CI-nya gagal lantang kalau balasannya bukan 200.
+- `RELEASE_SECRET` diperiksa **sebelum build**, bersama kunci penandatangan.
+  Alasannya sama: langkah yang memakainya ada di job `manifes`, setelah build
+  macOS universal yang bisa belasan menit, dan menemukannya kosong di sana
+  berarti installer terunggah tapi `/unduh` diam-diam menawarkan versi lama.
 
 ## Bagian 2 — Extension menyadari dirinya basi
 
@@ -172,9 +176,14 @@ Di atas popup: kedua nomor versi dan satu tombol yang membuka `/unduh`.
 Meniru cara kedaluwarsa sudah bekerja:
 
 - `assertAccess` menolak lebih dulu di sisi klien, supaya pengguna tidak
-  terlanjur membakar poin.
+  terlanjur membakar poin. Diperiksa di jalur segar **dan** jalur cache: kalau
+  hanya di jalur segar, extension basi tetap bekerja selama TTL 15 menit dan
+  pengguna melihat 403 dari server tanpa penjelasan.
 - `/api/extension/generate` yang berwenang: 403
   `{ error: "outdated", min, latest, url }`.
+- Batch di `content.js` **berhenti** pada galat `outdated` alih-alih mengulang
+  50 kegagalan yang identik. Tidak ada poin yang terbakar — server menolak
+  sebelum menagih — jadi yang dicegah kebisingan, bukan kerugian.
 
 Tiga aturan kegagalannya, eksplisit karena semuanya menyangkut mengunci orang
 dari pekerjaannya:
