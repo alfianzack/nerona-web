@@ -8,6 +8,8 @@ export interface ExtensionAccountState {
   validUntil: Date | null;
   marketplaces: string;
   rejectAnalyzer: boolean;
+  /** Lisensi ini menyertakan Nerona Hub. Dibaca Hub, diabaikan extension. */
+  hub: boolean;
   pointsBalance: number;
   active: boolean;
 }
@@ -33,6 +35,7 @@ export async function getExtensionAccountState(
     validUntil,
     marketplaces: license?.marketplaces ?? "*",
     rejectAnalyzer: license?.rejectAnalyzer ?? false,
+    hub: license?.hub ?? false,
     pointsBalance,
     active,
   };

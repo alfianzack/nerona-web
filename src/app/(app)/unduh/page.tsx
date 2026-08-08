@@ -73,6 +73,26 @@ export default async function UnduhPage() {
             FTP. Butuh akun Nerona yang sama dengan extension.
           </p>
 
+          {/*
+            Ditampilkan untuk yang belum berhak, dan unduhannya TIDAK diblokir:
+            memblokir berkas yang toh tidak berguna tanpa akun cuma menambah
+            satu cara gagal tanpa menambah satu pun perlindungan. Penjaganya di
+            server — `approvePairing` menolak menyambungkan Hub ke lisensi tanpa
+            bendera `hub`.
+          */}
+          {!license?.hub && (
+            <div className="mt-3 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
+              <p className="text-sm text-ink">Nerona Hub tersedia di paket Business.</p>
+              <p className="mt-1 text-xs text-muted">
+                Anda tetap bisa mengunduh dan memasangnya, tapi penyambungan akun akan ditolak
+                sampai paketnya Business.{" "}
+                <Link href="/pricing" className="font-semibold underline">
+                  Lihat harga
+                </Link>
+              </p>
+            </div>
+          )}
+
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <KartuHub os="windows" url={urlWindows} versi={settings.hubVersion} />
             <KartuHub os="mac" url={urlMac} versi={settings.hubVersion} />

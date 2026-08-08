@@ -105,6 +105,8 @@ model Plan {
   priceMonthly   Int?
   marketplaces   String   @default("*")
   rejectAnalyzer Boolean  @default(false)
+  /// Paket ini menyertakan Nerona Hub (aplikasi desktop).
+  hub            Boolean  @default(false)
   // AI generations per month shown on pricing pages; null = unlimited.
   // Display-only for now — the extension has no backend hook to enforce it,
   // same as the marketplaces limit.
@@ -135,6 +137,10 @@ model License {
   durationMonths Int       @default(1)
   marketplaces   String    @default("*")
   rejectAnalyzer Boolean   @default(false)
+  // Apakah lisensi ini berhak memakai Nerona Hub (aplikasi desktop).
+  // Disalin dari `Plan.hub` saat lisensi diberikan, sama seperti dua kolom di
+  // atas — bukan disimpulkan dari nama paket, karena nama bisa berubah.
+  hub            Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

@@ -81,6 +81,7 @@ export async function metadataTiers(monthsInput: number = 1): Promise<PricingTie
           { label: describeMarketplaces(plan.marketplaces), included: true },
           { label: await allowanceLabel("metadata", plan.name, planMonths), included: true },
           { label: "Analisis penolakan (reject analyzer)", included: plan.rejectAnalyzer },
+          { label: "Nerona Hub (aplikasi desktop, unggah FTP)", included: plan.hub },
         ],
         cta: ctaFor(plan.name),
         href: `/order?product=metadata&plan=${plan.name}&months=${planMonths}`,

@@ -8,6 +8,11 @@ const PESAN: Record<string, string> = {
   already_handled: "Kode ini sudah dipakai. Minta kode baru dari Nerona Hub.",
   too_many:
     "Terlalu banyak percobaan. Tunggu sekitar 10 menit, lalu buka lagi tautan ini dari Nerona Hub.",
+  // Menyebut paket yang dibutuhkan, bukan sekadar "tidak diizinkan": tanpa itu
+  // pengguna akan mencoba lagi dengan kode baru dan gagal dengan cara yang
+  // sama, lalu menyimpulkan aplikasinya rusak.
+  plan_required:
+    "Paket Anda belum termasuk Nerona Hub. Hub tersedia di paket Business — lihat halaman Harga untuk berpindah paket.",
 };
 
 export function FormPersetujuan({ kodeAwal }: { kodeAwal: string }) {

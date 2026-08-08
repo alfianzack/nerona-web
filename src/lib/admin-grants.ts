@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { generateLicenseKey } from "./license";
 import { activationExpiryFrom } from "@/lib/billing-period";
 import { creditPlanPoints } from "@/lib/plan-points";
+import { revokeHubTokens } from "@/lib/device-pairing";
 
 export interface GrantOptions {
   note?: string;
@@ -62,6 +63,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
+        hub: plan.hub,
         validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
         durationMonths: months,
       },
@@ -79,6 +81,7 @@ export async function grantLicense(
         planId: plan.id,
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
+        hub: plan.hub,
         validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
         durationMonths: months,
       },
@@ -109,6 +112,17 @@ export async function grantLicense(
     createdById: adminId,
     isRenewal: Boolean(options.isRenewal),
   });
+
+  // Turun paket mencabut Hub SEKETIKA, bukan menunggu lisensinya habis.
+  //
+  // Sengaja menilai keadaan AKHIR, bukan membandingkan paket lama dengan paket
+  // baru. Itu membuatnya idempoten dan ikut menutup jalur yang tidak terpikir:
+  // Business kedaluwarsa lalu diberikan ulang sebagai Pro, atau lisensi
+  // dipindah paket dua kali berturut-turut. Naik ke Business tidak mencabut
+  // apa pun karena `plan.hub` bernilai true di situ.
+  if (!plan.hub) {
+    await revokeHubTokens(user.id);
+  }
 
   return { ok: true };
 }

@@ -4,7 +4,14 @@ import { authOptions } from "@/lib/auth";
 import { approvePairing } from "@/lib/device-pairing";
 import { hit, tooManyRequests, RATE_LIMITS } from "@/lib/rate-limit";
 
-const STATUS: Record<string, number> = { not_found: 404, expired: 410, already_handled: 409 };
+const STATUS: Record<string, number> = {
+  not_found: 404,
+  expired: 410,
+  already_handled: 409,
+  // 403, bukan 401: sesinya sah, yang kurang haknya. 401 akan membuat klien
+  // menyimpulkan "login lagi" — saran yang dijamin tidak menyelesaikan apa pun.
+  plan_required: 403,
+};
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);

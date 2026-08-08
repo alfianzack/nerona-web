@@ -15,6 +15,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn() }));
+vi.mock("@/lib/device-pairing", () => ({ revokeHubTokens: vi.fn(async () => 0) }));
 
 import {
   grantLicense,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/admin-grants";
 import { prisma } from "@/lib/prisma";
 import { generateLicenseKey } from "@/lib/license";
+import { revokeHubTokens } from "@/lib/device-pairing";
 
 describe("grantLicense", () => {
   beforeEach(() => {
@@ -32,7 +34,7 @@ describe("grantLicense", () => {
 
   // `name` is non-nullable in the schema and is what the point allowance is
   // looked up by, so the fixture has to carry it.
-  const plan = { id: "plan-1", name: "Pro", marketplaces: "*", rejectAnalyzer: true };
+  const plan = { id: "plan-1", name: "Pro", marketplaces: "*", rejectAnalyzer: true, hub: false };
 
   it("returns user_not_found when no User matches the email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);
@@ -75,6 +77,7 @@ describe("grantLicense", () => {
         planId: "plan-1",
         marketplaces: "*",
         rejectAnalyzer: true,
+        hub: false,
         validUntil: expect.any(Date),
         durationMonths: 1,
       },
@@ -100,6 +103,7 @@ describe("grantLicense", () => {
         planId: "plan-1",
         marketplaces: "*",
         rejectAnalyzer: true,
+        hub: false,
         validUntil: expect.any(Date),
         durationMonths: 1,
       },
@@ -128,6 +132,7 @@ describe("grantLicense", () => {
         planId: "plan-1",
         marketplaces: "*",
         rejectAnalyzer: true,
+        hub: false,
         validUntil: overrideDate,
         durationMonths: 1,
       },
@@ -161,6 +166,40 @@ describe("grantLicense", () => {
     expect(prisma.order.create).toHaveBeenCalledWith({
       data: { userId: "user-1", amount: 150000, currency: "idr", note: undefined },
     });
+  });
+
+  // Turun paket harus mencabut Hub SEKETIKA. Menunggu lisensinya habis berarti
+  // pelanggan yang sudah turun ke Pro tetap memakai Hub berbulan-bulan.
+  it("mencabut token Hub saat lisensi berakhir di paket tanpa Hub", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue({ ...plan, hub: false });
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+
+    await grantLicense("admin-1", "user@example.com", "plan-1");
+
+    expect(revokeHubTokens).toHaveBeenCalledWith("user-1");
+  });
+
+  it("TIDAK mencabut apa pun saat naik ke paket ber-Hub", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue({
+      ...plan, name: "Business", hub: true,
+    });
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+
+    await grantLicense("admin-1", "user@example.com", "plan-1");
+
+    expect(revokeHubTokens).not.toHaveBeenCalled();
+  });
+
+  it("menyalin bendera hub paket ke lisensi", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue({ ...plan, hub: true });
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+
+    await grantLicense("admin-1", "user@example.com", "plan-1");
+
+    expect((prisma.license.update as any).mock.calls[0][0].data).toMatchObject({ hub: true });
   });
 });
 

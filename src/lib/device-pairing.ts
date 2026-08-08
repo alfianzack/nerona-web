@@ -42,7 +42,49 @@ export async function startPairing(input: { kind: string; label: string }): Prom
 
 export type ApproveResult =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "expired" | "already_handled" };
+  | { ok: false; reason: "not_found" | "expired" | "already_handled" | "plan_required" };
+
+/**
+ * Apakah lisensi orang ini menyertakan Nerona Hub.
+ *
+ * Yang dibaca kolom `hub` di lisensi, BUKAN nama paketnya. Nama dipakai di
+ * banyak tempat (`PAID_PLAN_NAMES`, label harga, judul di dasbor) dan sekali
+ * waktu akan diganti; kolom bendera tidak ikut bergeser saat itu terjadi.
+ */
+export async function lisensiBolehHub(userId: string): Promise<boolean> {
+  const license = await prisma.license.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { hub: true },
+  });
+  return Boolean(license?.hub);
+}
+
+/**
+ * Mencabut seluruh token yang lahir dari penyambungan Hub milik satu akun.
+ *
+ * Sasarannya lewat relasi `DevicePairing` (`kind = "hub"`), BUKAN pencocokan
+ * teks label. Label adalah kolom bebas: token extension yang kebetulan
+ * bernama mirip tidak boleh ikut tercabut, dan pengguna bisa saja menamai
+ * perangkatnya apa pun kelak.
+ *
+ * Mengembalikan jumlah token yang tercabut. Aman dijalankan berkali-kali.
+ */
+export async function revokeHubTokens(userId: string): Promise<number> {
+  const pairings = await prisma.devicePairing.findMany({
+    where: { userId, kind: "hub", tokenId: { not: null } },
+    select: { tokenId: true },
+  });
+  const ids = pairings.map((p) => p.tokenId).filter((id): id is string => Boolean(id));
+  if (!ids.length) return 0;
+
+  // `userId` ikut di filter meski id token sudah spesifik: dua penjaga lebih
+  // murah daripada satu baris pairing yang datanya melenceng.
+  const removed = await prisma.extensionToken.deleteMany({
+    where: { id: { in: ids }, userId },
+  });
+  return removed.count;
+}
 
 export async function approvePairing(input: {
   userId: string;
@@ -60,6 +102,22 @@ export async function approvePairing(input: {
     return { ok: true };
   }
 
+  // Gerbang paket, DI SINI dan bukan di rutenya: `userId` pada titik ini sudah
+  // dipastikan berasal dari sesi, dan tokennya dicetak di baris berikutnya —
+  // jadi tidak ada jalan mencetak token Hub yang melewati pemeriksaan ini.
+  //
+  // Pairing extension tidak tersentuh: hanya `kind === "hub"` yang diperiksa.
+  if (row.kind === "hub" && !(await lisensiBolehHub(input.userId))) {
+    // Statusnya DITULIS, tidak sekadar dikembalikan sebagai galat. Tanpa ini
+    // barisnya tetap `pending`, Hub terus polling sampai kodenya kedaluwarsa,
+    // lalu melapor "kode kedaluwarsa" — pesan yang menunjuk sebab yang salah.
+    await prisma.devicePairing.update({
+      where: { id: row.id },
+      data: { status: "plan_required" },
+    });
+    return { ok: false, reason: "plan_required" };
+  }
+
   const token = await createExtensionToken(input.userId, row.label);
   const created = await prisma.extensionToken.findUnique({ where: { token }, select: { id: true } });
   await prisma.devicePairing.update({
@@ -72,6 +130,10 @@ export async function approvePairing(input: {
 export type ClaimResult =
   | { status: "pending" }
   | { status: "denied" }
+  // Dipisah dari `denied`: "Anda menekan Tolak" dan "paket Anda tidak
+  // menyertakan Hub" menuntut tindakan yang berbeda, dan menyamakannya membuat
+  // pengguna mencoba lagi dengan kode baru yang dijamin gagal sama.
+  | { status: "plan_required" }
   | { status: "expired" }
   | { status: "approved"; token: string }
   | { status: "not_found" };
@@ -102,6 +164,7 @@ export async function claimPairing(deviceSecret: string): Promise<ClaimResult> {
   }
 
   if (row.status === "denied") return { status: "denied" };
+  if (row.status === "plan_required") return { status: "plan_required" };
   if (row.status === "pending" && row.expiresAt.getTime() <= Date.now()) return { status: "expired" };
   return { status: "pending" };
 }

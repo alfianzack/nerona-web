@@ -11,6 +11,9 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/license", () => ({ generateLicenseKey: vi.fn(async () => "KEY-1") }));
+// grantLicense mencabut token Hub saat paket hasilnya tanpa Hub. Di-mock di
+// sini supaya berkas tes ini tidak perlu ikut memodelkan tabel devicePairing.
+vi.mock("@/lib/device-pairing", () => ({ revokeHubTokens: vi.fn(async () => 0) }));
 vi.mock("@/lib/plan-points", () => ({
   creditPlanPoints: (...args: unknown[]) => creditPlanPointsMock(...(args as [])),
 }));

@@ -26,7 +26,7 @@ export async function GET() {
   const [plans, courses, licenseGroups, enrollmentGroups, agentPlans, discounts, topupRow] =
     await Promise.all([
     prisma.plan.findMany({
-      select: { id: true, name: true, priceMonthly: true, marketplaces: true, rejectAnalyzer: true },
+      select: { id: true, name: true, priceMonthly: true, marketplaces: true, rejectAnalyzer: true, hub: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.course.findMany({

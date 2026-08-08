@@ -92,6 +92,7 @@ async function activateFreeMetadata(userId: string): Promise<SubmitOrderResult> 
     planId: freePlan.id,
     marketplaces: freePlan.marketplaces,
     rejectAnalyzer: freePlan.rejectAnalyzer,
+    hub: freePlan.hub,
   };
   if (existing) {
     await prisma.license.update({ where: { id: existing.id }, data });
