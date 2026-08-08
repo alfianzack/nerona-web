@@ -72,6 +72,14 @@ export const RATE_LIMITS = {
   // and retry paths included) locks itself out partway through, and so does any
   // real user who cancels a couple of times behind a shared office NAT.
   pairStart: { limit: 20, windowMs: 10 * 60 * 1000 },
+  // Pemeriksaan versi publik (`/api/extension/latest`): 60 per 10 menit per IP.
+  //
+  // Jauh lebih longgar daripada yang lain karena ia BUKAN aksi akun — tidak ada
+  // yang bisa ditebak atau dibanjiri, dan pemanggilnya skrip pembaru yang
+  // menembak sekali per jalan. Yang dibatasi cuma biaya baca basis data dari
+  // endpoint tanpa auth. Angka ini juga harus menahan satu kantor di balik NAT
+  // yang sama: 60 memberi ruang belasan orang memperbarui berbarengan.
+  versiPublik: { limit: 60, windowMs: 10 * 60 * 1000 },
 } as const;
 
 /**
