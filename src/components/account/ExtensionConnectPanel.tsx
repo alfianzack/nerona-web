@@ -298,6 +298,10 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
             <p className="mt-0.5 text-xs text-muted">
+              nerona-metadata.zip
+              {versiTerbaru ? ` · versi ${versiTerbaru}` : ""}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
               Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
             </p>
           </div>
@@ -372,6 +376,9 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
       {extVersion && !sudahTersambung && (
         <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
           <p className="text-sm text-ink">✓ Extension terpasang (versi {extVersion}).</p>
+          {versiTerbaru && (
+            <p className="mt-0.5 text-xs text-muted">Versi tersedia: {versiTerbaru}</p>
+          )}
           <button
             onClick={hubungkanExtension}
             disabled={sibuk}
@@ -387,6 +394,19 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
           <p className="text-sm text-ink">
             ✓ Extension tersambung{emailTersambung ? ` sebagai ${emailTersambung}` : ""}.
           </p>
+          {/*
+            Nomor versi ditampilkan di SETIAP keadaan, bukan hanya saat basi.
+            Extension ini tidak punya pembaruan otomatis, jadi "versi berapa yang
+            saya pakai" adalah pertanyaan pertama di hampir setiap laporan
+            masalah — dan sebelumnya jawabannya hanya terlihat kalau kebetulan
+            sudah tertinggal.
+          */}
+          {(extVersion || versiTerbaru) && (
+            <p className="mt-0.5 text-xs text-muted">
+              {extVersion ? `Terpasang ${extVersion}` : "Versi terpasang tidak terbaca"}
+              {versiTerbaru ? ` · tersedia ${versiTerbaru}` : ""}
+            </p>
+          )}
           {lisensiAktif === false && (
             // Dua pernyataan yang dua-duanya benar. Sebelum ini keadaan yang
             // sama dilaporkan sebagai satu pernyataan yang salah ("Server
