@@ -1,0 +1,122 @@
+# Mengawasi produksi dari luar.
+#
+# Ini BUKAN tes. Tes membuktikan kode bekerja di mesin CI; berkas ini menanyakan
+# apakah yang sedang berjalan di produksi benar-benar waras — dan hampir semua
+# yang rusak di proyek ini rusak dengan cara yang tidak bisa dilihat tes.
+#
+# Kejadian yang melahirkannya: `NEXTAUTH_URL` tidak terpasang di Vercel, jadi
+# produksi membagikan `http://localhost:3000/hubungkan?kode=…` ke setiap Nerona
+# Hub yang mencoba menyambung. Seluruh CI hijau. Tidak ada galat di sisi mana
+# pun. Baru ketahuan ketika seorang pengguna menyebut bahwa alamat yang terbuka
+# di browsernya localhost — entah setelah berapa lama.
+#
+# Alarmnya kegagalan workflow itu sendiri: GitHub mengirim surel ke pemilik repo
+# saat alur terjadwal gagal. Tidak perlu layanan pemantau, tidak perlu akun baru.
+name: Awasi produksi
+
+on:
+  schedule:
+    # Tiap 6 jam. Cukup rapat untuk menangkap deploy yang salah di hari yang
+    # sama, cukup jarang untuk tidak jadi derau.
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+env:
+  SITUS: ${{ vars.NERONA_WEB_BASE_URL || 'https://nerona-web.vercel.app' }}
+  REPO_RILIS: alfianzack/nerona-hub-releases
+
+jobs:
+  awasi:
+    runs-on: ubuntu-latest
+    steps:
+      # Yang paling sering salah, dan yang paling mahal saat salah. Alamat ini
+      # dikirim KELUAR ke aplikasi di mesin orang lain.
+      - name: Alamat yang dibagikan server harus alamat produksi
+        run: |
+          set -euo pipefail
+          jawab=$(curl -fsS --max-time 20 "${SITUS%/}/api/health")
+          echo "$jawab"
+          alamat=$(printf '%s' "$jawab" | jq -r '.baseUrl // ""')
+
+          if [ -z "$alamat" ]; then
+            echo "::error::/api/health tidak menyebut baseUrl. Rutenya belum ter-deploy?"
+            exit 1
+          fi
+          case "$alamat" in
+            http://localhost*|http://127.*|"")
+              echo "::error::produksi membagikan alamat lokal: $alamat"
+              echo "Pasang NEXTAUTH_URL di Vercel lalu REDEPLOY — env baru tidak"
+              echo "masuk ke deploy yang sudah berjalan."
+              exit 1
+              ;;
+            https://*) echo "Alamat produksi: $alamat" ;;
+            *)
+              echo "::error::alamat bukan https: $alamat"
+              exit 1
+              ;;
+          esac
+
+      - name: Env penting harus terpasang
+        env:
+          RAHASIA: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAHASIA:-}" ]; then
+            echo "::error::secret CRON_SECRET belum ada di repo ini, jadi bagian env tidak bisa diperiksa."
+            exit 1
+          fi
+          jawab=$(curl -fsS --max-time 20 -H "Authorization: Bearer $RAHASIA" "${SITUS%/}/api/health")
+          hilang=$(printf '%s' "$jawab" | jq -r '.env | to_entries[] | select(.value == false) | .key')
+          if [ -n "$hilang" ]; then
+            echo "::error::env berikut TIDAK terpasang di produksi:"
+            echo "$hilang"
+            exit 1
+          fi
+          echo "Semua env yang dipantau terpasang."
+
+      # Extension memakai ini untuk tahu versi terbaru, dan `perbarui.ps1`
+      # mengunduh dari URL yang dikembalikannya.
+      - name: Versi extension harus bisa ditanyakan dan URL-nya sah
+        run: |
+          set -euo pipefail
+          jawab=$(curl -fsS --max-time 20 "${SITUS%/}/api/extension/latest")
+          echo "$jawab"
+          versi=$(printf '%s' "$jawab" | jq -r '.versi // ""')
+          url=$(printf '%s' "$jawab" | jq -r '.url // ""')
+          case "$url" in
+            https://*) ;;
+            *) echo "::error::URL ZIP extension bukan https: $url"; exit 1 ;;
+          esac
+          if ! printf '%s' "$versi" | grep -qE '^[0-9]+\.[0-9]+'; then
+            echo "::error::versi extension tidak masuk akal: $versi"
+            exit 1
+          fi
+          # Berkasnya benar-benar bisa diunduh, bukan cuma URL yang terlihat
+          # bagus. Aset rilis yang terhapus meninggalkan URL yang tetap sah.
+          curl -fsSI --max-time 30 -L "$url" >/dev/null
+          echo "Extension $versi, aset terjangkau."
+
+      # Inilah yang dibaca setiap Nerona Hub terpasang saat memeriksa pembaruan.
+      # Ia pernah terbit berisi version "hub-v0.1.2" — bukan semver — sehingga
+      # updater menolak semuanya, dengan seluruh pipeline hijau.
+      - name: Manifes pembaruan Hub harus semver dan lengkap
+        run: |
+          set -euo pipefail
+          manifes=$(curl -fsS --max-time 30 -L \
+            "https://github.com/$REPO_RILIS/releases/download/hub-latest/latest.json")
+          echo "$manifes"
+
+          versi=$(printf '%s' "$manifes" | jq -r '.version // ""')
+          if ! printf '%s' "$versi" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::version di latest.json bukan semver polos: '$versi'"
+            echo "Updater menolak nilai seperti ini, dan tidak ada satu pun langkah CI yang memerah."
+            exit 1
+          fi
+
+          for kunci in windows-x86_64 darwin-universal darwin-aarch64 darwin-x86_64; do
+            if [ "$(printf '%s' "$manifes" | jq -r --arg k "$kunci" '.platforms[$k].url // ""')" = "" ]; then
+              echo "::error::latest.json tidak memuat platform $kunci"
+              exit 1
+            fi
+          done
+          echo "Manifes $versi lengkap untuk keempat platform."
