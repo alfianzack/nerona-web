@@ -56,10 +56,33 @@ async function emailInvoice(
 // `leadDays` (or already lapsed). Idempotent: skips users who already have a
 // pending request for that product. `planExpiresAt/validUntil: { lte }` excludes
 // nulls, so free/never-expiring rows are ignored.
+/**
+ * Saklar perpanjangan otomatis. Kosong atau apa pun selain `"1"` berarti MATI.
+ *
+ * Bawaannya mati, dan itu disengaja. Sejak alur sekali bayar, lisensi baru tidak
+ * punya tanggal akhir — tidak ada yang perlu diperpanjang. Keadaan aman di sini
+ * adalah tidak melakukan apa-apa: kunci yang lupa diisi tidak boleh membuat
+ * tagihan untuk siapa pun.
+ *
+ * Kodenya sengaja ditinggal utuh. Kalau arah bisnisnya berubah lagi, yang perlu
+ * dikerjakan cuma mengisi satu kunci.
+ */
+export const AUTO_RENEW_SETTING_KEY = "auto_renew_enabled";
+
+export async function autoRenewEnabled(): Promise<boolean> {
+  const row = await prisma.setting.findUnique({ where: { key: AUTO_RENEW_SETTING_KEY } });
+  return (row?.value ?? "").trim() === "1";
+}
+
 export async function generateDueRenewals(
   now: Date = new Date(),
   leadDays = 7
 ): Promise<{ created: number }> {
+  // Berhenti di baris pertama, sebelum satu baris pun dibaca dari basis data.
+  if (!(await autoRenewEnabled())) {
+    return { created: 0 };
+  }
+
   const cutoff = new Date(now.getTime() + leadDays * DAY_MS);
   let created = 0;
 

@@ -15,6 +15,9 @@ vi.mock("@/lib/prisma", () => ({
     agentProfile: { findMany: vi.fn() },
     license: { findMany: vi.fn() },
     plan: { findFirst: vi.fn() },
+    // Saklar auto-renew; suite ini menguji penyembunyian Agent, jadi saklarnya
+    // dinyalakan supaya yang diuji tetap logikanya.
+    setting: { findUnique: vi.fn(async () => ({ value: "1" })) },
   },
 }));
 

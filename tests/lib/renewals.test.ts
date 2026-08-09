@@ -11,6 +11,9 @@ vi.mock("@/lib/prisma", () => ({
     agentProfile: { findMany: vi.fn() },
     license: { findMany: vi.fn() },
     orderRequest: { count: vi.fn(), create: vi.fn() },
+    // Saklar auto-renew. Seluruh suite ini menguji GENERATORNYA, jadi saklarnya
+    // dipaksa menyala; keadaan matinya diuji tersendiri di bawah.
+    setting: { findUnique: vi.fn(async () => ({ value: "1" })) },
   },
 }));
 vi.mock("@/lib/billing/invoice", () => ({
@@ -35,6 +38,7 @@ beforeEach(() => {
   (prisma.license.findMany as any).mockResolvedValue([]);
   (prisma.orderRequest.count as any).mockResolvedValue(0);
   (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-1", createdAt: new Date("2026-07-24T00:00:00Z") });
+  (prisma.setting.findUnique as any).mockResolvedValue({ value: "1" });
 });
 
 describe("generateDueRenewals", () => {
@@ -102,5 +106,30 @@ describe("generateDueRenewals", () => {
     const res = await generateDueRenewals(now, 7);
     expect(prisma.orderRequest.create).toHaveBeenCalled();
     expect(res.created).toBe(1);
+  });
+});
+
+describe("saklar perpanjangan otomatis", () => {
+  /**
+   * Bawaannya MATI. Sejak alur sekali bayar, lisensi baru tidak punya tanggal
+   * akhir — tidak ada yang perlu diperpanjang. Kunci yang lupa diisi tidak boleh
+   * membuat tagihan untuk siapa pun.
+   */
+  it("kunci kosong berarti mati, dan tidak satu baris pun dibaca", async () => {
+    (prisma.setting.findUnique as any).mockResolvedValue(null);
+
+    expect(await generateDueRenewals(now)).toEqual({ created: 0 });
+    expect(prisma.license.findMany).not.toHaveBeenCalled();
+    expect(prisma.agentProfile.findMany).not.toHaveBeenCalled();
+    expect(prisma.orderRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("nilai selain \"1\" juga berarti mati", async () => {
+    for (const value of ["0", "true", "on", "ya", ""]) {
+      vi.clearAllMocks();
+      (prisma.setting.findUnique as any).mockResolvedValue({ value });
+      expect(await generateDueRenewals(now)).toEqual({ created: 0 });
+      expect(prisma.orderRequest.create).not.toHaveBeenCalled();
+    }
   });
 });
