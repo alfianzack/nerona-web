@@ -82,7 +82,32 @@ describe("amountForOrder", () => {
     expect(prisma.plan.findFirst).not.toHaveBeenCalled();
   });
 
-  it("metadata dihitung dari harga bulanan dan diskon durasi", async () => {
+  /**
+   * Pembelian baru berharga TETAP — tidak dikalikan apa pun. Sejak alur sekali
+   * bayar, yang dijual adalah akses selamanya, dan `durationMonths` cuma
+   * menentukan kelipatan poin.
+   *
+   * Kalau harga di sini ikut dikalikan lagi, pembeli membayar 79.000 × 12 untuk
+   * sesuatu yang dijanjikan 79.000.
+   */
+  it("pembelian baru memakai harga apa adanya, tanpa dikalikan durasi", async () => {
+    (prisma.plan.findFirst as any).mockResolvedValue({ priceMonthly: 79000 });
+    expect(
+      await amountForOrder({
+        product: "metadata",
+        planName: "Pro",
+        durationMonths: 1,
+        priceAmount: null,
+      })
+    ).toBe(79000);
+  });
+
+  /**
+   * Perpanjangan dari alur LAMA tetap dihitung per durasi. Baris yang dibuat
+   * dengan janji "3 bulan seharga sekian" harus ditagih sebesar itu, bukan
+   * sebesar harga sekali bayar hari ini.
+   */
+  it("perpanjangan lama tetap dihitung dari durasi dan diskonnya", async () => {
     (prisma.plan.findFirst as any).mockResolvedValue({ priceMonthly: 29000 });
     (prisma.setting.findMany as any).mockResolvedValue([
       { key: "duration_discount_3", value: "10" },
@@ -94,6 +119,7 @@ describe("amountForOrder", () => {
         planName: "Pro",
         durationMonths: 3,
         priceAmount: null,
+        isRenewal: true,
       })
     ).toBe(78000);
   });

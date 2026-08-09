@@ -15,6 +15,18 @@ export interface GrantOptions {
    * Pemberian manual admin tanpa nilai ini tetap 1 bulan.
    */
   durationMonths?: number;
+  /**
+   * Lisensi tanpa tanggal akhir — yang dibeli di alur sekali bayar.
+   *
+   * Bendera tersendiri, BUKAN `validUntil: undefined`. Di bawah, `undefined`
+   * sudah jatuh ke `activationExpiryFrom(...)`, dan menyalahartikan "tidak
+   * disebut" sebagai "tanpa batas" akan membuat setiap pemberian manual admin
+   * ikut jadi permanen tanpa satu pun yang memintanya.
+   *
+   * `durationMonths` tetap berlaku dan tetap menentukan kelipatan poin: yang
+   * permanen adalah aksesnya, bukan jatah poinnya.
+   */
+  permanen?: boolean;
   /** Only changes the ledger note ("Perpanjangan" vs "Bonus"). */
   isRenewal?: boolean;
 }
@@ -64,7 +76,9 @@ export async function grantLicense(
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
         hub: plan.hub,
-        validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
+        validUntil: options.permanen
+          ? null
+          : (options.validUntil ?? activationExpiryFrom(new Date(), months)),
         durationMonths: months,
       },
     });
@@ -82,7 +96,9 @@ export async function grantLicense(
         marketplaces: plan.marketplaces,
         rejectAnalyzer: plan.rejectAnalyzer,
         hub: plan.hub,
-        validUntil: options.validUntil ?? activationExpiryFrom(new Date(), months),
+        validUntil: options.permanen
+          ? null
+          : (options.validUntil ?? activationExpiryFrom(new Date(), months)),
         durationMonths: months,
       },
     });

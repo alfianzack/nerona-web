@@ -111,6 +111,50 @@ describe("grantLicense", () => {
     expect(prisma.license.create).not.toHaveBeenCalled();
   });
 
+  /**
+   * Alur sekali bayar: yang dibeli adalah akses selamanya. `validUntil` null
+   * sudah berarti tanpa batas di seluruh sistem — lisensi Free memakainya sejak
+   * awal, dan `getExtensionAccountState` sudah membacanya begitu.
+   */
+  it("permanen menulis validUntil null, bukan tanggal", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue(plan);
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+
+    await grantLicense("admin-1", "user@example.com", "plan-1", { permanen: true });
+
+    const data = (prisma.license.update as any).mock.calls[0][0].data;
+    expect(data.validUntil).toBeNull();
+    // Yang permanen aksesnya, BUKAN jatah poinnya: durasi tetap 1 supaya poin
+    // yang dikredit sejatah satu bulan.
+    expect(data.durationMonths).toBe(1);
+  });
+
+  it("permanen juga berlaku saat lisensinya baru dibuat", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue(plan);
+    (prisma.license.findFirst as any).mockResolvedValue(null);
+
+    await grantLicense(null, "user@example.com", "plan-1", { permanen: true });
+
+    expect((prisma.license.create as any).mock.calls[0][0].data.validUntil).toBeNull();
+  });
+
+  /**
+   * Bendera tersendiri, bukan `validUntil: undefined`. Kalau "tidak disebut"
+   * diartikan "tanpa batas", setiap pemberian manual admin ikut jadi permanen
+   * tanpa satu pun yang memintanya.
+   */
+  it("tanpa bendera permanen, pemberian biasa tetap punya tanggal akhir", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
+    (prisma.plan.findUnique as any).mockResolvedValue(plan);
+    (prisma.license.findFirst as any).mockResolvedValue({ id: "license-1" });
+
+    await grantLicense("admin-1", "user@example.com", "plan-1", {});
+
+    expect((prisma.license.update as any).mock.calls[0][0].data.validUntil).toBeInstanceOf(Date);
+  });
+
   it("honors an explicit validUntil override instead of the month-end default", async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1" });
     (prisma.plan.findUnique as any).mockResolvedValue(plan);

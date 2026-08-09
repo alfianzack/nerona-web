@@ -174,23 +174,21 @@ describe("submitOrder — paid plans", () => {
     });
   });
 
-  it("stores the chosen duration", async () => {
+  /**
+   * Alur sekali bayar tidak punya durasi untuk dipilih, dan kolomnya kini cuma
+   * menentukan kelipatan poin. Kalau nilainya masih bisa datang dari klien,
+   * permintaan yang mengarang `durationMonths: 12` mendapat DUA BELAS KALI poin
+   * dengan harga yang sama — dan tidak ada satu pun harga yang ikut naik untuk
+   * menahannya.
+   */
+  it("selalu menyimpan durasi 1, apa pun yang dikirim klien", async () => {
     (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
     (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
     (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-new" });
 
-    await submitOrder("user-1", "metadata", "Pro", undefined, 6);
-
-    expect((prisma.orderRequest.create as any).mock.calls[0][0].data.durationMonths).toBe(6);
-  });
-
-  it("refuses a duration it does not sell instead of honouring it", async () => {
-    (prisma.plan.findFirst as any).mockResolvedValue({ id: "plan-pro" });
-    (prisma.orderRequest.findFirst as any).mockResolvedValue(null);
-    (prisma.orderRequest.create as any).mockResolvedValue({ id: "req-new" });
-
-    // Durasi datang dari query string — 999 bulan seharga sebulan kalau diteruskan.
-    await submitOrder("user-1", "metadata", "Pro", undefined, 999);
+    // Bahkan kalau seseorang menambahkan argumen kelima lagi kelak, tanda
+    // tangannya tidak menerimanya — dan nilainya tetap 1.
+    await submitOrder("user-1", "metadata", "Pro", undefined);
 
     expect((prisma.orderRequest.create as any).mock.calls[0][0].data.durationMonths).toBe(1);
   });
@@ -285,6 +283,8 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1",
       validUntil: undefined,
+      // Pembelian baru membeli akses SELAMANYA.
+      permanen: true,
       durationMonths: 1,
       isRenewal: false,
     });
@@ -329,6 +329,9 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-1r",
       validUntil: expectedValidUntil,
+      // Perpanjangan TETAP bertanggal: baris yang masih di tengah jalan
+      // diselesaikan dengan aturan saat ia dibuat, bukan aturan hari ini.
+      permanen: false,
       durationMonths: 1,
       isRenewal: true,
     });
@@ -450,6 +453,7 @@ describe("fulfillOrderRequest", () => {
     expect(grantLicense).toHaveBeenCalledWith("admin-1", "a@b.c", "plan-pro", {
       note: "Order req-6mr",
       validUntil: renewedExpiryFrom(currentValidUntil, new Date(), 6),
+      permanen: false,
       durationMonths: 6,
       isRenewal: true,
     });

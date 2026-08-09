@@ -46,15 +46,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Permintaan tidak valid." }, { status: 400 });
   }
 
-  const result = await submitOrder(
-    session.user.id,
-    product,
-    planName,
-    contactNote,
-    // Tanpa ini durasi yang dipilih di checkout hilang diam-diam dan setiap
-    // order tercatat sebagai paket bulanan.
-    body?.durationMonths
-  );
+  // `durationMonths` dari klien SENGAJA tidak diteruskan lagi: alur sekali
+  // bayar tidak punya durasi untuk dipilih, dan kolomnya cuma menentukan
+  // kelipatan poin. Meneruskannya berarti permintaan yang mengarang angka 12
+  // mendapat dua belas kali poin dengan harga yang sama.
+  const result = await submitOrder(session.user.id, product, planName, contactNote);
   if (!result.ok) {
     // An existing pending order isn't an error for checkout — point the client
     // at that order so they can finish paying / upload proof.

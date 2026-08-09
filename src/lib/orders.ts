@@ -145,8 +145,7 @@ export async function submitOrder(
   userId: string,
   product: string,
   planName: string,
-  contactNote?: string,
-  durationMonths?: unknown
+  contactNote?: string
 ): Promise<SubmitOrderResult> {
   if (!isProduct(product)) {
     return { ok: false, reason: "invalid_product" };
@@ -191,10 +190,14 @@ export async function submitOrder(
       userId,
       product,
       planName,
-      // Durasi datang dari client; coerceDuration menolak apa pun di luar
-      // 1/3/6/12 dengan mengembalikannya ke bulanan, bukan menyimpan angka liar
-      // yang nanti dipakai menghitung masa aktif.
-      durationMonths: coerceDuration(durationMonths),
+      // SELALU 1, dan nilainya tidak lagi datang dari klien.
+      //
+      // Sejak alur sekali bayar, tidak ada durasi yang bisa dipilih: yang dibeli
+      // adalah akses selamanya, dan kolom ini cuma menentukan kelipatan poin —
+      // yang memang sejatah satu bulan. Menerimanya dari klien berarti seseorang
+      // bisa mengarang `durationMonths: 12` lewat permintaan langsung dan
+      // mendapat dua belas kali poin dengan harga yang sama.
+      durationMonths: 1,
       contactNote: contactNote || undefined,
     },
   });
@@ -371,9 +374,15 @@ export async function fulfillOrderRequest(
     }
     // grantLicense credits the metadata allowance, so this branch must not —
     // a second call here would double every metadata activation.
+    //
+    // Pembelian metadata sekarang membeli akses SELAMANYA, jadi `permanen` untuk
+    // yang bukan perpanjangan. Perpanjangan tetap memakai tanggal: baris
+    // perpanjangan yang masih di tengah jalan harus diselesaikan dengan aturan
+    // saat ia dibuat, bukan aturan hari ini.
     const result = await grantLicense(adminId, order.user.email, plan.id, {
       note: `Order ${order.id}`,
       validUntil,
+      permanen: !order.isRenewal,
       durationMonths: months,
       isRenewal: Boolean(order.isRenewal),
     });

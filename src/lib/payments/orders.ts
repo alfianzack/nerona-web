@@ -85,6 +85,11 @@ export interface OrderForPricing {
   planName: string;
   durationMonths: number;
   priceAmount: number | null;
+  /**
+   * Order perpanjangan dari alur lama. Hanya ia yang masih dihitung per durasi;
+   * pembelian baru berharga tetap.
+   */
+  isRenewal?: boolean;
 }
 
 /**
@@ -106,10 +111,20 @@ export async function amountForOrder(order: OrderForPricing): Promise<number | n
   const plan = await prisma.plan.findFirst({ where: { name: order.planName } });
   if (!plan || plan.priceMonthly === null || plan.priceMonthly <= 0) return null;
 
-  const months = coerceDuration(order.durationMonths);
-  const discounts = await getDurationDiscounts();
-  const total = priceForDuration(plan.priceMonthly, months, discounts[months] ?? 0);
-  return total > 0 ? total : null;
+  // Harga apa adanya, TIDAK dikalikan durasi. Sejak alur sekali bayar,
+  // `priceMonthly` adalah harga sekali bayar untuk akses selamanya — namanya
+  // yang tertinggal, bukan artinya.
+  //
+  // Order perpanjangan yang masih tersisa dari alur lama tetap memakai aturan
+  // lama: baris yang dibuat dengan janji "12 bulan seharga sekian" harus
+  // ditagih sebesar itu, bukan sebesar harga hari ini.
+  if (order.isRenewal) {
+    const months = coerceDuration(order.durationMonths);
+    const discounts = await getDurationDiscounts();
+    const lama = priceForDuration(plan.priceMonthly, months, discounts[months] ?? 0);
+    return lama > 0 ? lama : null;
+  }
+  return plan.priceMonthly > 0 ? plan.priceMonthly : null;
 }
 
 export type StartPaymentResult =
@@ -138,7 +153,7 @@ export async function startPaymentForOrder(
 
   const order = await prisma.orderRequest.findFirst({
     where: { id: orderId, userId },
-    select: { id: true, product: true, planName: true, durationMonths: true, priceAmount: true, status: true },
+    select: { id: true, product: true, planName: true, durationMonths: true, priceAmount: true, status: true, isRenewal: true },
   });
   if (!order) return { ok: false, reason: "order_not_found" };
   if (order.status !== "pending") return { ok: false, reason: "not_pending" };
