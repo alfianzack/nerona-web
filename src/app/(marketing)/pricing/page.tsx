@@ -5,12 +5,14 @@ import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
 import { pricingProducts } from "@/lib/pricing-products";
+import { TopupSection } from "@/components/marketing/TopupSection";
+import { getTopupPackages } from "@/lib/topup";
 
 const PRICING_FAQ = [
   {
-    question: "Apakah paket diperpanjang otomatis?",
+    question: "Apakah ada tagihan bulanan?",
     answer:
-      "Tidak ada tagihan otomatis — kami tidak menyimpan data pembayaran Anda. Menjelang masa aktif berakhir, kami kirim invoice perpanjangan sebagai pengingat; paket baru berlanjut setelah Anda transfer dan pembayaran kami verifikasi. Abaikan invoice itu kalau Anda tidak ingin lanjut.",
+      "Tidak ada. Paket dibeli sekali dan aksesnya berlaku selamanya — tidak ada perpanjangan, tidak ada tagihan berulang, dan kami tidak menyimpan data pembayaran Anda. Yang habis hanya poin, dan itu pun hanya diisi kalau Anda memang mau melanjutkan.",
   },
   {
     question: "Apakah paket Free diperbarui setiap bulan?",
@@ -20,14 +22,20 @@ const PRICING_FAQ = [
   {
     question: "Apa itu poin, dan bagaimana kalau habis?",
     answer:
-      "Poin terpakai setiap kali AI bekerja — besarnya tergantung panjang teks yang diproses. Alat berhenti sementara kalau poin habis atau masa aktif paket berakhir; mengaktifkan atau memperpanjang paket menambahkan poin baru ke saldo Anda. Poin yang belum terpakai tidak hangus.",
+      "Poin terpakai setiap kali AI bekerja — besarnya tergantung panjang teks yang diproses. Pembelian paket menyertakan poin awal; kalau habis, alat berhenti sementara sampai Anda isi ulang. Poin yang belum terpakai tidak hangus, dan isi ulang bisa kapan saja tanpa berlangganan.",
   },
   {
-    question: "Apakah bisa pindah paket di tengah jalan?",
+    question: "Kalau sudah beli, apakah akses saya bisa hilang?",
     answer:
-      "Bisa — kirim order upgrade kapan saja, tim kami bantu sesuaikan sisa masa aktif Anda.",
+      "Tidak karena waktu. Akses tidak punya tanggal kedaluwarsa, jadi alat tetap bisa dipakai selama poin Anda ada. Pelanggan lama yang masih memakai paket berdurasi tetap berjalan sampai masa aktifnya habis.",
+  },
+  {
+    question: "Apakah bisa naik paket setelah membeli?",
+    answer:
+      "Bisa — kirim order paket yang lebih tinggi kapan saja, dan tim kami bantu menyesuaikannya.",
   },
 ];
+
 
 /**
  * Halaman harga publik — tetap tanpa sidebar, termasuk untuk yang sudah masuk.
@@ -41,9 +49,10 @@ const PRICING_FAQ = [
  * Isinya sama-sama dari pricingProducts(), jadi harganya tidak mungkin berbeda.
  */
 export default async function PricingPage() {
-  const [{ products, discounts }, session] = await Promise.all([
+  const [{ products, discounts }, session, topupPackages] = await Promise.all([
     pricingProducts(),
     getServerSession(authOptions),
+    getTopupPackages(),
   ]);
   const signedIn = Boolean(session?.user);
 
@@ -75,9 +84,11 @@ export default async function PricingPage() {
         </div>
       </section>
 
+      <TopupSection packages={topupPackages} />
+
       <StepsSection
         title="Cara pembayaran"
-        subtitle="Tanpa tagihan otomatis — setiap perpanjangan menunggu transfer Anda."
+        subtitle="Tanpa tagihan otomatis dan tanpa perpanjangan — bayar sekali, lalu isi poin bila perlu."
         variant="cards"
         steps={[
           {
