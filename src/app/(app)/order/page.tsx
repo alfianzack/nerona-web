@@ -70,10 +70,8 @@ export default async function OrderPage({
           <CheckoutView
             product={product}
             planName={tier.name}
-            durationMonths={months}
-            durationLabel={DURATION_LABELS[months] ?? `${months} bulan`}
             priceLabel={tier.priceLabel}
-            savingsLabel={tier.savingsLabel ?? null}
+            poinAwal={tier.poinAwal ?? null}
             features={tier.features}
             // Dua syarat, dan keduanya diperiksa DI SINI supaya pilihan yang
             // pasti gagal tidak pernah sampai ke layar: saklarnya menyala, dan
@@ -84,7 +82,7 @@ export default async function OrderPage({
               (await amountForOrder({
                 product,
                 planName: tier.name,
-                durationMonths: months,
+                durationMonths: 1,
                 priceAmount: null,
               })) !== null
             }

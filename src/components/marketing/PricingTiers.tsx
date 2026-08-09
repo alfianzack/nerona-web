@@ -10,8 +10,14 @@ export interface PricingTier {
   icon: string;
   tagline: string;
   priceLabel: string;
-  /** Setara per bulan + penghematan; hanya terisi untuk durasi > 1 bulan. */
+  /**
+   * Sisa dari alur berdurasi. Sejak pembelian jadi sekali bayar tidak ada lagi
+   * penghematan durasi untuk ditampilkan, jadi nilainya selalu kosong — kolomnya
+   * dipertahankan supaya pemanggil lama tidak patah.
+   */
   savingsLabel?: string | null;
+  /** Poin yang ikut di pembelian pertama. */
+  poinAwal?: number | null;
   features: PricingTierFeature[];
   cta: string;
   href: string;

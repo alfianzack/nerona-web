@@ -8,6 +8,7 @@ import {
   getDurationDiscounts,
   priceLabelFor,
   savingsLabelFor,
+  formatRupiah,
   DURATION_LABELS,
 } from "./plan-duration";
 import type { PricingTier } from "@/components/marketing/PricingTiers";
@@ -60,8 +61,13 @@ function durationForPlan(planName: string, months: number): number {
   return normalizePlan(planName) === "free" ? 1 : months;
 }
 
-export async function metadataTiers(monthsInput: number = 1): Promise<PricingTier[]> {
-  const months = coerceDuration(monthsInput);
+/**
+ * `monthsInput` diabaikan sejak alur sekali bayar — dipertahankan supaya
+ * pemanggil lama (halaman harga dengan query `months`) tidak patah. Harga tidak
+ * lagi dikalikan apa pun, dan poin yang disebutkan adalah jatah satu bulan.
+ */
+export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTier[]> {
+  const months = 1;
   const [plans, discounts] = await Promise.all([prisma.plan.findMany(), getDurationDiscounts()]);
   const ordered = plans
     .filter((plan) => TIER_ORDER.includes(plan.name))
@@ -75,8 +81,19 @@ export async function metadataTiers(monthsInput: number = 1): Promise<PricingTie
         name: plan.name,
         icon: TIER_ICONS[plan.name] ?? "✨",
         tagline: METADATA_TAGLINES[plan.name] ?? "",
-        priceLabel: priceLabelFor(plan.priceMonthly, planMonths, discount),
-        savingsLabel: savingsLabelFor(plan.priceMonthly, planMonths, discount),
+        // TANPA "/bulan". Label itu menjanjikan penagihan bulanan yang tidak
+        // pernah terjadi, dan salah paham semacam itu berakhir di permintaan
+        // pengembalian uang.
+        priceLabel:
+          plan.priceMonthly === null
+            ? "Hubungi kami"
+            : plan.priceMonthly === 0
+              ? "Gratis"
+              : `${formatRupiah(plan.priceMonthly)} sekali bayar`,
+        savingsLabel: null,
+        // Poin yang ikut di pembelian pertama, ditampilkan di ringkasan
+        // checkout. Jatah SATU bulan — yang dibeli adalah aksesnya.
+        poinAwal: await pointsForPlan("metadata", plan.name),
         features: [
           { label: describeMarketplaces(plan.marketplaces), included: true },
           { label: await allowanceLabel("metadata", plan.name, planMonths), included: true },

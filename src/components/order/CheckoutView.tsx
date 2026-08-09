@@ -7,10 +7,9 @@ import type { PricingTierFeature } from "@/components/marketing/PricingTiers";
 interface CheckoutViewProps {
   product: "metadata" | "agent";
   planName: string;
-  durationMonths: number;
-  durationLabel: string;
   priceLabel: string;
-  savingsLabel?: string | null;
+  /** Poin yang ikut di pembelian pertama. */
+  poinAwal?: number | null;
   features: PricingTierFeature[];
   /** Saklar QRIS menyala DAN paket ini punya harga angka. */
   qrisTersedia?: boolean;
@@ -21,10 +20,8 @@ type Metode = "qris" | "bank";
 export function CheckoutView({
   product,
   planName,
-  durationMonths,
-  durationLabel,
   priceLabel,
-  savingsLabel,
+  poinAwal,
   features,
   qrisTersedia = false,
 }: CheckoutViewProps) {
@@ -43,7 +40,8 @@ export function CheckoutView({
       body: JSON.stringify({
         product,
         planName,
-        durationMonths,
+        // `durationMonths` sengaja TIDAK dikirim: server selalu menyimpan 1, dan
+        // mengirimnya dari sini cuma memberi kesan nilainya bisa dipilih.
         contactNote: contactNote || undefined,
       }),
     });
@@ -132,7 +130,10 @@ export function CheckoutView({
           {product === "metadata" ? "Nerona Metadata" : "Nerona Agent"}
         </p>
         <h2 className="mt-1 text-xl font-extrabold text-ink">Paket {planName}</h2>
-        <p className="mt-1 text-xs font-medium text-muted">Durasi {durationLabel}</p>
+        <p className="mt-1 text-xs font-medium text-muted">
+          Sekali bayar · akses selamanya
+          {poinAwal ? ` · ${poinAwal.toLocaleString("id-ID")} poin` : ""}
+        </p>
 
         <ul className="mt-4 space-y-2 text-[13px] text-ink">
           {features.map((feature) => (
@@ -159,9 +160,15 @@ export function CheckoutView({
             <span className="text-sm font-semibold text-ink">Total</span>
             <span className="text-lg font-extrabold text-brand-blue">{priceLabel}</span>
           </div>
-          {savingsLabel && (
-            <p className="mt-1 text-right text-xs font-medium text-emerald-600">{savingsLabel}</p>
-          )}
+          {/*
+            Dikatakan di tempat harganya, bukan cuma di kartu paket. Yang dibeli
+            adalah AKSES, dan poinnya bekal awal — tanpa kalimat ini, pembeli
+            membandingkan jumlah poin di sini dengan paket top-up dan
+            menyimpulkan paket masuknya mahal.
+          */}
+          <p className="mt-1 text-right text-xs font-medium text-emerald-600">
+            Bayar sekali, tidak ada tagihan bulanan
+          </p>
         </div>
 
         {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
