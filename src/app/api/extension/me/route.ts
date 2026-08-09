@@ -3,6 +3,7 @@ import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { getAiSettings } from "@/lib/ai-settings";
 import { infoPembaruanExtension } from "@/lib/extension-version";
+import { MARKETPLACES } from "@/lib/marketplaces";
 
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("authorization") || "";
@@ -32,5 +33,17 @@ export async function GET(request: Request) {
     account: { ...state, validUntil: state.validUntil ? state.validUntil.toISOString() : null },
     ai: { model: ai.model },
     update,
+    // Daftar marketplace yang BERWENANG, dikirim ke setiap klien di setiap
+    // panggilan yang memang sudah terjadi.
+    //
+    // Sebelum ini daftarnya disalin tangan di tiga repo, dan berkas katalog Hub
+    // sendiri mengakui tidak ada tes yang bisa menyeberanginya. Itu sudah
+    // menggigit sekali: `adobe_stock` vs `adobe` memblokir Adobe Stock untuk
+    // setiap lisensi berdaftar eksplisit, tanpa galat di sisi mana pun.
+    //
+    // `marketplaces` pada lisensi diperbandingkan dengan daftar INI, jadi di
+    // sinilah kebenarannya berada. Klien yang memakainya tidak bisa lagi
+    // menyimpang diam-diam.
+    allMarketplaces: MARKETPLACES.map((m) => m.key),
   });
 }

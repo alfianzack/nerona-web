@@ -63,4 +63,25 @@ describe("GET /api/extension/me", () => {
       latest: "1.2.0", min: "", url: "https://nerona-web.vercel.app/unduh",
     });
   });
+
+  /// Daftar marketplace yang berwenang ikut di setiap panggilan, jadi klien
+  /// tidak perlu menyalinnya dengan tangan lagi.
+  it("membawa daftar marketplace yang berwenang", async () => {
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({
+      email: "u@x.com", plan: "Pro", licenseStatus: "active",
+      validUntil: null, marketplaces: "*",
+      rejectAnalyzer: false, pointsBalance: 10, active: true,
+    });
+    (getAiSettings as any).mockResolvedValue({ model: "m", apiKey: "k", pricing: {} });
+    (infoPembaruanExtension as any).mockResolvedValue({ latest: "", min: "", url: "" });
+
+    const body = await (await GET(req("Bearer nrx_ok"))).json();
+    expect(Array.isArray(body.allMarketplaces)).toBe(true);
+    // Nilai yang menentukan: `api::allows` di Hub dan ekspansi `*` di extension
+    // membandingkan id dengan daftar ini.
+    expect(body.allMarketplaces).toContain("adobe");
+    expect(body.allMarketplaces).toContain("canva");
+    expect(body.allMarketplaces.every((k: unknown) => typeof k === "string")).toBe(true);
+  });
 });
