@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/Button";
+
 interface AuthButtonProps {
   type?: "button" | "submit";
   variant?: "primary" | "secondary";
@@ -6,6 +8,16 @@ interface AuthButtonProps {
   children: React.ReactNode;
 }
 
+/**
+ * Pembungkus tipis di atas Button.
+ *
+ * Tanda tangannya sengaja dibiarkan persis seperti semula supaya keempat
+ * halaman auth tidak perlu disentuh saat fondasi dipasang. Berkas ini dihapus
+ * di Gelombang 5, setelah pemanggilnya pindah ke Button langsung.
+ *
+ * Satu perubahan yang ikut terbawa: tombol ini akhirnya punya jejak fokus
+ * papan ketik, karena aturan :focus-visible sekarang hidup di lapisan dasar.
+ */
 export function AuthButton({
   type = "button",
   variant = "primary",
@@ -13,15 +25,9 @@ export function AuthButton({
   onClick,
   children,
 }: AuthButtonProps) {
-  const base = "w-full rounded-full py-2.5 text-sm font-medium transition disabled:opacity-50";
-  const styles =
-    variant === "primary"
-      ? "bg-gradient-to-br from-gold-500 to-gold-400 text-navy-900 font-semibold hover:brightness-110"
-      : "bg-navy-900/5 text-ink ring-1 ring-navy-900/10 hover:bg-navy-900/10";
-
   return (
-    <button type={type} disabled={disabled} onClick={onClick} className={`${base} ${styles}`}>
+    <Button type={type} variant={variant} size="md" full disabled={disabled} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }
