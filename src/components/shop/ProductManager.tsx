@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm, EMPTY_PRODUCT, type ProductFormValues } from "@/components/shop/ProductForm";
 import { formatRupiah } from "@/lib/format";
@@ -17,10 +20,13 @@ interface Product {
 
 const PAGE_SIZE = 20;
 
+/**
+ * Belum ada primitive untuk <select>. Bentuknya sengaja dijiplak dari Input —
+ * radius kendali, cincin border, dan cincin fokus aksen yang sama — supaya
+ * kotak cari dan kedua penyaring di baris yang sama tidak berbeda tinggi.
+ */
 const selectClass =
-  "rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 focus:outline-none focus:ring-2 focus:ring-gold-400";
-const inputClass =
-  "rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+  "rounded-control bg-surface px-3 py-2.5 text-body text-ink ring-1 ring-border transition focus:outline-none focus:ring-2 focus:ring-accent";
 
 export function ProductManager() {
   const [rows, setRows] = useState<Product[]>([]);
@@ -148,53 +154,36 @@ export function ProductManager() {
       key: "price",
       header: "Harga",
       sortable: true,
-      render: (p) => formatRupiah(p.price),
+      render: (p) => <span className="font-mono tabular-nums">{formatRupiah(p.price)}</span>,
     },
     {
       key: "stock",
       header: "Stok",
       sortable: true,
-      render: (p) => (p.stock === null ? "—" : String(p.stock)),
+      render: (p) => (
+        <span className="font-mono tabular-nums">{p.stock === null ? "—" : String(p.stock)}</span>
+      ),
     },
     {
       key: "isActive",
       header: "Status",
       render: (p) =>
-        p.isActive ? (
-          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600">
-            aktif
-          </span>
-        ) : (
-          <span className="rounded-full bg-navy-900/5 px-2 py-0.5 text-xs font-semibold text-muted">
-            nonaktif
-          </span>
-        ),
+        p.isActive ? <Badge tone="success">aktif</Badge> : <Badge tone="neutral">nonaktif</Badge>,
     },
     {
       key: "actions",
       header: "Aksi",
       render: (p) => (
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => openEdit(p)}
-            className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-          >
+          <Button variant="secondary" size="sm" onClick={() => openEdit(p)}>
             Edit
-          </button>
-          <button
-            onClick={() => toggleActive(p)}
-            disabled={busy}
-            className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => toggleActive(p)} disabled={busy}>
             {p.isActive ? "Nonaktifkan" : "Aktifkan"}
-          </button>
-          <button
-            onClick={() => remove(p.id)}
-            disabled={busy}
-            className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-600 ring-1 ring-rose-500/20 transition hover:bg-rose-500/15 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => remove(p.id)} disabled={busy}>
             Hapus
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -212,11 +201,11 @@ export function ProductManager() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input
+        <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cari nama produk..."
-          className={`${inputClass} flex-1 min-w-[160px]`}
+          className="min-w-[160px] flex-1"
         />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
           <option value="">Semua status</option>
@@ -232,15 +221,11 @@ export function ProductManager() {
           <option value="low">Stok menipis (≤ 5)</option>
           <option value="out">Stok habis</option>
         </select>
-        <button
-          onClick={openAdd}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110"
-        >
-          + Tambah produk
-        </button>
+        {/* Menambah produk tidak menggerakkan uang, jadi tombolnya primary. */}
+        <Button onClick={openAdd}>+ Tambah produk</Button>
       </div>
 
-      {error && <p className="mb-3 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mb-3 text-caption text-danger">{error}</p>}
 
       <DataTable
         columns={columns}

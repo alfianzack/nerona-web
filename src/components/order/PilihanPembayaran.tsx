@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { cn } from "@/components/ui/cn";
+import { Icon } from "@/components/ui/icons";
 
 /**
  * Dua metode bayar yang saling menggantikan, bukan dua panel bertumpuk.
@@ -35,16 +37,20 @@ export function PilihanPembayaran({
 
   return (
     <section className="mt-6">
+      {/* Pemilih ruas, bukan sederet pil: bentuk pil di dalam aplikasi hanya
+          milik chip dan avatar. */}
       <div
         role="tablist"
         aria-label="Metode pembayaran"
-        className="flex gap-2 rounded-full bg-navy-900/5 p-1 ring-1 ring-navy-900/10"
+        className="flex gap-1 rounded-control bg-surface-sunken p-1 ring-1 ring-border"
       >
         <Tab aktif={aktif === "qris"} onClick={() => setAktif("qris")}>
-          📱 QRIS
+          <Icon name="phone" className="h-4 w-4" />
+          QRIS
         </Tab>
         <Tab aktif={aktif === "transfer"} onClick={() => setAktif("transfer")}>
-          🏦 Transfer bank
+          <Icon name="bank" className="h-4 w-4" />
+          Transfer bank
         </Tab>
       </div>
 
@@ -68,9 +74,12 @@ function Tab({
       role="tab"
       aria-selected={aktif}
       onClick={onClick}
-      className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-        aktif ? "bg-surface text-ink shadow-sm ring-1 ring-navy-900/10" : "text-muted hover:text-ink"
-      }`}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-2 rounded-chip px-4 py-2 text-body font-medium transition",
+        // Ruas terpilih naik ke permukaan lewat warna dan garis rambut saja;
+        // bayangan disimpan untuk lapisan yang benar-benar melayang.
+        aktif ? "bg-surface text-ink ring-1 ring-border" : "text-muted hover:text-ink",
+      )}
     >
       {children}
     </button>

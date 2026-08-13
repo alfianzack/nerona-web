@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Icon } from "@/components/ui/icons";
 import { formatRupiah } from "@/lib/format";
 
 export interface ProductOption {
@@ -31,10 +34,13 @@ interface DraftItem {
 
 const emptyItem = (): DraftItem => ({ productId: "", productName: "", qty: "1", unitPrice: "" });
 
-const inputClass =
-  "w-full rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
-const secondaryBtn =
-  "rounded-full bg-navy-900/5 px-3.5 py-1.5 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50";
+/**
+ * Belum ada primitive untuk <select>. Bentuknya dijiplak dari Input supaya
+ * pemilih produk dan keempat isian di baris yang sama punya tinggi, radius,
+ * dan cincin fokus yang sama.
+ */
+const selectClass =
+  "w-full rounded-control bg-surface px-3 py-2.5 text-body text-ink ring-1 ring-border transition focus:outline-none focus:ring-2 focus:ring-accent";
 
 interface OrderFormProps {
   products: ProductOption[];
@@ -90,17 +96,15 @@ export function OrderForm({ products, submitting, serverError, onSubmit, onCance
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <input
+        <Input
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
           placeholder="Nama pelanggan (opsional)"
-          className={inputClass}
         />
-        <input
+        <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Catatan (opsional)"
-          className={inputClass}
         />
       </div>
 
@@ -110,7 +114,7 @@ export function OrderForm({ products, submitting, serverError, onSubmit, onCance
             <select
               value={item.productId}
               onChange={(e) => onPickProduct(index, e.target.value)}
-              className={`${inputClass} sm:w-40`}
+              className={`${selectClass} sm:w-40`}
             >
               <option value="">— pilih produk —</option>
               {products.map((p) => (
@@ -119,60 +123,66 @@ export function OrderForm({ products, submitting, serverError, onSubmit, onCance
                 </option>
               ))}
             </select>
-            <input
+            <Input
               value={item.productName}
               onChange={(e) => updateItem(index, { productName: e.target.value })}
               placeholder="Nama item"
-              className={`${inputClass} sm:flex-1`}
+              className="sm:flex-1"
             />
-            <input
+            <Input
               value={item.qty}
               onChange={(e) => updateItem(index, { qty: e.target.value })}
               placeholder="Qty"
               inputMode="numeric"
-              className={`${inputClass} sm:w-16`}
+              className="font-mono tabular-nums sm:w-16"
             />
-            <input
+            <Input
               value={item.unitPrice}
               onChange={(e) => updateItem(index, { unitPrice: e.target.value })}
               placeholder="Harga"
               inputMode="numeric"
-              className={`${inputClass} sm:w-24`}
+              className="font-mono tabular-nums sm:w-24"
             />
+            {/* Ikon, bukan glyph ✕: glyph teks dirender oleh huruf sistem, jadi
+                tingginya tidak pernah sama dengan tinggi isian di sebelahnya.
+                Tombolnya sengaja telanjang — tombol merah pekat di setiap baris
+                item terbaca lebih keras daripada aksinya. */}
             <button
               onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-              className="rounded-full px-2 py-1 text-sm text-rose-600 transition hover:bg-rose-500/10"
+              className="rounded-control p-2 text-danger transition hover:bg-danger-bg"
               aria-label="Hapus item"
             >
-              ✕
+              <Icon name="close" className="h-4 w-4" />
             </button>
           </div>
         ))}
-        <button onClick={() => setItems((prev) => [...prev, emptyItem()])} className={secondaryBtn}>
+        <Button variant="secondary" size="sm" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
           + Item
-        </button>
+        </Button>
       </div>
 
-      <div className="flex items-center justify-between border-t border-navy-900/10 pt-3">
-        <span className="text-sm font-semibold text-ink">Total</span>
-        <span className="text-lg font-extrabold text-brand-blue">{formatRupiah(draftTotal)}</span>
+      <div className="flex items-center justify-between border-t border-divider pt-3">
+        <span className="text-body font-semibold text-ink">Total</span>
+        {/* Tinta, bukan aksen: aksen menandai sesuatu yang bisa ditekan, dan
+            total bukan tautan. Disamakan dengan CheckoutView dan detail order. */}
+        <span className="font-mono text-title-2 tabular-nums text-ink">
+          {formatRupiah(draftTotal)}
+        </span>
       </div>
 
       {(error || serverError) && (
-        <p className="text-sm text-rose-500">{error || serverError}</p>
+        <p className="text-caption text-danger">{error || serverError}</p>
       )}
 
+      {/* Mencatat transaksi bukan aksi yang menggerakkan uang — tidak ada yang
+          dibayar di sini — jadi tombolnya primary, bukan emas. */}
       <div className="flex justify-end gap-2 pt-1">
-        <button onClick={onCancel} className={secondaryBtn}>
+        <Button variant="secondary" onClick={onCancel}>
           Batal
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        </Button>
+        <Button onClick={handleSubmit} disabled={submitting}>
           {submitting ? "Menyimpan..." : "Simpan transaksi"}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "./icons";
 
 interface ModalProps {
   open: boolean;
@@ -35,16 +36,21 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0 bg-navy-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-xl shadow-navy-900/20 ring-1 ring-navy-900/10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink">{title}</h2>
+      {/* Tirai memakai tinta, bukan navy — nilainya sengaja disamakan dengan
+          tirai laci di AppShell supaya dua lapisan melayang di aplikasi yang
+          sama tidak menggelapkan latar dengan kadar yang berbeda. */}
+      <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm" onClick={onClose} />
+      {/* Satu dari dua tempat yang masih pantas berbayang: dialog memang
+          melayang di atas halaman. Kartu diam tidak. */}
+      <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-card bg-surface p-6 shadow-float ring-1 ring-border">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-title-2 text-ink">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="rounded-full p-1 text-muted transition hover:bg-navy-900/5 hover:text-ink"
+            className="flex-none rounded-control p-1.5 text-muted transition hover:bg-surface-sunken hover:text-ink"
           >
-            ✕
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
         <div className="mt-4">{children}</div>

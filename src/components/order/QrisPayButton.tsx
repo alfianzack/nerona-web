@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-styles";
+import { Icon } from "@/components/ui/icons";
 
 const PESAN: Record<string, string> = {
   disabled: "Pembayaran QRIS sedang dimatikan. Pakai transfer manual di bawah.",
@@ -69,18 +72,27 @@ export function QrisPayButton({
   if (tautanAktif) {
     return (
       <div>
+        {/*
+          Tetap jangkar biasa, bukan tautan router: tujuannya di luar aplikasi
+          dan dibuka di tab baru, jadi yang dipinjam dari lapisan tombol cuma
+          tampilannya. Emas karena tautan ini yang membawa uang berpindah.
+        */}
         <a
           href={tautanAktif}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2.5 text-sm font-semibold text-navy-900 transition hover:brightness-110"
+          className={buttonClass({ variant: "money" })}
         >
-          Buka halaman pembayaran QRIS ↗
+          Buka halaman pembayaran QRIS
+          <Icon name="external-link" className="h-4 w-4" />
         </a>
         {kedaluwarsa && (
-          <p className="mt-2 text-xs text-muted">Tautan bayar berlaku sampai {kedaluwarsa}.</p>
+          <p className="mt-2 text-caption text-muted">
+            Tautan bayar berlaku sampai{" "}
+            <span className="font-mono tabular-nums">{kedaluwarsa}</span>.
+          </p>
         )}
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-caption text-muted">
           Tab baru akan terbuka. Setelah membayar, tutup tab itu — halaman ini memperbarui
           statusnya sendiri. Paket aktif tanpa perlu mengunggah bukti.
         </p>
@@ -90,15 +102,10 @@ export function QrisPayButton({
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={siapkan}
-        disabled={sibuk}
-        className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-      >
+      <Button variant="money" onClick={siapkan} disabled={sibuk}>
         {sibuk ? "Menyiapkan QRIS..." : "Siapkan pembayaran QRIS"}
-      </button>
-      {galat && <p className="mt-2 text-sm text-rose-500">{galat}</p>}
+      </Button>
+      {galat && <p className="mt-2 text-body text-danger">{galat}</p>}
     </div>
   );
 }

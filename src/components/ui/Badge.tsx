@@ -37,7 +37,12 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 font-mono text-label font-semibold uppercase tabular-nums",
+        // Sengaja TIDAK memaksa huruf besar. Badge dipakai untuk dua hal:
+        // kata status ("Lunas", "Menunggu bayar") dan nilai ("1.250 poin").
+        // Huruf besar paksa membuat yang kedua terbaca berteriak, dan satuannya
+        // ikut jadi "POIN". Pemanggil yang memang mau huruf besar bisa
+        // menambahkannya sendiri; kebalikannya tidak bisa dibatalkan.
+        "inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 font-mono text-label font-semibold tabular-nums",
         TONES[tone],
         className,
       )}

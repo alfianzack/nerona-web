@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { labelPerangkat, pisahLabelPerangkat } from "@/lib/device-label";
 import { butuhPembaruan } from "@/lib/unduhan";
 import { bolehSambungOtomatis } from "@/lib/auto-sambung";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { buttonClass } from "@/components/ui/button-styles";
+import { Icon } from "@/components/ui/icons";
 
 interface TokenRow {
   id: string;
@@ -282,8 +286,8 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
   const sudahTersambung = Boolean(barisExtension) && extPunyaToken !== false;
 
   return (
-    <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <h2 className="text-lg font-semibold text-ink">Perangkat terhubung</h2>
+    <Card>
+      <h2 className="text-title-2 text-ink">Perangkat terhubung</h2>
 
       {/*
         Extension Nerona Metadata tidak ada di Chrome Web Store, jadi
@@ -294,22 +298,29 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
         sudah basi.
       */}
       {!extVersion && (
-        <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
+        <Card variant="sunken" padding="sm" className="mt-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">1. Unduh extension</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="text-body font-semibold text-ink">1. Unduh extension</p>
+            <p className="mt-1 text-caption text-muted">
               nerona-metadata.zip
-              {versiTerbaru ? ` · versi ${versiTerbaru}` : ""}
+              {versiTerbaru ? (
+                <>
+                  {" · versi "}
+                  <span className="font-mono tabular-nums">{versiTerbaru}</span>
+                </>
+              ) : (
+                ""
+              )}
             </p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-1 text-caption text-muted">
               Simpan lalu ekstrak — foldernya jangan dihapus, Chrome memuatnya langsung dari situ.
             </p>
           </div>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <TombolUnduhZip url={unduhUrl} />
           </div>
-          <p className="mt-4 text-sm font-semibold text-ink">2. Pasang di Chrome</p>
-          <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
+          <p className="mt-5 text-body font-semibold text-ink">2. Pasang di Chrome</p>
+          <ol className="mt-1.5 list-inside list-decimal space-y-1 text-caption text-muted">
             <li>
               Ekstrak ZIP-nya. Isinya satu folder bernama <code>nerona-metadata</code> — taruh di
               tempat yang tidak akan dipindah, misalnya <code>Documents</code>.
@@ -331,10 +342,10 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
             memuat folder yang sudah dimuat Chrome: pemulihan yang salah. Yang
             benar adalah menimpa isinya lalu menekan Reload.
           */}
-          <p className="mt-4 text-sm font-semibold text-ink">
+          <p className="mt-5 text-body font-semibold text-ink">
             Sudah pernah dipasang tapi tetap tidak terdeteksi?
           </p>
-          <ol className="mt-1 list-inside list-decimal space-y-1 text-xs text-muted">
+          <ol className="mt-1.5 list-inside list-decimal space-y-1 text-caption text-muted">
             <li>
               Berarti yang terpasang versi lama — unduh lagi ZIP di atas, lalu{" "}
               <b>timpa isi folder</b> <code>nerona-metadata</code> yang sudah ada (jangan pilih
@@ -346,7 +357,7 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
             </li>
             <li>Muat ulang halaman ini.</li>
           </ol>
-        </div>
+        </Card>
       )}
 
       {/*
@@ -355,44 +366,61 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
         basi adalah penyebab paling mungkin dari kegagalan yang tampak seperti
         "fiturnya rusak" — dan sebelum ini tidak ada apa pun yang memberitahu
         pengguna bahwa itu yang terjadi.
+
+        Kotaknya bernada peringatan, bukan emas: build basi adalah keadaan yang
+        perlu diperbaiki, sementara emas di dalam aplikasi hanya menandai aksi
+        yang menggerakkan uang.
       */}
       {extVersion && butuhPembaruan(extVersion, versiTerbaru) && (
-        <div className="mt-4 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
-          <p className="text-sm text-ink">
-            Versi terpasang {extVersion}, tersedia {versiTerbaru}.
+        <div className="mt-4 rounded-card bg-warning-bg p-4 ring-1 ring-warning/25">
+          <p className="text-body text-ink">
+            Versi terpasang <span className="font-mono tabular-nums">{extVersion}</span>, tersedia{" "}
+            <span className="font-mono tabular-nums">{versiTerbaru}</span>.
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1.5 text-caption text-muted">
             Unduh lagi, <b>timpa isi folder</b> <code>nerona-metadata</code> yang sudah ada, lalu
             klik ikon <b>⟳ Reload</b> di kartu Nerona Metadata pada{" "}
             <code>chrome://extensions</code>. Jangan pilih Load unpacked lagi — Chrome sudah
             memuat folder itu.
           </p>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <TombolUnduhZip url={unduhUrl} />
           </div>
         </div>
       )}
 
       {extVersion && !sudahTersambung && (
-        <div className="mt-4 rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10">
-          <p className="text-sm text-ink">✓ Extension terpasang (versi {extVersion}).</p>
+        <Card variant="sunken" padding="sm" className="mt-4">
+          <p className="flex items-start gap-2 text-body text-ink">
+            <Icon name="check-circle" className="mt-0.5 h-4 w-4 flex-none text-success" />
+            <span>
+              Extension terpasang (versi <span className="font-mono tabular-nums">{extVersion}</span>
+              ).
+            </span>
+          </p>
           {versiTerbaru && (
-            <p className="mt-0.5 text-xs text-muted">Versi tersedia: {versiTerbaru}</p>
+            <p className="mt-1 text-caption text-muted">
+              Versi tersedia: <span className="font-mono tabular-nums">{versiTerbaru}</span>
+            </p>
           )}
-          <button
-            onClick={hubungkanExtension}
-            disabled={sibuk}
-            className="mt-3 rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-          >
+          {/*
+            Menyambungkan extension tidak menggerakkan uang, jadi aksi utama
+            biasa. Emas di dalam aplikasi hanya untuk beli, top-up, dan
+            perpanjang — dipakai di sini pun ia berhenti menandai apa-apa.
+          */}
+          <Button onClick={hubungkanExtension} disabled={sibuk} className="mt-4">
             {sibuk ? "Menghubungkan..." : "Hubungkan extension"}
-          </button>
-        </div>
+          </Button>
+        </Card>
       )}
 
       {sudahTersambung && (
-        <div className="mt-4 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
-          <p className="text-sm text-ink">
-            ✓ Extension tersambung{emailTersambung ? ` sebagai ${emailTersambung}` : ""}.
+        <div className="mt-4 rounded-card bg-success-bg p-4 ring-1 ring-success/25">
+          <p className="flex items-start gap-2 text-body text-ink">
+            <Icon name="check-circle" className="mt-0.5 h-4 w-4 flex-none text-success" />
+            <span>
+              Extension tersambung{emailTersambung ? ` sebagai ${emailTersambung}` : ""}.
+            </span>
           </p>
           {/*
             Nomor versi ditampilkan di SETIAP keadaan, bukan hanya saat basi.
@@ -402,9 +430,23 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
             sudah tertinggal.
           */}
           {(extVersion || versiTerbaru) && (
-            <p className="mt-0.5 text-xs text-muted">
-              {extVersion ? `Terpasang ${extVersion}` : "Versi terpasang tidak terbaca"}
-              {versiTerbaru ? ` · tersedia ${versiTerbaru}` : ""}
+            <p className="mt-1 text-caption text-muted">
+              {extVersion ? (
+                <>
+                  {"Terpasang "}
+                  <span className="font-mono tabular-nums">{extVersion}</span>
+                </>
+              ) : (
+                "Versi terpasang tidak terbaca"
+              )}
+              {versiTerbaru ? (
+                <>
+                  {" · tersedia "}
+                  <span className="font-mono tabular-nums">{versiTerbaru}</span>
+                </>
+              ) : (
+                ""
+              )}
             </p>
           )}
           {lisensiAktif === false && (
@@ -412,7 +454,7 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
             // sama dilaporkan sebagai satu pernyataan yang salah ("Server
             // menolak token yang baru dibuat"), dan setiap klik ulang mencetak
             // token baru yang tidak menyelesaikan apa pun.
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-2 text-caption text-muted">
               Paket Anda belum aktif, jadi extension belum bisa dipakai membuat
               metadata. Aktifkan paket dulu — penyambungannya sendiri tidak perlu
               diulang.
@@ -421,11 +463,11 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
         </div>
       )}
 
-      {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-4 text-body text-danger">{error}</p>}
 
-      <ul className="mt-4 divide-y divide-navy-900/10">
+      <ul className="mt-5 divide-y divide-divider">
         {tokens.length === 0 && (
-          <li className="py-2 text-sm text-muted">Belum ada perangkat terhubung.</li>
+          <li className="py-3 text-body text-muted">Belum ada perangkat terhubung.</li>
         )}
         {tokens.map((t) => {
           // Id-nya turun ke baris keterangan, bukan hilang: dua Chrome di dua
@@ -434,10 +476,10 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
           // deretan huruf tanpa arti.
           const { nama, instalasi: idPerangkat } = pisahLabelPerangkat(t.label);
           return (
-          <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+          <li key={t.id} className="flex items-center justify-between gap-3 py-3">
             <div className="min-w-0">
-              <p className="text-ink">{nama}</p>
-              <p className="text-xs text-muted">
+              <p className="text-body text-ink">{nama}</p>
+              <p className="mt-0.5 font-mono text-label uppercase tabular-nums text-muted">
                 Dibuat {new Date(t.createdAt).toLocaleDateString("id-ID")}
                 {t.lastUsedAt
                   ? ` · dipakai ${new Date(t.lastUsedAt).toLocaleDateString("id-ID")}`
@@ -445,42 +487,43 @@ export function ExtensionConnectPanel({ unduhUrl, versiTerbaru }: ExtensionConne
                 {idPerangkat ? ` · id ${idPerangkat}` : ""}
               </p>
             </div>
-            <button
-              onClick={() => revoke(t.id)}
-              className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-            >
+            <Button variant="danger" size="sm" onClick={() => revoke(t.id)}>
               Putuskan
-            </button>
+            </Button>
           </li>
           );
         })}
       </ul>
 
-      <details className="mt-4">
-        <summary className="cursor-pointer text-xs text-muted">
+      <details className="mt-5">
+        <summary className="cursor-pointer text-caption text-muted">
           Kalau tombolnya tidak muncul
         </summary>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-caption text-muted">
           Buat token manual di bawah, lalu tempel di popup extension (buka bagian
           &quot;Cara lain&quot; di sana). Dipakai juga untuk Nerona Hub kalau halaman
           persetujuannya tidak bisa dibuka.
         </p>
         {created && (
-          <div className="mt-3 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
-            <p className="text-xs font-semibold text-ink">
+          <div className="mt-3 rounded-card bg-warning-bg p-4 ring-1 ring-warning/25">
+            <p className="text-caption font-semibold text-ink">
               Token baru (salin sekarang — tidak ditampilkan lagi):
             </p>
-            <code className="mt-1 block break-all text-sm text-ink">{created}</code>
+            {/*
+              Tidak ada tombol salin di sini, dan tokennya benar-benar hanya
+              tampil sekali — seleksi seluruhnya dalam satu klik menutup satu-
+              satunya cara kehilangannya: menyeretnya dan meleset satu karakter.
+            */}
+            <code className="mt-2 block select-all break-all font-mono text-body text-ink">
+              {created}
+            </code>
           </div>
         )}
-        <button
-          onClick={createToken}
-          className="mt-3 rounded-full bg-navy-900/5 px-4 py-2 text-xs font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-        >
+        <Button variant="secondary" size="sm" onClick={createToken} className="mt-3">
           Buat token manual
-        </button>
+        </Button>
       </details>
-    </div>
+    </Card>
   );
 }
 
@@ -499,9 +542,14 @@ function namaBrowser(): string {
  */
 function TombolUnduhZip({ url }: { url: string | null }) {
   if (!url) {
+    /*
+      Bukan tombol yang dinonaktifkan: elemen disabled tidak memunculkan tooltip
+      `title` di Chrome, dan kalimat itulah satu-satunya yang menjelaskan bahwa
+      yang kosong adalah pengaturan admin, bukan rilisnya.
+    */
     return (
       <span
-        className="cursor-not-allowed whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-muted ring-1 ring-navy-900/10"
+        className="inline-flex cursor-not-allowed items-center justify-center whitespace-nowrap rounded-action bg-surface px-4 py-2 text-body font-medium text-muted ring-1 ring-border"
         title="Tautan unduhan belum diisi di pengaturan admin."
       >
         Belum tersedia
@@ -514,7 +562,9 @@ function TombolUnduhZip({ url }: { url: string | null }) {
       // `download` diabaikan browser untuk URL lintas-origin; aset GitHub tetap
       // terunduh karena servernya mengirim Content-Disposition: attachment.
       download
-      className="whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
+      // buttonClass, bukan ButtonLink: ini tautan lintas-origin ke aset rilis,
+      // dan router Next tidak punya urusan apa pun dengannya.
+      className={buttonClass({ variant: "primary" })}
     >
       Download Nerona Metadata
     </a>

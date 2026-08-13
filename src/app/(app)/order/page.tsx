@@ -1,9 +1,12 @@
-import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
-import { coerceDuration, DURATION_LABELS } from "@/lib/plan-duration";
+import { coerceDuration } from "@/lib/plan-duration";
 import { AGENT_ENABLED } from "@/lib/features";
 import { amountForOrder, gatewayEnabled } from "@/lib/payments/orders";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TextLink } from "@/components/ui/TextLink";
+import { Icon } from "@/components/ui/icons";
 import { CheckoutView } from "@/components/order/CheckoutView";
 import { FreeActivateCard } from "@/components/order/FreeActivateCard";
 
@@ -33,15 +36,15 @@ export default async function OrderPage({
 
   if (!tier || (product !== "metadata" && !agentOrderable)) {
     return (
-      <main className="mx-auto max-w-xl px-6 py-20 text-center">
-        <h1 className="text-2xl font-semibold text-ink">Pilih paket dulu</h1>
-        <p className="mt-3 text-sm text-muted">
-          Buka halaman Harga dan pilih paket yang ingin Anda aktifkan.
-        </p>
+      <main className="mx-auto max-w-xl px-6 py-band">
+        <PageHeader
+          title="Pilih paket dulu"
+          description="Buka halaman Harga dan pilih paket yang ingin Anda aktifkan."
+        />
         <div className="mt-6">
-          <Link href="/pricing" className="text-brand-blue hover:underline">
-            Lihat Harga ›
-          </Link>
+          {/* Kurung sudutnya datang dari TextLink sendiri, jadi tidak ditulis
+              lagi di sini. */}
+          <TextLink href="/pricing">Lihat Harga</TextLink>
         </div>
       </main>
     );
@@ -50,18 +53,22 @@ export default async function OrderPage({
   const isFree = tier.name === "Free";
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-14 sm:py-16">
-      <Link href="/pricing" className="text-sm text-brand-blue hover:underline">
-        ‹ Kembali ke Harga
-      </Link>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-        {isFree ? "Aktifkan paket" : "Configure your plan"}
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        {isFree
-          ? "Paket Free — tanpa pembayaran, langsung aktif."
-          : "Pilih metode pembayaran, lalu selesaikan transfer di langkah berikutnya."}
-      </p>
+    <main className="mx-auto max-w-3xl px-6 py-band">
+      <ButtonLink href="/pricing" variant="ghost" size="sm" className="-ml-3">
+        <Icon name="arrow-left" className="h-3.5 w-3.5" />
+        Kembali ke Harga
+      </ButtonLink>
+      {/* Judulnya sempat berbahasa Inggris di cabang berbayar — satu-satunya
+          kebocoran bahasa di corong pembayaran. */}
+      <PageHeader
+        className="mt-3"
+        title={isFree ? "Aktifkan paket" : "Atur paket Anda"}
+        description={
+          isFree
+            ? "Paket Free — tanpa pembayaran, langsung aktif."
+            : "Pilih metode pembayaran, lalu selesaikan transfer di langkah berikutnya."
+        }
+      />
 
       <div className="mt-8">
         {isFree ? (

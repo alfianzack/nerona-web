@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session-guards";
 import { getUserOrder } from "@/lib/orders";
@@ -9,27 +8,53 @@ import { prisma } from "@/lib/prisma";
 import { amountForOrder, gatewayEnabled } from "@/lib/payments/orders";
 import { tampakMuatanQris } from "@/lib/payments/sumopod";
 import { qrisSvg } from "@/lib/payments/qr";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { PaymentProofUpload } from "@/components/order/PaymentProofUpload";
 import { PilihanPembayaran } from "@/components/order/PilihanPembayaran";
 import { QrisPayButton } from "@/components/order/QrisPayButton";
 import { SegarkanSaatFokus } from "@/components/order/SegarkanSaatFokus";
 
-function statusBanner(status: string, hasProof: boolean) {
+/**
+ * Spanduk status order.
+ *
+ * Warnanya dulu empat pasang nilai mentah yang melayang antar langkah; kini
+ * peran status: lunas hijau, dibatalkan merah, bukti terkirim biru informasi,
+ * menunggu kuning peringatan. Kalimatnya sepanjang satu baris penuh, jadi ini
+ * tidak bisa memakai chip Badge — chip itu mono huruf kapital untuk satu-dua
+ * kata, dan sebuah kalimat di dalamnya tidak terbaca.
+ */
+function statusBanner(
+  status: string,
+  hasProof: boolean,
+): { text: string; icon: IconName; tone: string } {
   if (status === "fulfilled") {
-    return { text: "Paket aktif — terima kasih!", tone: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20" };
+    return {
+      text: "Paket aktif — terima kasih!",
+      icon: "check-circle",
+      tone: "bg-success-bg text-success ring-success/25",
+    };
   }
   if (status === "cancelled") {
-    return { text: "Order dibatalkan.", tone: "bg-rose-500/10 text-rose-600 ring-rose-500/20" };
+    return {
+      text: "Order dibatalkan.",
+      icon: "close",
+      tone: "bg-danger-bg text-danger ring-danger/25",
+    };
   }
   if (hasProof) {
     return {
       text: "Bukti transfer terkirim — menunggu verifikasi admin.",
-      tone: "bg-brand-blue/10 text-brand-blue ring-brand-blue/20",
+      icon: "check",
+      tone: "bg-brand-blue/10 text-brand-blue-ink ring-brand-blue/25",
     };
   }
   return {
     text: "Menunggu pembayaran. Transfer ke rekening di bawah, lalu unggah buktinya.",
-    tone: "bg-gold-400/15 text-gold-600 ring-gold-400/30",
+    icon: "clock",
+    tone: "bg-warning-bg text-warning ring-warning/25",
   };
 }
 
@@ -103,16 +128,18 @@ export default async function OrderDetailPage({
   const bisaQris = isPending && qrisAktif && (await amountForOrder(order)) !== null;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-14 sm:py-16">
-      <Link href="/transaksi" className="text-sm text-brand-blue hover:underline">
-        ‹ Semua transaksi
-      </Link>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-        {orderTitle(order.product, order.planName)}
-      </h1>
+    <main className="mx-auto max-w-2xl px-6 py-band">
+      <ButtonLink href="/transaksi" variant="ghost" size="sm" className="-ml-3">
+        <Icon name="arrow-left" className="h-3.5 w-3.5" />
+        Semua transaksi
+      </ButtonLink>
+      <PageHeader className="mt-3" title={orderTitle(order.product, order.planName)} />
 
-      <div className={`mt-4 rounded-2xl px-4 py-3 text-sm font-medium ring-1 ${banner.tone}`}>
-        {banner.text}
+      <div
+        className={`mt-5 flex items-start gap-2.5 rounded-card px-4 py-3 text-body font-medium ring-1 ${banner.tone}`}
+      >
+        <Icon name={banner.icon} className="mt-0.5 h-4 w-4 flex-none" />
+        <span>{banner.text}</span>
       </div>
 
       {isPending && (
@@ -120,9 +147,10 @@ export default async function OrderDetailPage({
           href={`/api/orders/${order.id}/invoice`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-block text-sm font-medium text-brand-blue hover:underline"
+          className="mt-3 inline-flex items-center gap-1.5 text-caption font-medium text-accent transition hover:underline"
         >
-          Unduh invoice (PDF) ↗
+          Unduh invoice (PDF)
+          <Icon name="external-link" className="h-3.5 w-3.5" />
         </a>
       )}
 
@@ -138,51 +166,54 @@ export default async function OrderDetailPage({
           qrisTersedia={bisaQris}
           awal={searchParams.bayar === "transfer" ? "transfer" : "qris"}
           panelQris={
-            <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+            <Card>
               {qrSvg ? (
                 <>
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     Pindai dengan aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
-                    <span className="font-semibold text-ink">{price}</span> — tidak ada biaya
-                    tambahan.
+                    <span className="font-mono font-semibold tabular-nums text-ink">{price}</span>{" "}
+                    — tidak ada biaya tambahan.
                   </p>
                   {/*
                     Latar putih di bawah QR bukan pilihan gaya: kamera memindai
-                    kontras, dan QR di atas kartu bergradien gagal terbaca di
+                    kontras, dan QR di atas permukaan berwarna gagal terbaca di
                     sebagian perangkat.
                   */}
                   <div
-                    className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 ring-1 ring-navy-900/10 [&>svg]:block [&>svg]:h-auto [&>svg]:w-[240px]"
+                    className="mx-auto mt-4 w-fit rounded-card bg-white p-3 ring-1 ring-border [&>svg]:block [&>svg]:h-auto [&>svg]:w-[240px]"
                     dangerouslySetInnerHTML={{ __html: qrSvg }}
                   />
-                  <p className="mt-4 text-center text-xs text-muted">
+                  <p className="mt-4 text-center text-caption text-muted">
                     Berlaku sampai{" "}
-                    {tagihanHidup!.expiresAt.toLocaleString("id-ID", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
+                    <span className="font-mono tabular-nums">
+                      {tagihanHidup!.expiresAt.toLocaleString("id-ID", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </span>
                     . Paket aktif sendiri beberapa detik setelah pembayaran masuk — tidak perlu
                     mengunggah bukti.
                   </p>
-                  <p className="mt-2 text-center text-xs text-muted/80">
+                  <p className="mt-2 text-center text-caption text-muted">
                     Tidak bisa memindai dari perangkat ini?{" "}
                     <a
                       href={tagihanHidup!.linkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-brand-blue hover:underline"
+                      className="inline-flex items-center gap-1 font-medium text-accent transition hover:underline"
                     >
-                      Buka halaman bayar ↗
+                      Buka halaman bayar
+                      <Icon name="external-link" className="h-3 w-3" />
                     </a>{" "}
                     — tutup tabnya setelah membayar, halaman ini memperbarui statusnya sendiri.
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     Pindai QRIS dari aplikasi bank atau e-wallet apa pun. Jumlahnya{" "}
-                    <span className="font-semibold text-ink">{price}</span> — tidak ada biaya
-                    tambahan.
+                    <span className="font-mono font-semibold tabular-nums text-ink">{price}</span>{" "}
+                    — tidak ada biaya tambahan.
                   </p>
                   <div className="mt-4">
                     <QrisPayButton
@@ -200,67 +231,65 @@ export default async function OrderDetailPage({
                   </div>
                 </>
               )}
-            </div>
+            </Card>
           }
           panelTransfer={
-            <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Detail transfer
-              </h2>
+            <Card>
+              <h2 className="text-title-2 text-ink">Detail transfer</h2>
               {bankReady ? (
-                <dl className="mt-3 space-y-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-muted">Bank</dt>
-                    <dd className="font-medium text-ink">{bank.bankName}</dd>
+                <dl className="mt-4 space-y-3">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="font-mono text-label uppercase text-muted">Bank</dt>
+                    <dd className="text-body font-medium text-ink">{bank.bankName}</dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-muted">Nomor rekening</dt>
-                    <dd className="rounded-lg bg-navy-900/5 px-2.5 py-1 font-mono text-ink ring-1 ring-navy-900/10">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="font-mono text-label uppercase text-muted">Nomor rekening</dt>
+                    {/* Nomor yang akan disalin orang ke aplikasi banknya: mono
+                        dan tabular supaya digitnya tidak bisa salah dibaca. */}
+                    <dd className="rounded-chip bg-surface-sunken px-2.5 py-1 font-mono text-body tabular-nums text-ink ring-1 ring-border">
                       {bank.accountNumber}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-muted">Atas nama</dt>
-                    <dd className="font-medium text-ink">{bank.accountHolder}</dd>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="font-mono text-label uppercase text-muted">Atas nama</dt>
+                    <dd className="text-body font-medium text-ink">{bank.accountHolder}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-t border-navy-900/10 pt-3">
-                    <dt className="text-muted">Jumlah transfer</dt>
-                    <dd className="text-lg font-extrabold text-brand-blue">{price}</dd>
+                  <div className="flex items-baseline justify-between gap-4 border-t border-divider pt-3">
+                    <dt className="font-mono text-label uppercase text-muted">Jumlah transfer</dt>
+                    <dd className="font-mono text-title-2 tabular-nums text-ink">{price}</dd>
                   </div>
                   {bank.instructions && (
-                    <p className="border-t border-navy-900/10 pt-3 text-xs text-muted">
+                    <p className="border-t border-divider pt-3 text-caption text-muted">
                       {bank.instructions}
                     </p>
                   )}
-                  <p className="border-t border-navy-900/10 pt-3 text-xs text-muted">
+                  <p className="border-t border-divider pt-3 text-caption text-muted">
                     Setelah transfer, unggah buktinya di bawah. Paket aktif setelah admin
                     mengonfirmasi.
                   </p>
                 </dl>
               ) : (
-                <p className="mt-3 text-sm text-muted">
+                <p className="mt-3 text-body text-muted">
                   Rekening pembayaran belum diatur. Silakan hubungi admin Nerona.
                 </p>
               )}
-            </div>
+            </Card>
           }
         />
       )}
 
-      <section className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Bukti pembayaran
-        </h2>
-        <div className="mt-3">
+      <Card className="mt-6">
+        <h2 className="text-title-2 text-ink">Bukti pembayaran</h2>
+        <div className="mt-4">
           {isPending ? (
             <PaymentProofUpload orderId={order.id} hasProof={hasProof} />
           ) : hasProof ? (
             <PaymentProofUpload orderId={order.id} hasProof disabled />
           ) : (
-            <p className="text-sm text-muted">Tidak ada bukti pembayaran.</p>
+            <p className="text-body text-muted">Tidak ada bukti pembayaran.</p>
           )}
         </div>
-      </section>
+      </Card>
     </main>
   );
 }

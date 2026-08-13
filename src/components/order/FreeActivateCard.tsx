@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/icons";
 
 interface FreeActivateCardProps {
   product: "metadata" | "agent";
@@ -32,36 +35,42 @@ export function FreeActivateCard({ product, planName }: FreeActivateCardProps) {
 
   if (done) {
     return (
-      <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-8 text-center shadow-lg shadow-navy-900/10 ring-1 ring-gold-400/40">
-        <p className="text-3xl" aria-hidden="true">🎉</p>
-        <h2 className="mt-3 text-lg font-bold text-ink">Paket Free aktif!</h2>
-        <p className="mt-2 text-sm text-muted">
+      <Card padding="lg" className="text-center">
+        {/* Sebelumnya emoji perayaan setinggi 30px. Pada ukuran itu emoji
+            terbaca seperti klip seni, dan bentuknya berbeda di tiap sistem
+            operasi; centang berwarna status mengabarkan hal yang sama. */}
+        <Icon name="check-circle" className="mx-auto h-8 w-8 text-success" />
+        <h2 className="mt-3 text-title-2 text-ink">Paket Free aktif!</h2>
+        <p className="mt-2 text-body text-muted">
           {product === "metadata"
             ? "Lisensi Free Anda sudah dibuat — lihat kunci lisensi di halaman Akun."
             : "Nerona Agent Anda aktif — hubungkan nomor WhatsApp dari dashboard."}
         </p>
-        <Link
+        <ButtonLink
           href={product === "metadata" ? "/account" : "/agent/dashboard"}
-          className="mt-6 inline-block rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-6 py-2.5 text-sm font-bold text-navy-900 transition hover:brightness-110"
+          className="mt-6"
         >
           {product === "metadata" ? "Buka Akun" : "Buka Dashboard Agent"}
-        </Link>
-      </div>
+        </ButtonLink>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-8 text-center shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <h2 className="text-xl font-extrabold text-ink">Paket {planName}</h2>
-      <p className="mt-2 text-sm text-muted">Aktif seketika, tanpa pembayaran.</p>
-      {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
-      <button
+    <Card padding="lg" className="text-center">
+      <h2 className="text-title-2 text-ink">Paket {planName}</h2>
+      <p className="mt-2 text-body text-muted">Aktif seketika, tanpa pembayaran.</p>
+      {error && <p className="mt-4 text-body text-danger">{error}</p>}
+      <Button
+        variant="money"
+        size="lg"
+        full
+        className="mt-6"
         onClick={handleActivate}
         disabled={submitting}
-        className="mt-6 w-full rounded-full bg-gradient-to-br from-gold-500 to-gold-400 py-3 text-sm font-bold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
       >
         {submitting ? "Memproses..." : "Aktifkan Gratis Sekarang"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }

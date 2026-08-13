@@ -135,6 +135,22 @@ const ICONS = {
   "chevron-up": <polyline points="6 15 12 9 18 15" />,
   "chevron-down": <polyline points="6 9 12 15 18 9" />,
   play: <polygon points="7 4 20 12 7 20" />,
+  // Dua ini menyusul: glyph ↗ dan ‹ masih dipakai sebagai ikon di layar order
+  // justru karena daftar ini belum menyediakan penggantinya. Kekurangan
+  // daftarnya, bukan pengecualian yang sah.
+  "external-link": (
+    <>
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M18 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" />
+    </>
+  ),
+  "arrow-left": (
+    <>
+      <line x1="20" y1="12" x2="4" y2="12" />
+      <polyline points="10 6 4 12 10 18" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof ICONS;

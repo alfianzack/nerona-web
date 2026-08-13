@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export interface ChatMessage {
   direction: "in" | "out";
@@ -54,20 +57,20 @@ export function AgentChatPanel({ initialMessages, initialPoints }: AgentChatPane
   }
 
   return (
-    <div className="mt-8 rounded-2xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <div className="flex items-center justify-between">
-        <p className="font-medium text-ink">Chat dengan asisten</p>
-        <span className="rounded-full bg-gold-400/15 px-3 py-1 text-xs font-semibold text-gold-500">
-          {points.toLocaleString("id-ID")} poin
-        </span>
+    <Card className="mt-8">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-title-2 text-ink">Chat dengan asisten</p>
+        {/* Saldo poin adalah uang, dan itu satu-satunya sebab emas muncul di
+            panel ini. */}
+        <Badge tone="points">{points.toLocaleString("id-ID")} poin</Badge>
       </div>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-caption text-muted">
         Percakapan ini menyambung dengan WhatsApp — asisten mengingat keduanya.
       </p>
 
       <div className="mt-5 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
         {messages.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">
+          <p className="py-8 text-center text-body text-muted">
             Belum ada percakapan. Mulai dengan menanyakan apa saja soal toko Anda.
           </p>
         )}
@@ -77,16 +80,19 @@ export function AgentChatPanel({ initialMessages, initialPoints }: AgentChatPane
             key={i}
             className={`flex ${m.direction === "in" ? "justify-end" : "justify-start"}`}
           >
+            {/* Gelembung pengguna dulu bertinta emas. Emas di dalam aplikasi
+                menandai uang, bukan siapa yang bicara, jadi pemisah kedua sisi
+                turun ke satu warna aksen melawan permukaan cekung. */}
             <div
-              className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm ${
+              className={`max-w-[80%] whitespace-pre-wrap rounded-card px-4 py-2 text-body ${
                 m.direction === "in"
-                  ? "bg-gold-400/15 text-ink"
-                  : "bg-navy-900/5 text-ink ring-1 ring-navy-900/10"
+                  ? "bg-accent/10 text-ink"
+                  : "bg-surface-sunken text-ink ring-1 ring-border"
               }`}
             >
               {m.body}
               {m.channel === "whatsapp" && (
-                <span className="mt-1 block text-[10px] uppercase tracking-wide text-muted">
+                <span className="mt-1 block font-mono text-label uppercase text-muted">
                   via WhatsApp
                 </span>
               )}
@@ -96,7 +102,7 @@ export function AgentChatPanel({ initialMessages, initialPoints }: AgentChatPane
 
         {sending && (
           <div className="flex justify-start">
-            <div className="rounded-2xl bg-navy-900/5 px-4 py-2 text-sm text-muted ring-1 ring-navy-900/10">
+            <div className="rounded-card bg-surface-sunken px-4 py-2 text-body text-muted ring-1 ring-border">
               Asisten sedang mengetik…
             </div>
           </div>
@@ -105,6 +111,9 @@ export function AgentChatPanel({ initialMessages, initialPoints }: AgentChatPane
       </div>
 
       <div className="mt-5 flex gap-2">
+        {/* Belum ada primitif untuk area teks bertingkat, jadi kelasnya sengaja
+            dicocokkan dengan Input supaya keduanya tidak berbeda tinggi cincin
+            dan warna fokusnya. */}
         <textarea
           rows={2}
           value={text}
@@ -117,17 +126,16 @@ export function AgentChatPanel({ initialMessages, initialPoints }: AgentChatPane
           }}
           maxLength={4000}
           placeholder="Tulis pesan… (Enter untuk kirim)"
-          className="flex-1 resize-none rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
+          className="flex-1 resize-none rounded-control bg-surface px-3.5 py-2.5 text-body text-ink ring-1 ring-border transition placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
         />
-        <button
-          type="button"
+        <Button
           onClick={() => void send()}
           disabled={sending || !text.trim()}
-          className="self-end rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
+          className="self-end"
         >
           Kirim
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }

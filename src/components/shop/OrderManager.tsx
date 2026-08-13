@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { formatRupiah } from "@/lib/format";
 import {
@@ -34,19 +37,32 @@ const STATUS_LABEL: Record<string, string> = {
   done: "Selesai",
   cancelled: "Batal",
 };
-const STATUS_TONE: Record<string, string> = {
-  new: "bg-gold-400/15 text-gold-600 ring-gold-400/30",
-  paid: "bg-brand-blue/10 text-brand-blue ring-brand-blue/20",
-  done: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20",
-  cancelled: "bg-rose-500/10 text-rose-600 ring-rose-500/20",
+/**
+ * Empat pasang warna yang sebelumnya ditulis tangan di sini turun jadi nada
+ * Badge. "Baru" memakai nada peringatan, bukan emas: emas di dalam aplikasi
+ * menandai aksi yang menggerakkan uang, jadi memakainya untuk status membuat
+ * dua hal berbeda terlihat sama.
+ */
+const STATUS_TONE: Record<string, BadgeTone> = {
+  new: "warning",
+  paid: "info",
+  done: "success",
+  cancelled: "danger",
 };
 
 const PAGE_SIZE = 20;
 
+/**
+ * Belum ada primitive untuk <select>. Bentuknya dijiplak dari Input supaya
+ * kotak cari, penyaring status, dan kedua kotak tanggal di baris yang sama
+ * tidak berbeda tinggi.
+ */
 const selectClass =
-  "rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 focus:outline-none focus:ring-2 focus:ring-gold-400";
-const inputClass =
-  "rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+  "rounded-control bg-surface px-3 py-2.5 text-body text-ink ring-1 ring-border transition focus:outline-none focus:ring-2 focus:ring-accent";
+// Versi rapat untuk pemilih status di dalam baris tabel: tingginya disamakan
+// dengan tombol ukuran kecil yang berdiri tepat di sebelahnya.
+const rowSelectClass =
+  "rounded-control bg-surface px-2 py-1.5 text-caption text-ink ring-1 ring-border transition focus:outline-none focus:ring-2 focus:ring-accent";
 
 export function OrderManager() {
   const [rows, setRows] = useState<Order[]>([]);
@@ -174,29 +190,33 @@ export function OrderManager() {
       key: "occurredAt",
       header: "Tanggal",
       sortable: true,
-      render: (o) =>
-        new Date(o.occurredAt).toLocaleString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+      render: (o) => (
+        <span className="font-mono tabular-nums">
+          {new Date(o.occurredAt).toLocaleString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      ),
     },
     { key: "customerName", header: "Pelanggan", render: (o) => o.customerName || "Tanpa nama" },
-    { key: "total", header: "Total", sortable: true, render: (o) => formatRupiah(o.total) },
+    {
+      key: "total",
+      header: "Total",
+      sortable: true,
+      render: (o) => <span className="font-mono tabular-nums">{formatRupiah(o.total)}</span>,
+    },
     {
       key: "status",
       header: "Status",
       sortable: true,
       render: (o) => (
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
-            STATUS_TONE[o.status] ?? STATUS_TONE.new
-          }`}
-        >
+        <Badge tone={STATUS_TONE[o.status] ?? STATUS_TONE.new}>
           {STATUS_LABEL[o.status] ?? o.status}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -208,7 +228,7 @@ export function OrderManager() {
             value={o.status}
             onChange={(e) => changeStatus(o.id, e.target.value)}
             disabled={busy}
-            className="rounded-xl bg-navy-900/5 px-2 py-1 text-xs text-ink ring-1 ring-navy-900/10 focus:outline-none focus:ring-2 focus:ring-gold-400"
+            className={rowSelectClass}
           >
             {Object.entries(STATUS_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
@@ -216,19 +236,12 @@ export function OrderManager() {
               </option>
             ))}
           </select>
-          <button
-            onClick={() => setDetail(o)}
-            className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setDetail(o)}>
             Detail
-          </button>
-          <button
-            onClick={() => remove(o.id)}
-            disabled={busy}
-            className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-600 ring-1 ring-rose-500/20 transition hover:bg-rose-500/15 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => remove(o.id)} disabled={busy}>
             Hapus
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -237,11 +250,11 @@ export function OrderManager() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input
+        <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cari pelanggan..."
-          className={`${inputClass} flex-1 min-w-[150px]`}
+          className="min-w-[150px] flex-1"
         />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
           <option value="">Semua status</option>
@@ -255,25 +268,21 @@ export function OrderManager() {
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className={selectClass}
+          className={`${selectClass} font-mono tabular-nums`}
           aria-label="Dari tanggal"
         />
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className={selectClass}
+          className={`${selectClass} font-mono tabular-nums`}
           aria-label="Sampai tanggal"
         />
-        <button
-          onClick={openCreate}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110"
-        >
-          + Catat transaksi
-        </button>
+        {/* Mencatat transaksi tidak menggerakkan uang, jadi tombolnya primary. */}
+        <Button onClick={openCreate}>+ Catat transaksi</Button>
       </div>
 
-      {error && <p className="mb-3 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mb-3 text-caption text-danger">{error}</p>}
 
       <DataTable
         columns={columns}
@@ -305,33 +314,41 @@ export function OrderManager() {
 
       <Modal open={detail !== null} onClose={() => setDetail(null)} title="Detail transaksi">
         {detail && (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-body">
             <p className="text-muted">
               {detail.customerName || "Tanpa nama"} ·{" "}
-              {new Date(detail.occurredAt).toLocaleString("id-ID")}
+              <span className="font-mono tabular-nums">
+                {new Date(detail.occurredAt).toLocaleString("id-ID")}
+              </span>
             </p>
             {new Date(detail.createdAt).getTime() - new Date(detail.occurredAt).getTime() >
               60_000 && (
-              <p className="text-xs text-muted/70">
-                Dicatat pada {new Date(detail.createdAt).toLocaleString("id-ID")}
+              <p className="text-caption text-muted">
+                Dicatat pada{" "}
+                <span className="font-mono tabular-nums">
+                  {new Date(detail.createdAt).toLocaleString("id-ID")}
+                </span>
               </p>
             )}
             <ul className="space-y-1">
               {detail.items.map((item) => (
                 <li key={item.id} className="flex justify-between gap-4 text-ink">
                   <span>
-                    {item.productName} × {item.qty}
+                    {item.productName} ×{" "}
+                    <span className="font-mono tabular-nums">{item.qty}</span>
                   </span>
-                  <span className="tabular-nums text-muted">
+                  <span className="font-mono tabular-nums text-muted">
                     {formatRupiah(item.qty * item.unitPrice)}
                   </span>
                 </li>
               ))}
             </ul>
-            {detail.note && <p className="text-xs text-muted/80">Catatan: {detail.note}</p>}
-            <div className="flex justify-between border-t border-navy-900/10 pt-3">
+            {detail.note && <p className="text-caption text-muted">Catatan: {detail.note}</p>}
+            <div className="flex justify-between border-t border-divider pt-3">
               <span className="font-semibold text-ink">Total</span>
-              <span className="font-bold text-brand-blue">{formatRupiah(detail.total)}</span>
+              <span className="font-mono font-semibold tabular-nums text-accent">
+                {formatRupiah(detail.total)}
+              </span>
             </div>
           </div>
         )}

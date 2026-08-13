@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/session-guards";
 import { getBalance } from "@/lib/points";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
 import { pricingProducts } from "@/lib/pricing-products";
+import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata = { title: "Paket & Harga — Nerona" };
 
@@ -21,16 +23,14 @@ export default async function PaketPage() {
 
   return (
     <main className="bg-canvas">
-      <div className="mx-auto max-w-5xl px-6 py-14 sm:py-16">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight text-ink">Paket & Harga</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/20 px-3.5 py-1.5 text-sm font-semibold text-[#9A6B08] ring-1 ring-gold-400/40">
-            {balance.toLocaleString("id-ID")} poin
-          </span>
-        </div>
-        <p className="mt-2 max-w-xl text-sm text-muted">
-          Pilih paket untuk membeli atau memperpanjang. Riwayat pembayaran ada di Finance.
-        </p>
+      <div className="mx-auto max-w-5xl px-6 py-band">
+        {/* Saldo poin ikut di kepala halaman karena inilah layar tempat orang
+            memutuskan membeli — angkanya bagian dari keputusan itu. */}
+        <PageHeader
+          title="Paket & Harga"
+          description="Pilih paket untuk membeli atau memperpanjang. Riwayat pembayaran ada di Finance."
+          actions={<Badge tone="points">{balance.toLocaleString("id-ID")} poin</Badge>}
+        />
 
         <div className="mt-10">
           <PricingSwitcher products={products} discounts={discounts} />

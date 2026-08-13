@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PricingTierFeature } from "@/components/marketing/PricingTiers";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { cn } from "@/components/ui/cn";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 interface CheckoutViewProps {
   product: "metadata" | "agent";
@@ -87,15 +92,15 @@ export function CheckoutView({
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      {/* Left — payment method */}
+      {/* Kiri — pilihan metode bayar. */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Bayar dengan</p>
+        <p className="font-mono text-label uppercase text-muted">Bayar dengan</p>
         <div className="mt-3 space-y-3">
           {qrisTersedia && (
             <MetodeKartu
               dipilih={metode === "qris"}
               onPilih={() => setMetode("qris")}
-              ikon="📱"
+              ikon="phone"
               judul="QRIS"
               keterangan="Pindai dari aplikasi bank atau e-wallet apa pun. Paket aktif sendiri begitu pembayaran masuk."
             />
@@ -103,51 +108,55 @@ export function CheckoutView({
           <MetodeKartu
             dipilih={metode === "bank"}
             onPilih={() => setMetode("bank")}
-            ikon="🏦"
+            ikon="bank"
             judul="Transfer Bank"
             keterangan="Setelah kirim order, kami tampilkan nomor rekening tujuan. Paket aktif setelah admin mengonfirmasi."
           />
         </div>
 
-        <div className="mt-6">
-          <label htmlFor="contactNote" className="text-xs font-medium text-muted">
-            Nomor WhatsApp (opsional) — agar tim kami mudah menghubungi Anda
-          </label>
-          <input
-            id="contactNote"
-            type="text"
-            value={contactNote}
-            onChange={(e) => setContactNote(e.target.value)}
-            placeholder="mis. 0812-3456-7890"
-            className="mt-2 w-full rounded-xl bg-navy-900/5 px-3 py-2.5 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
-          />
-        </div>
+        <Field
+          id="contactNote"
+          className="mt-6"
+          label="Nomor WhatsApp (opsional) — agar tim kami mudah menghubungi Anda"
+          type="text"
+          value={contactNote}
+          onChange={(e) => setContactNote(e.target.value)}
+          placeholder="mis. 0812-3456-7890"
+        />
       </div>
 
-      {/* Right — plan summary */}
-      <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+      {/* Kanan — ringkasan paket yang sedang dibeli. */}
+      <Card>
+        <p className="font-mono text-label uppercase text-muted">
           {product === "metadata" ? "Nerona Metadata" : "Nerona Agent"}
         </p>
-        <h2 className="mt-1 text-xl font-extrabold text-ink">Paket {planName}</h2>
-        <p className="mt-1 text-xs font-medium text-muted">
+        <h2 className="mt-1 text-title-2 text-ink">Paket {planName}</h2>
+        <p className="mt-1 text-caption text-muted">
           Sekali bayar · akses selamanya
-          {poinAwal ? ` · ${poinAwal.toLocaleString("id-ID")} poin` : ""}
+          {poinAwal ? (
+            <>
+              {" · "}
+              <span className="font-mono tabular-nums">{poinAwal.toLocaleString("id-ID")}</span>{" "}
+              poin
+            </>
+          ) : null}
         </p>
 
-        <ul className="mt-4 space-y-2 text-[13px] text-ink">
+        <ul className="mt-4 space-y-2 text-body text-ink">
           {features.map((feature) => (
             <li key={feature.label} className="flex items-start gap-2">
-              <span
-                className={`mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full text-[9px] font-bold ${
-                  feature.included
-                    ? "bg-emerald-400/15 text-emerald-500"
-                    : "bg-rose-400/10 text-rose-500"
-                }`}
-                aria-hidden="true"
-              >
-                {feature.included ? "✓" : "✕"}
-              </span>
+              {/*
+                Silang abu-abu, bukan merah: fitur yang tidak termasuk paket itu
+                ketiadaan, bukan kesalahan. Warna status di sebelahnya membuat
+                paket yang dipilih terlihat seperti pilihan yang salah.
+              */}
+              <Icon
+                name={feature.included ? "check" : "close"}
+                className={cn(
+                  "mt-1 h-4 w-4 flex-none",
+                  feature.included ? "text-accent" : "text-muted",
+                )}
+              />
               <span className={feature.included ? "" : "text-muted line-through"}>
                 {feature.label}
               </span>
@@ -155,10 +164,10 @@ export function CheckoutView({
           ))}
         </ul>
 
-        <div className="mt-5 border-t border-navy-900/10 pt-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold text-ink">Total</span>
-            <span className="text-lg font-extrabold text-brand-blue">{priceLabel}</span>
+        <div className="mt-5 border-t border-divider pt-4">
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-body font-semibold text-ink">Total</span>
+            <span className="font-mono text-title-2 tabular-nums text-ink">{priceLabel}</span>
           </div>
           {/*
             Dikatakan di tempat harganya, bukan cuma di kartu paket. Yang dibeli
@@ -166,30 +175,43 @@ export function CheckoutView({
             membandingkan jumlah poin di sini dengan paket top-up dan
             menyimpulkan paket masuknya mahal.
           */}
-          <p className="mt-1 text-right text-xs font-medium text-emerald-600">
+          <p className="mt-1 text-right text-caption font-medium text-success">
             Bayar sekali, tidak ada tagihan bulanan
           </p>
         </div>
 
-        {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
+        {error && <p className="mt-4 text-body text-danger">{error}</p>}
 
-        <button
+        {/* Emas menandai aksi yang menggerakkan uang, dan di layar ini ialah
+            satu-satunya. */}
+        <Button
+          variant="money"
+          size="lg"
+          full
+          className="mt-5"
           onClick={handleBuy}
           disabled={submitting}
-          className="mt-5 w-full rounded-full bg-gradient-to-br from-gold-500 to-gold-400 py-3 text-sm font-bold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
         >
           {submitting ? "Memproses..." : metode === "qris" ? "Bayar dengan QRIS" : "Beli"}
-        </button>
-        <p className="mt-3 text-center text-xs text-muted/80">
+        </Button>
+        <p className="mt-3 text-center text-caption text-muted">
           {metode === "qris"
             ? "Anda akan dibawa ke halaman QRIS. Paket aktif sendiri setelah pembayaran masuk."
             : "Pembayaran via transfer bank. Paket aktif setelah pembayaran dikonfirmasi admin."}
         </p>
-      </div>
+      </Card>
     </div>
   );
 }
 
+/**
+ * Kartu pilihan metode bayar.
+ *
+ * Garisnya setebal satu piksel di kedua keadaan, jadi memilih tidak menggeser
+ * apa pun; yang membedakan hanya warna garis dan semburat latarnya. Ikonnya
+ * dulu emoji, yang dirender sistem operasi — bentuk dan bobotnya berbeda di
+ * tiap mesin dan tidak pernah ikut warna teks di sekitarnya.
+ */
 function MetodeKartu({
   dipilih,
   onPilih,
@@ -199,7 +221,7 @@ function MetodeKartu({
 }: {
   dipilih: boolean;
   onPilih: () => void;
-  ikon: string;
+  ikon: IconName;
   judul: string;
   keterangan: string;
 }) {
@@ -208,18 +230,19 @@ function MetodeKartu({
       type="button"
       onClick={onPilih}
       aria-pressed={dipilih}
-      className={`flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+      className={cn(
+        "flex w-full items-center gap-3 rounded-card border p-4 text-left transition",
         dipilih
-          ? "border-brand-blue bg-brand-blue/5"
-          : "border-navy-900/10 bg-transparent hover:border-navy-900/20"
-      }`}
+          ? "border-accent bg-accent/5"
+          : "border-border bg-surface hover:bg-surface-sunken",
+      )}
     >
-      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-blue/15 text-brand-blue">
-        {ikon}
+      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-chip bg-accent/10 text-accent">
+        <Icon name={ikon} />
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink">{judul}</p>
-        <p className="text-xs text-muted">{keterangan}</p>
+        <p className="text-body font-semibold text-ink">{judul}</p>
+        <p className="text-caption text-muted">{keterangan}</p>
       </div>
     </button>
   );

@@ -53,7 +53,11 @@ const config: Config = {
         "body-lg": ["1.0625rem", { lineHeight: "1.5", letterSpacing: "-0.003em" }],
         body: ["0.9375rem", { lineHeight: "1.6" }],
         caption: ["0.75rem", { lineHeight: "1.5" }],
-        label: ["0.6875rem", { lineHeight: "1.4", letterSpacing: "0.085em" }],
+        // Bobot ikut didefinisikan di sini. Tanpa itu label render di bobot 400
+        // dan setiap pemanggil harus mengingat menambahkan bobotnya sendiri —
+        // yang langsung terbukti: sebagian tempat menulis font-semibold, sebagian
+        // tidak, dan hasilnya label yang sama tampil dua tebal berbeda.
+        label: ["0.6875rem", { lineHeight: "1.4", letterSpacing: "0.085em", fontWeight: "500" }],
       },
       borderRadius: {
         card: "var(--radius-card)",

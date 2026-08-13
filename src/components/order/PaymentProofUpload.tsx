@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
 
 interface PaymentProofUploadProps {
   orderId: string;
@@ -43,7 +44,7 @@ export function PaymentProofUpload({ orderId, hasProof, disabled }: PaymentProof
           <img
             src={`/api/orders/${orderId}/proof?v=${version}`}
             alt="Bukti pembayaran"
-            className="max-h-64 rounded-xl ring-1 ring-navy-900/10"
+            className="max-h-64 rounded-card ring-1 ring-border"
           />
         )}
       </div>
@@ -58,7 +59,7 @@ export function PaymentProofUpload({ orderId, hasProof, disabled }: PaymentProof
           <img
             src={`/api/orders/${orderId}/proof?v=${version}`}
             alt="Bukti pembayaran"
-            className="max-h-64 rounded-xl ring-1 ring-navy-900/10"
+            className="max-h-64 rounded-card ring-1 ring-border"
           />
         </div>
       )}
@@ -74,15 +75,11 @@ export function PaymentProofUpload({ orderId, hasProof, disabled }: PaymentProof
           e.target.value = "";
         }}
       />
-      <button
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-        className="rounded-full bg-navy-900/5 px-4 py-2 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
-      >
+      <Button variant="secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
         {uploading ? "Mengunggah..." : showImage ? "Ganti bukti transfer" : "Unggah bukti transfer"}
-      </button>
-      {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
-      <p className="mt-2 text-xs text-muted/80">Format PNG, JPG, atau WEBP. Maksimal 5 MB.</p>
+      </Button>
+      {error && <p className="mt-2 text-body text-danger">{error}</p>}
+      <p className="mt-2 text-caption text-muted">Format PNG, JPG, atau WEBP. Maksimal 5 MB.</p>
     </div>
   );
 }
