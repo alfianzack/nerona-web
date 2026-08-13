@@ -15,17 +15,18 @@ import { AdminPaymentGatewayPanel } from "@/components/admin/AdminPaymentGateway
  * tinggi panel tidak lagi mengubah kerapian halaman — panel baru boleh
  * ditambahkan tanpa memikirkan pasangannya.
  *
- * `break-inside-avoid` wajib: tanpa itu satu panel bisa terpotong di tengah
- * dan sambungannya pindah ke kolom sebelah.
+ * Satu panel per sel, dan `break-inside-avoid` wajib: tanpa itu satu panel bisa
+ * terpotong di tengah dan sambungannya pindah ke kolom sebelah. Jarak bawah sel
+ * sengaja sama dengan jarak antar kolom supaya celahnya seragam ke dua arah,
+ * dan mengikuti irama antar kartu di aplikasi tenant.
  */
-/** Satu panel per sel kolom. `break-inside-avoid` mencegahnya terpotong. */
 function Sel({ children }: { children: React.ReactNode }) {
-  return <div className="mb-4 break-inside-avoid">{children}</div>;
+  return <div className="mb-6 break-inside-avoid">{children}</div>;
 }
 
 export default function AdminSettingsPage() {
   return (
-    <div className="columns-1 gap-4 lg:columns-2">
+    <div className="columns-1 gap-6 lg:columns-2">
       <Sel>
         <AdminPaymentGatewayPanel />
       </Sel>

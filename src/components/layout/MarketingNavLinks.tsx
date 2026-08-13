@@ -29,7 +29,8 @@ export function MarketingNavLinks({
   // terlihat sama penting.
   const authArea = dashboardHref ? (
     <ButtonLink href={dashboardHref} variant="secondary" size="sm">
-      Dashboard →
+      Dashboard
+      <Icon name="arrow-right" className="h-3.5 w-3.5" />
     </ButtonLink>
   ) : (
     <>

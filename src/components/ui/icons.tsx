@@ -151,6 +151,13 @@ const ICONS = {
       <polyline points="10 6 4 12 10 18" />
     </>
   ),
+  "arrow-right": (
+    <>
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <polyline points="14 6 20 12 14 18" />
+    </>
+  ),
+  "chevron-right": <polyline points="9 6 15 12 9 18" />,
 } as const;
 
 export type IconName = keyof typeof ICONS;

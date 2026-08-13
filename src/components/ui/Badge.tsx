@@ -3,6 +3,7 @@ import { cn } from "./cn";
 export type BadgeTone =
   | "neutral"
   | "info"
+  | "emphasis"
   | "success"
   | "warning"
   | "danger"
@@ -22,6 +23,10 @@ export type BadgeTone =
 const TONES: Record<BadgeTone, string> = {
   neutral: "bg-surface-sunken text-muted ring-1 ring-border",
   info: "bg-brand-blue/10 text-brand-blue-ink ring-1 ring-brand-blue/25",
+  // Pasangan `info` untuk membedakan dua hal yang setara, bukan untuk
+  // menandai keadaan. Dipakai chip produk: tanpa ini Metadata dan Agent
+  // sama-sama biru-atau-abu dan bedanya nyaris tak terbaca.
+  emphasis: "bg-brand-orange/10 text-brand-orange-ink ring-1 ring-brand-orange/25",
   success: "bg-success-bg text-success ring-1 ring-success/25",
   warning: "bg-warning-bg text-warning ring-1 ring-warning/25",
   danger: "bg-danger-bg text-danger ring-1 ring-danger/25",

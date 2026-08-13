@@ -1,7 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Icon } from "@/components/ui/icons";
 
 interface PlanState {
   status: string;
@@ -35,35 +40,45 @@ const FILTER_CHIPS: { key: FilterKey; label: string; countKey: keyof FilterCount
   { key: "none", label: "Tanpa paket", countKey: "none" },
 ];
 
-// Darkened brand hues so white initials stay readable.
-const AVATAR_COLORS = ["#3B65C4", "#C25717", "#1F7FAE", "#9A6B08", "#3D44A8"];
+/**
+ * Empat varian aman-kontras merek plus satu ungu navy, sebagai kelas token.
+ *
+ * Sebelumnya kelimanya hex lepas yang dipasang lewat gaya inline. Hex yang
+ * sama sudah punya nama di lapisan token, dan warna yang hidup di luar token
+ * tidak ikut berubah kalau paletnya digeser.
+ */
+const AVATAR_COLORS = [
+  "bg-brand-blue-ink",
+  "bg-brand-orange-ink",
+  "bg-brand-sky-ink",
+  "bg-brand-gold-ink",
+  "bg-navy-500",
+];
 
-function avatarFor(row: UserRow): { initials: string; color: string } {
+function avatarFor(row: UserRow): { initials: string; colorClass: string } {
   const source = row.name?.trim() || row.email;
   const words = source.split(/[\s.@_-]+/).filter(Boolean);
   const initials = ((words[0]?.[0] ?? "?") + (words[1]?.[0] ?? "")).toUpperCase();
   let hash = 0;
   for (const ch of row.email) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return { initials, color: AVATAR_COLORS[hash % AVATAR_COLORS.length] };
+  return { initials, colorClass: AVATAR_COLORS[hash % AVATAR_COLORS.length] };
 }
 
+/**
+ * Titik status hilang, warnanya yang bekerja: hijau untuk paket yang hidup,
+ * abu-abu untuk yang tidak. Statusnya juga tetap tertulis sebagai kata di
+ * dalam chip, jadi keterangannya tidak bergantung pada warna saja.
+ */
 function StatusPill({ state, fallbackLabel }: { state: PlanState | null; fallbackLabel: string }) {
   if (!state) {
-    return <span className="text-xs text-muted/60">—</span>;
+    return <span className="text-caption text-muted">—</span>;
   }
   const active = state.status === "active" || state.status === "comp";
   const planLabel = state.plan ? state.plan : fallbackLabel;
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
-        active
-          ? "bg-brand-blue/10 text-brand-blue ring-brand-blue/20"
-          : "bg-navy-900/5 text-muted ring-navy-900/10"
-      }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-muted/50"}`} />
+    <Badge tone={active ? "success" : "neutral"}>
       {planLabel} · {state.status}
-    </span>
+    </Badge>
   );
 }
 
@@ -118,13 +133,19 @@ export function AdminUsersDirectory() {
 
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-lg font-semibold text-ink">Pengguna</h2>
-        <p className="text-xs text-muted">{total} pengguna</p>
-      </div>
+      <PageHeader
+        title="Pengguna"
+        actions={<Badge tone="neutral">{total} pengguna</Badge>}
+      />
 
-      <form onSubmit={handleSearch} className="mt-3 flex gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-xl bg-surface px-3 ring-1 ring-navy-900/10 focus-within:ring-2 focus-within:ring-gold-400">
+      {/* Isian pencarian tidak memakai primitive Input: ikon kaca pembesar
+          duduk di dalam kotaknya, jadi cincin dan latarnya milik pembungkus
+          dan isiannya sendiri harus bening. Cincin fokusnya aksen, bukan emas
+          — mencari sesuatu tidak memindahkan uang. */}
+      <form onSubmit={handleSearch} className="mt-6 flex gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-control bg-surface px-3 ring-1 ring-border focus-within:ring-2 focus-within:ring-accent">
+          {/* Digambar di tempat karena daftar ikon bersama belum punya kaca
+              pembesar. Bentuk, tebal garis, dan ukurannya disamakan. */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -133,7 +154,7 @@ export function AdminUsersDirectory() {
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
-            className="h-4 w-4 flex-none text-muted/60"
+            className="h-4 w-4 flex-none text-muted"
           >
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -143,18 +164,18 @@ export function AdminUsersDirectory() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cari nama atau email..."
-            className="w-full bg-transparent py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none"
+            className="w-full bg-transparent py-2 text-body text-ink placeholder:text-muted/60 focus:outline-none"
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={loading}>
           {loading ? "..." : "Cari"}
-        </button>
+        </Button>
       </form>
 
+      {/* Chip penyaring meminjam bentuk dan ukuran Badge — keduanya chip di
+          mata pembaca — tapi tetap tombol, jadi kelasnya ditulis di sini dan
+          bukan Badge yang dibungkus tombol: keadaan tunjuk butuh warna yang
+          Badge tidak sediakan. */}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {FILTER_CHIPS.map((chip) => (
           <button
@@ -162,10 +183,10 @@ export function AdminUsersDirectory() {
             type="button"
             aria-pressed={filter === chip.key}
             onClick={() => handleFilter(chip.key)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
+            className={`inline-flex items-center rounded-chip px-2.5 py-1 font-mono text-label font-semibold tabular-nums ring-1 transition ${
               filter === chip.key
-                ? "bg-brand-blue/12 text-[#3B65C4] ring-brand-blue/35"
-                : "bg-surface text-muted ring-navy-900/10 hover:text-ink"
+                ? "bg-brand-blue/10 text-brand-blue-ink ring-brand-blue/25"
+                : "bg-surface text-muted ring-border hover:text-ink"
             }`}
           >
             {chip.label}
@@ -174,24 +195,27 @@ export function AdminUsersDirectory() {
         ))}
       </div>
 
-      {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-3 text-body text-danger">{error}</p>}
 
-      <div className="mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-surface to-surface2 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+      {/* Lebar minimum tabel dipertahankan: enam kolom tidak muat di layar
+          sempit, dan yang benar di sana adalah menggulir mendatar, bukan
+          meremas kolomnya. */}
+      <Card padding="none" className="mt-4 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-body">
             <thead>
-              <tr className="border-b border-navy-900/10 bg-canvas/60 text-xs uppercase tracking-wide text-muted">
-                <th className="px-4 py-3 font-medium">Pengguna</th>
-                <th className="px-4 py-3 font-medium">Metadata</th>
-                <th className="px-4 py-3 font-medium">Agent</th>
-                <th className="px-4 py-3 font-medium">Poin</th>
-                <th className="px-4 py-3 font-medium">Terdaftar</th>
-                <th className="px-4 py-3 font-medium">
+              <tr className="border-b border-border font-mono text-label uppercase text-muted">
+                <th className="px-4 py-3">Pengguna</th>
+                <th className="px-4 py-3">Metadata</th>
+                <th className="px-4 py-3">Agent</th>
+                <th className="px-4 py-3">Poin</th>
+                <th className="px-4 py-3">Terdaftar</th>
+                <th className="px-4 py-3">
                   <span className="sr-only">Aksi</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-900/10">
+            <tbody className="divide-y divide-divider">
               {rows.length === 0 && !loading && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted">
@@ -202,25 +226,28 @@ export function AdminUsersDirectory() {
               {rows.map((row) => {
                 const avatar = avatarFor(row);
                 return (
-                  <tr key={row.id} className="align-middle transition hover:bg-brand-blue/[.045]">
+                  <tr key={row.id} className="align-middle transition hover:bg-surface-sunken">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
+                        {/* Lingkaran hanya untuk avatar dan chip; bentuk lain
+                            di dalam aplikasi memakai radius token. */}
                         <span
-                          className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-xs font-semibold text-white"
-                          style={{ backgroundColor: avatar.color }}
+                          className={`flex h-9 w-9 flex-none items-center justify-center rounded-full text-caption font-semibold text-white ${avatar.colorClass}`}
                         >
                           {avatar.initials}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-ink">
+                          <p className="truncate text-body font-semibold text-ink">
                             {row.name ?? "—"}
+                            {/* Peran admin dulu berchip emas. Emas menandai
+                                uang, dan sebuah peran bukan uang. */}
                             {row.adminRole && (
-                              <span className="ml-1.5 inline-block rounded-full bg-gold-400/30 px-1.5 py-0.5 align-[1px] text-[10px] font-bold uppercase tracking-wide text-[#9A6B08]">
+                              <Badge tone="info" className="ml-1.5 align-[1px] uppercase">
                                 {row.adminRole}
-                              </span>
+                              </Badge>
                             )}
                           </p>
-                          <p className="truncate text-xs text-muted">{row.email}</p>
+                          <p className="truncate font-mono text-caption text-muted">{row.email}</p>
                         </div>
                       </div>
                     </td>
@@ -230,10 +257,10 @@ export function AdminUsersDirectory() {
                     <td className="px-4 py-3">
                       <StatusPill state={row.agent} fallbackLabel="Agent" />
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm tabular-nums text-ink">
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-body tabular-nums text-ink">
                       {row.points.toLocaleString("id-ID")}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-muted">
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-caption tabular-nums text-muted">
                       {new Date(row.createdAt).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "short",
@@ -241,12 +268,9 @@ export function AdminUsersDirectory() {
                       })}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/users/${row.id}`}
-                        className="whitespace-nowrap rounded-full bg-navy-900/5 px-3.5 py-1.5 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10"
-                      >
+                      <ButtonLink href={`/admin/users/${row.id}`} variant="secondary" size="sm">
                         Kelola
-                      </Link>
+                      </ButtonLink>
                     </td>
                   </tr>
                 );
@@ -255,31 +279,52 @@ export function AdminUsersDirectory() {
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-navy-900/10 px-4 py-3">
-          <span className="text-xs text-muted">
-            {total === 0 ? "0 pengguna" : `Menampilkan ${from}–${to} dari ${total} pengguna`}
+        {/* Kurung sudut ‹ dan › berhenti dipakai sebagai panah: keduanya glyph
+            teks, dirender font sistem, jadi tingginya berbeda antar mesin dan
+            ukurannya tidak bisa disetel. Arah "berikutnya" memakai chevron
+            yang diputar seperempat putaran — daftar ikon bersama baru punya
+            chevron atas dan bawah. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+          <span className="text-caption text-muted">
+            {total === 0 ? (
+              <>
+                <span className="font-mono tabular-nums text-ink">0</span> pengguna
+              </>
+            ) : (
+              <>
+                Menampilkan{" "}
+                <span className="font-mono tabular-nums text-ink">
+                  {from}–{to}
+                </span>{" "}
+                dari <span className="font-mono tabular-nums text-ink">{total}</span> pengguna
+              </>
+            )}
           </span>
-          <div className="flex items-center gap-2 text-sm">
-            <button
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => load(page - 1, q.trim(), filter)}
               disabled={page <= 1 || loading}
-              className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-40"
             >
-              ‹ Sebelumnya
-            </button>
-            <span className="text-xs tabular-nums text-muted">
+              <Icon name="arrow-left" className="h-4 w-4 flex-none" />
+              Sebelumnya
+            </Button>
+            <span className="font-mono text-caption tabular-nums text-muted">
               Hal {page} / {totalPages}
             </span>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => load(page + 1, q.trim(), filter)}
               disabled={page >= totalPages || loading}
-              className="rounded-full bg-navy-900/5 px-3 py-1 text-xs font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-40"
             >
-              Berikutnya ›
-            </button>
+              Berikutnya
+              <Icon name="chevron-down" className="h-4 w-4 flex-none -rotate-90" />
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

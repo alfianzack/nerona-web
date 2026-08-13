@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 interface PlanRow {
   id: string;
@@ -41,45 +45,41 @@ function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
-const inputClass =
-  "w-44 rounded-xl bg-surface px-3 py-2 text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
-const saveClass =
-  "whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50";
-const savedClass =
-  "whitespace-nowrap rounded-full bg-emerald-500/10 px-3.5 py-1.5 text-sm font-semibold text-emerald-700";
-
-function PanelHeader({
-  chipClass,
+/**
+ * Kepala bagian, bukan kepala panel.
+ *
+ * Lima kelompok harga di berkas ini sebelumnya masing-masing memakai resep
+ * kartu yang sama persis — cincin, bayangan, dan lencana ikon 36px — sehingga
+ * kelimanya berteriak sekeras panel tetangganya di halaman yang sama, dan tidak
+ * ada yang menuntun mata. Sekarang semuanya duduk di dalam SATU kartu: kartu
+ * itu yang memegang cincin, sedangkan bagian di dalamnya hanya punya ikon polos
+ * dan judul. Tiga tingkat garis membentuk urutannya — cincin kartu, garis antar
+ * bagian, lalu garis paling tipis antar baris.
+ */
+function Section({
   icon,
+  tone,
   title,
   subtitle,
+  children,
 }: {
-  chipClass: string;
-  icon: React.ReactNode;
+  icon: IconName;
+  tone: string;
   title: string;
   subtitle: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${chipClass}`}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="h-[18px] w-[18px]"
-        >
-          {icon}
-        </svg>
-      </span>
-      <div>
-        <h2 className="text-lg font-semibold text-ink">{title}</h2>
-        <p className="text-xs text-muted">{subtitle}</p>
+    <section className="py-6 first:pt-0 last:pb-0">
+      <div className="flex items-start gap-3">
+        <Icon name={icon} className={`mt-1 h-[18px] w-[18px] flex-none ${tone}`} />
+        <div className="min-w-0">
+          <h2 className="text-title-2 text-ink">{title}</h2>
+          <p className="mt-0.5 text-caption text-muted">{subtitle}</p>
+        </div>
       </div>
-    </div>
+      {children}
+    </section>
   );
 }
 
@@ -208,117 +208,128 @@ export function AdminPricingPanel() {
   }) {
     const { type, apiId, draftKey, label, detail } = row;
     const isSaved = savedId === draftKey;
+    // Titik dua sah di dalam id HTML, tapi menyusahkan pemilih CSS. Diganti
+    // supaya penyambungan label dan keterangan tetap aman.
+    const inputId = `harga-${draftKey.replace(/:/g, "-")}`;
+    const detailId = `${inputId}-ket`;
     return (
-      <div key={draftKey} className="flex items-center justify-between gap-3 py-2.5">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-ink">{label}</p>
-          <p className="truncate text-xs text-muted">{detail}</p>
-        </div>
-        <div className="flex flex-none items-center gap-2">
-          <div className="relative">
-            <input
-              type="text"
-              value={drafts[draftKey] ?? ""}
-              onChange={(e) => setDrafts((d) => ({ ...d, [draftKey]: e.target.value }))}
-              placeholder={row.placeholder ?? "Rp ..."}
-              aria-label={`Harga ${label}`}
-              className={`${inputClass} ${row.suffix ? "pr-8" : ""}`}
-            />
-            {row.suffix && (
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">
-                {row.suffix}
-              </span>
-            )}
-          </div>
-          <button
+      <div key={draftKey} className="py-3.5">
+        <div className="flex flex-wrap items-end gap-3">
+          {/*
+            Field, bukan kolom dengan aria-label seperti sebelumnya: nama paket
+            di sebelahnya tidak pernah benar-benar tersambung ke kolomnya, jadi
+            mengkliknya tidak memindahkan fokus.
+
+            Mono dipasang di pembungkus, bukan di kolomnya, karena Field tidak
+            meneruskan kelas ke elemen isian — angka yang diketik mewarisinya
+            dari sini. Label ikut mono, dan itu memang yang diinginkan untuk
+            daftar setelan.
+          */}
+          <Field
+            id={inputId}
+            label={label}
+            className="min-w-[9rem] flex-1 font-mono tabular-nums"
+            type="text"
+            value={drafts[draftKey] ?? ""}
+            onChange={(e) => setDrafts((d) => ({ ...d, [draftKey]: e.target.value }))}
+            placeholder={row.placeholder ?? "Rp ..."}
+            aria-describedby={detailId}
+          />
+          {row.suffix && (
+            // Satuannya berdiri di samping kolom, tidak lagi melayang di
+            // dalamnya: begitu kolom punya label sungguhan, penempatan absolut
+            // di tengah tinggi meleset dan hanya bisa diperbaiki dengan angka
+            // ajaib.
+            <span className="pb-2.5 font-mono text-body text-muted">{row.suffix}</span>
+          )}
+          <Button
+            size="sm"
+            variant={isSaved ? "secondary" : "primary"}
             onClick={() => handleSave(type, apiId, draftKey)}
             disabled={savingId === draftKey}
-            className={isSaved ? savedClass : saveClass}
           >
-            {savingId === draftKey ? "Menyimpan..." : isSaved ? "Tersimpan ✓" : "Simpan"}
-          </button>
+            {savingId === draftKey ? (
+              "Menyimpan..."
+            ) : isSaved ? (
+              <>
+                <Icon name="check" className="h-4 w-4 text-success" />
+                Tersimpan
+              </>
+            ) : (
+              "Simpan"
+            )}
+          </Button>
         </div>
+        <p id={detailId} className="mt-1.5 font-mono text-label text-muted">
+          {detail}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {error && <p className="text-sm text-rose-500">{error}</p>}
+    <Card padding="lg">
+      {error && (
+        <p className="mb-5 rounded-card bg-danger-bg px-3 py-2 text-caption text-danger ring-1 ring-danger/25">
+          {error}
+        </p>
+      )}
 
-      <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <PanelHeader
-          chipClass="bg-gold-400/30 text-[#9A6B08]"
-          icon={
-            <>
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </>
-          }
+      <div className="divide-y divide-border">
+        <Section
+          icon="image"
+          tone="text-brand-blue-ink"
           title="Harga paket Metadata"
           subtitle="Harga per bulan. Harga 3/6/12 bulan dihitung otomatis dari sini."
-        />
-        <div className="mt-2 divide-y divide-navy-900/10">
-          {plans.map((plan) =>
-            renderRow({
-              type: "plan",
-              apiId: plan.id,
-              draftKey: plan.id,
-              label: plan.name,
-              detail:
-                plan.priceMonthly === null
-                  ? `${plan.activeLicenses ?? 0} lisensi aktif · harga belum diatur`
-                  : `${plan.activeLicenses ?? 0} lisensi aktif · ${formatRupiah(plan.priceMonthly)}/bulan`,
-              placeholder: "99000",
-            })
-          )}
-        </div>
-      </div>
+        >
+          <div className="mt-3 divide-y divide-divider">
+            {plans.map((plan) =>
+              renderRow({
+                type: "plan",
+                apiId: plan.id,
+                draftKey: plan.id,
+                label: plan.name,
+                detail:
+                  plan.priceMonthly === null
+                    ? `${plan.activeLicenses ?? 0} lisensi aktif · harga belum diatur`
+                    : `${plan.activeLicenses ?? 0} lisensi aktif · ${formatRupiah(plan.priceMonthly)}/bulan`,
+                placeholder: "99000",
+              })
+            )}
+          </div>
+        </Section>
 
-      <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <PanelHeader
-          chipClass="bg-emerald-500/15 text-emerald-700"
-          icon={
-            <>
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-            </>
-          }
+        <Section
+          icon="chat"
+          tone="text-brand-sky-ink"
           title="Harga paket Agent"
           subtitle="Harga per bulan. Harga 3/6/12 bulan dihitung otomatis dari sini."
-        />
-        <div className="mt-2 divide-y divide-navy-900/10">
-          {agentPlans.map((agent) =>
-            renderRow({
-              type: "agent",
-              apiId: agent.plan,
-              draftKey: `agent:${agent.plan}`,
-              label: agent.label,
-              detail: `${agent.activeProfiles} akun aktif · ${formatRupiah(agent.effective)}/bulan`,
-              // Kosongkan kolomnya untuk kembali ke harga bawaan; placeholder
-              // memperlihatkan harga apa yang berlaku saat itu terjadi.
-              placeholder: String(agent.effective),
-            })
-          )}
-        </div>
-      </div>
+        >
+          <div className="mt-3 divide-y divide-divider">
+            {agentPlans.map((agent) =>
+              renderRow({
+                type: "agent",
+                apiId: agent.plan,
+                draftKey: `agent:${agent.plan}`,
+                label: agent.label,
+                detail: `${agent.activeProfiles} akun aktif · ${formatRupiah(agent.effective)}/bulan`,
+                // Kosongkan kolomnya untuk kembali ke harga bawaan; placeholder
+                // memperlihatkan harga apa yang berlaku saat itu terjadi.
+                placeholder: String(agent.effective),
+              })
+            )}
+          </div>
+        </Section>
 
-      <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <PanelHeader
-          chipClass="bg-brand-orange/15 text-[#C25717]"
-          icon={
-            <>
-              <line x1="19" y1="5" x2="5" y2="19" />
-              <circle cx="6.5" cy="6.5" r="2.5" />
-              <circle cx="17.5" cy="17.5" r="2.5" />
-            </>
-          }
+        <Section
+          icon="tag"
+          tone="text-brand-orange-ink"
           title="Diskon durasi"
           subtitle="Potongan untuk paket 3 / 6 / 12 bulan — berlaku untuk Metadata dan Agent"
-        />
-        <div className="mt-2 divide-y divide-navy-900/10">
-          {discounts.map((d) => (
-            <div key={d.months}>
-              {renderRow({
+        >
+          <div className="mt-3 divide-y divide-divider">
+            {discounts.map((d) =>
+              renderRow({
                 type: "discount",
                 apiId: String(d.months),
                 draftKey: `discount:${d.months}`,
@@ -326,80 +337,84 @@ export function AdminPricingPanel() {
                 detail: previewFor(d),
                 placeholder: "0",
                 suffix: "%",
-              })}
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-muted">
-          Harga akhir dibulatkan ke ribuan terdekat. Kosongkan untuk kembali ke potongan bawaan.
-        </p>
-      </div>
+              })
+            )}
+          </div>
+          <p className="mt-3 text-caption text-muted">
+            Harga akhir dibulatkan ke ribuan terdekat. Kosongkan untuk kembali ke potongan bawaan.
+          </p>
+        </Section>
 
-      <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <PanelHeader
-          chipClass="bg-gold-400/30 text-[#9A6B08]"
-          icon={
-            <>
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v10M9.5 9.5h5M9.5 14.5h5" />
-            </>
-          }
+        <Section
+          icon="wallet"
+          tone="text-brand-gold-ink"
           title="Paket poin (top-up)"
           subtitle="Pilihan beli poin satuan di halaman Finance tenant"
-        />
-        <label htmlFor="topupPackages" className="mt-3 block text-xs text-muted">
-          Satu paket per baris, <code>poin=harga</code>. Contoh: <code>1000=45000</code>
-        </label>
-        <textarea
-          id="topupPackages"
-          rows={4}
-          value={topupDraft}
-          onChange={(e) => {
-            setTopupDraft(e.target.value);
-            setTopupSaved(false);
-          }}
-          placeholder={topup.effective}
-          className="mt-2 w-full rounded-xl bg-surface px-3 py-2 font-mono text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400"
-        />
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-xs text-muted">
-            Kosongkan untuk kembali ke paket bawaan. Berlaku sekarang:{" "}
-            <span className="font-medium text-ink">{topup.effective.replace(/\n/g, " · ")}</span>
-          </p>
-          <button
-            onClick={saveTopup}
-            disabled={topupSaving}
-            className={topupSaved ? savedClass : saveClass}
-          >
-            {topupSaving ? "Menyimpan..." : topupSaved ? "Tersimpan ✓" : "Simpan"}
-          </button>
-        </div>
-      </div>
+        >
+          <label htmlFor="topupPackages" className="mt-4 block text-caption text-muted">
+            Satu paket per baris, <code className="font-mono text-ink">poin=harga</code>. Contoh:{" "}
+            <code className="font-mono text-ink">1000=45000</code>
+          </label>
+          {/* Ditulis tangan, bukan lewat primitif: Field dan Input keduanya
+              hanya melayani elemen input. Gayanya menyalin Input supaya kolom
+              ini tidak terlihat berbeda dari kolom lain di halaman. */}
+          <textarea
+            id="topupPackages"
+            rows={4}
+            value={topupDraft}
+            onChange={(e) => {
+              setTopupDraft(e.target.value);
+              setTopupSaved(false);
+            }}
+            placeholder={topup.effective}
+            className="mt-2 w-full rounded-control bg-surface px-3.5 py-2.5 font-mono text-body tabular-nums text-ink ring-1 ring-border transition placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-caption text-muted">
+              Kosongkan untuk kembali ke paket bawaan. Berlaku sekarang:{" "}
+              <span className="font-mono tabular-nums text-ink">
+                {topup.effective.replace(/\n/g, " · ")}
+              </span>
+            </p>
+            <Button
+              size="sm"
+              variant={topupSaved ? "secondary" : "primary"}
+              onClick={saveTopup}
+              disabled={topupSaving}
+            >
+              {topupSaving ? (
+                "Menyimpan..."
+              ) : topupSaved ? (
+                <>
+                  <Icon name="check" className="h-4 w-4 text-success" />
+                  Tersimpan
+                </>
+              ) : (
+                "Simpan"
+              )}
+            </Button>
+          </div>
+        </Section>
 
-      <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-        <PanelHeader
-          chipClass="bg-brand-blue/15 text-[#3B65C4]"
-          icon={
-            <>
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-            </>
-          }
+        <Section
+          icon="play"
+          tone="text-accent"
           title="Harga kelas"
           subtitle="Kelas belajar di halaman Learn"
-        />
-        <div className="mt-2 divide-y divide-navy-900/10">
-          {courses.map((course) =>
-            renderRow({
-              type: "course",
-              apiId: course.id,
-              draftKey: course.id,
-              label: course.title,
-              detail: `${course.enrollments ?? 0} peserta`,
-            })
-          )}
-        </div>
+        >
+          <div className="mt-3 divide-y divide-divider">
+            {courses.map((course) =>
+              renderRow({
+                type: "course",
+                apiId: course.id,
+                draftKey: course.id,
+                label: course.title,
+                detail: `${course.enrollments ?? 0} peserta`,
+              })
+            )}
+          </div>
+        </Section>
       </div>
-    </div>
+    </Card>
   );
 }

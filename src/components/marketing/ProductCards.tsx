@@ -20,7 +20,7 @@ const PRODUCTS = [
     icon: "image",
     title: "Nerona Metadata",
     body: "Judul, deskripsi, dan kata kunci dibuat otomatis dengan AI, langsung terisi ke formulir unggah Adobe Stock, Shutterstock, dan lainnya.",
-    go: "Pelajari Metadata →",
+    go: "Pelajari Metadata",
     stripe: "bg-brand-blue",
     chip: "bg-brand-blue/15",
     accent: "text-brand-blue-ink",
@@ -30,7 +30,7 @@ const PRODUCTS = [
     icon: "chat",
     title: "Nerona Agent",
     body: "Asisten AI pribadi yang chat langsung di WhatsApp — catat pesanan, cek stok, dan tanya omzet toko Anda kapan saja.",
-    go: "Pelajari Agent →",
+    go: "Pelajari Agent",
     stripe: "bg-brand-orange",
     chip: "bg-brand-orange/15",
     accent: "text-brand-orange-ink",
@@ -63,8 +63,15 @@ export function ProductCards() {
               </span>
               <h3 className="mt-4 text-title-2 text-ink">{product.title}</h3>
               <p className="mt-2 text-body-lg text-muted">{product.body}</p>
-              <span className={`mt-4 inline-block text-body font-semibold ${product.accent}`}>
+              {/* Panah sebagai ikon, bukan glyph teks. Alasannya sama dengan
+                  emoji yang sudah dibuang dari berkas ini: glyph dirender font
+                  sistem, ukurannya tidak bisa disetel, dan warnanya tidak ikut
+                  teks di sekitarnya. */}
+              <span
+                className={`mt-4 inline-flex items-center gap-1.5 text-body font-semibold ${product.accent}`}
+              >
                 {product.go}
+                <Icon name="arrow-right" className="h-4 w-4" />
               </span>
             </Card>
           </Link>

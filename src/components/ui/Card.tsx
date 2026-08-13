@@ -4,15 +4,19 @@ type CardVariant = "default" | "sunken" | "accent" | "flush";
 type CardPadding = "none" | "sm" | "md" | "lg";
 
 /**
- * Pengganti resep yang sebelumnya disalin 57 kali di 41 berkas:
+ * Pengganti satu resep kartu yang sebelumnya disalin 57 kali di 41 berkas:
+ * sudut 24px, gradien putih menuju #F4F8FD, bayangan besar bernada navy, dan
+ * cincin navy tembus pandang. Gradiennya tidak mengerjakan apa pun secara
+ * visual, tapi dipasang di setiap panel produk — bahkan di dalam DataTable dan
+ * Modal. Yang hilang di sini: gradien itu, dan bayangannya. Permukaan
+ * dipisahkan garis rambut, dan bayangan disimpan untuk lapisan yang
+ * benar-benar melayang.
  *
- *   rounded-3xl bg-gradient-to-b from-surface to-surface2 p-5
- *   shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10
- *
- * Gradiennya putih menuju #F4F8FD — tidak mengerjakan apa pun secara visual,
- * tapi dipasang di setiap panel produk, bahkan di dalam DataTable dan Modal.
- * Yang hilang di sini: gradien itu, dan bayangannya. Permukaan dipisahkan oleh
- * garis rambut, dan bayangan disimpan untuk lapisan yang benar-benar melayang.
+ * Resep lamanya sengaja dijabarkan dengan kata, bukan dengan nama kelasnya:
+ * pemindai Tailwind membaca komentar sebagai teks biasa, jadi menuliskannya di
+ * sini akan membuat kedelapan kelas yang baru saja dihapus tetap terbit di
+ * bundel CSS sebagai aturan mati. Berkas ini rumah aturan itu; ia yang paling
+ * tidak boleh melanggarnya.
  */
 const VARIANTS: Record<CardVariant, string> = {
   default: "bg-surface ring-1 ring-border",

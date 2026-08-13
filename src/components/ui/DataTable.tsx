@@ -64,21 +64,43 @@ export function DataTable<T>({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  onClick={() => handleHeaderClick(col)}
-                  className={`px-4 py-3 ${col.sortable ? "cursor-pointer select-none hover:text-ink" : ""} ${col.className ?? ""}`}
+                  scope="col"
+                  aria-sort={
+                    col.sortable
+                      ? sort === col.key
+                        ? order === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                      : undefined
+                  }
+                  className={`px-4 py-3 ${col.className ?? ""}`}
                 >
-                  <span className="inline-flex items-center gap-1.5">
-                    {col.header}
-                    {/* Ikon, bukan glyph teks. ▲ dan ▼ dirender font sistem:
-                        tingginya berbeda antar mesin, tidak bisa disetel
-                        ukurannya, dan tidak ikut warna teks di sekitarnya. */}
-                    {col.sortable && sort === col.key && (
-                      <Icon
-                        name={order === "asc" ? "chevron-up" : "chevron-down"}
-                        className="h-3.5 w-3.5"
-                      />
-                    )}
-                  </span>
+                  {/* Kepala kolom yang bisa diurutkan adalah tombol sungguhan,
+                      bukan <th> ber-onClick. Sebelumnya pengurutan sama sekali
+                      tidak bisa dicapai dari papan ketik: elemennya tidak
+                      pernah menerima fokus, jadi aturan :focus-visible global
+                      pun tidak menolong. */}
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleHeaderClick(col)}
+                      className="inline-flex select-none items-center gap-1.5 rounded-control transition hover:text-ink"
+                    >
+                      {col.header}
+                      {/* Ikon, bukan glyph teks: glyph panah dirender font
+                          sistem, tingginya berbeda antar mesin, ukurannya tidak
+                          bisa disetel, dan warnanya tidak ikut teks sekitarnya. */}
+                      {sort === col.key && (
+                        <Icon
+                          name={order === "asc" ? "chevron-up" : "chevron-down"}
+                          className="h-3.5 w-3.5"
+                        />
+                      )}
+                    </button>
+                  ) : (
+                    col.header
+                  )}
                 </th>
               ))}
             </tr>

@@ -17,8 +17,13 @@ export default async function AdminGroupLayout({ children }: { children: React.R
       email={session.user.email ?? ""}
       homeHref="/admin"
     >
-      {/* Admin pages bring no <main> and no container of their own. */}
-      <main className="mx-auto max-w-6xl px-6 py-12">{children}</main>
+      {/* Wadah dan <main> tinggal di sini, bukan di tiap halaman: dengan begitu
+          semua layar admin berbagi lebar dan irama yang sama tanpa ada yang
+          menjahitnya ulang. Napas vertikalnya sekarang ikut token pita (--band)
+          yang juga dipakai aplikasi tenant, bukan angka lepas yang kebetulan
+          mirip. (Nama kelasnya sengaja tidak ditulis di sini: pemindai Tailwind
+          ikut membaca komentar.) */}
+      <main className="mx-auto max-w-6xl px-6 py-band">{children}</main>
     </AppShell>
   );
 }

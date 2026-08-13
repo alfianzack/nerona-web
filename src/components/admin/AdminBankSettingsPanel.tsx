@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/icons";
 
 interface BankSettings {
   bankName: string;
@@ -11,8 +16,12 @@ interface BankSettings {
 
 const EMPTY: BankSettings = { bankName: "", accountNumber: "", accountHolder: "", instructions: "" };
 
-const inputClass =
-  "w-full rounded-xl bg-surface px-3 py-2 text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+/**
+ * Field meneruskan `className` ke pembungkusnya, bukan ke isian di dalamnya,
+ * jadi mono harus diarahkan langsung ke elemen isiannya. Kalau ditempel di
+ * pembungkus, labelnya ikut berubah jadi mono padahal hanya angkanya yang perlu.
+ */
+const ISIAN_ANGKA = "[&_input]:font-mono [&_input]:tabular-nums";
 
 const FIELDS: {
   key: keyof BankSettings;
@@ -71,75 +80,75 @@ export function AdminBankSettingsPanel() {
   }
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <Card>
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-sky/25 text-[#1F7FAE]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className="h-[18px] w-[18px]"
-          >
-            <line x1="3" y1="22" x2="21" y2="22" />
-            <line x1="6" y1="18" x2="6" y2="11" />
-            <line x1="10" y1="18" x2="10" y2="11" />
-            <line x1="14" y1="18" x2="14" y2="11" />
-            <line x1="18" y1="18" x2="18" y2="11" />
-            <polygon points="12 2 20 7 4 7" />
-          </svg>
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-chip bg-brand-sky/25 text-brand-sky-ink">
+          <Icon name="bank" />
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-ink">Rekening transfer</h2>
-          <p className="text-xs text-muted">Ditampilkan ke pelanggan saat checkout</p>
+          <h2 className="text-title-2 text-ink">Rekening transfer</h2>
+          <p className="text-caption text-muted">Ditampilkan ke pelanggan saat checkout</p>
         </div>
       </div>
 
-      {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-2 text-body text-danger">{error}</p>}
       <div className="mt-4 space-y-4">
-        {FIELDS.map((field) => (
-          <div key={field.key}>
-            <label htmlFor={`bank-${field.key}`} className="text-xs font-semibold text-ink">
-              {field.label}
-            </label>
-            {field.textarea ? (
+        {FIELDS.map((field) =>
+          field.textarea ? (
+            // Belum ada primitif untuk area teks bertingkat, jadi label, cincin,
+            // dan warna fokusnya sengaja dicocokkan dengan Field supaya kolom
+            // catatan tidak terlihat berasal dari formulir lain.
+            <div key={field.key} className="grid gap-1.5">
+              <label
+                htmlFor={`bank-${field.key}`}
+                className="text-caption font-medium text-muted"
+              >
+                {field.label}
+              </label>
               <textarea
                 id={`bank-${field.key}`}
                 rows={2}
                 value={values[field.key]}
                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                 placeholder={field.placeholder}
-                className={`mt-1.5 ${inputClass}`}
+                aria-describedby={field.help ? `bank-${field.key}-hint` : undefined}
+                className="w-full rounded-control bg-surface px-3.5 py-2.5 text-body text-ink ring-1 ring-border transition placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
               />
-            ) : (
-              <input
-                id={`bank-${field.key}`}
-                type="text"
-                value={values[field.key]}
-                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                placeholder={field.placeholder}
-                className={`mt-1.5 ${inputClass} ${
-                  field.key === "accountNumber" ? "tabular-nums" : ""
-                }`}
-              />
-            )}
-            {field.help && <p className="mt-1 text-[11px] text-muted/80">{field.help}</p>}
-          </div>
-        ))}
+              {field.help && (
+                <p id={`bank-${field.key}-hint`} className="text-caption text-muted">
+                  {field.help}
+                </p>
+              )}
+            </div>
+          ) : (
+            <Field
+              key={field.key}
+              id={`bank-${field.key}`}
+              label={field.label}
+              type="text"
+              value={values[field.key]}
+              onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+              placeholder={field.placeholder}
+              hint={field.help}
+              // Nomor rekening disalin orang ke aplikasi banknya digit demi
+              // digit, jadi lebarnya harus tetap dan angkanya tidak boleh bisa
+              // salah dibaca.
+              className={field.key === "accountNumber" ? ISIAN_ANGKA : undefined}
+            />
+          ),
+        )}
       </div>
       <div className="mt-5 flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? "Menyimpan..." : "Simpan rekening"}
-        </button>
-        {saved && <span className="text-xs font-semibold text-emerald-700">✓ Tersimpan</span>}
+        </Button>
+        {saved && (
+          <Badge tone="success">
+            <Icon name="check" className="h-3.5 w-3.5" />
+            Tersimpan
+          </Badge>
+        )}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -7,9 +7,20 @@ import {
   pricingFromInput,
   type AiPricing,
 } from "@/lib/agent/pricing";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Icon, type IconName } from "@/components/ui/icons";
 
-const inputClass =
-  "w-full rounded-xl bg-surface px-3 py-2 text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+/**
+ * Field meneruskan `className` ke pembungkusnya, bukan ke isian di dalamnya,
+ * jadi mono harus diarahkan langsung ke elemen isiannya. Kalau ditempel di
+ * pembungkus, labelnya ikut berubah jadi mono padahal yang perlu hanya isinya:
+ * id model, kunci API, dan tarif. Kolom bertipe angka sudah mendapat angka
+ * berbaris dari lapisan token, jadi di sini cukup jenis hurufnya.
+ */
+const ISIAN_MONO = "[&_input]:font-mono";
 
 interface Probe {
   ok: boolean;
@@ -137,9 +148,12 @@ export function AdminAiSettingsPanel() {
   });
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <Card>
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-sky/25 text-[#1F7FAE]">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-chip bg-brand-sky/25 text-brand-sky-ink">
+          {/* Daftar Icon belum punya glyph otak, jadi gambarnya tetap di sini.
+              Warnanya tidak ditulis di SVG-nya sendiri, melainkan diwarisi dari
+              warna teks induknya, supaya ia ikut token seperti ikon lain. */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -154,55 +168,47 @@ export function AdminAiSettingsPanel() {
           </svg>
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-ink">Koneksi AI (Sumopod)</h2>
-          <p className="text-xs text-muted">Model, API key & tarif poin untuk agen dan extension</p>
+          <h2 className="text-title-2 text-ink">Koneksi AI (Sumopod)</h2>
+          <p className="text-caption text-muted">
+            Model, API key & tarif poin untuk agen dan extension
+          </p>
         </div>
       </div>
 
-      {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-2 text-body text-danger">{error}</p>}
 
       <div className="mt-4 space-y-4">
-        <div>
-          <label htmlFor="ai-model" className="text-xs font-semibold text-ink">
-            Model
-          </label>
-          <input
-            id="ai-model"
-            type="text"
-            value={model}
-            onChange={(e) => {
-              setSaved(false);
-              invalidateTestResult();
-              setModel(e.target.value);
-            }}
-            placeholder="gemini-2.0-flash-lite"
-            className={`mt-1.5 ${inputClass}`}
-          />
-          <p className="mt-1 text-[11px] text-muted/80">
-            Id model persis seperti di Sumopod. Kosongkan untuk pakai default.
-          </p>
-        </div>
-        <div>
-          <label htmlFor="ai-key" className="text-xs font-semibold text-ink">
-            API key
-          </label>
-          <input
-            id="ai-key"
-            type="password"
-            value={apiKey}
-            onChange={(e) => {
-              setSaved(false);
-              invalidateTestResult();
-              setApiKey(e.target.value);
-            }}
-            placeholder={keyPlaceholder}
-            className={`mt-1.5 ${inputClass}`}
-          />
-        </div>
+        <Field
+          id="ai-model"
+          label="Model"
+          type="text"
+          value={model}
+          onChange={(e) => {
+            setSaved(false);
+            invalidateTestResult();
+            setModel(e.target.value);
+          }}
+          placeholder="gemini-2.0-flash-lite"
+          hint="Id model persis seperti di Sumopod. Kosongkan untuk pakai default."
+          className={ISIAN_MONO}
+        />
+        <Field
+          id="ai-key"
+          label="API key"
+          type="password"
+          value={apiKey}
+          onChange={(e) => {
+            setSaved(false);
+            invalidateTestResult();
+            setApiKey(e.target.value);
+          }}
+          placeholder={keyPlaceholder}
+          className={ISIAN_MONO}
+        />
 
-        <div className="rounded-xl bg-navy-900/[.03] p-3 ring-1 ring-navy-900/[.06]">
-          <p className="text-xs font-semibold text-ink">Tarif poin</p>
-          <p className="mt-0.5 text-[11px] text-muted/80">
+        <Card variant="sunken" padding="sm">
+          <p className="font-mono text-label uppercase text-muted">Tarif poin</p>
+          <p className="mt-1 text-caption text-muted">
             Dipakai untuk menghitung poin yang dipotong tiap panggilan AI (agen &
             extension). Kosongkan untuk pakai default.
           </p>
@@ -241,22 +247,24 @@ export function AdminAiSettingsPanel() {
               }}
             />
           </div>
-          <p className="mt-3 text-[11px] text-muted">
-            Estimasi: 1.500 token input + 400 token output ≈{" "}
-            <span className="font-semibold text-ink">{previewCost} poin</span>
+          <p className="mt-3 text-caption text-muted">
+            Estimasi: <span className="font-mono tabular-nums">1.500</span> token input +{" "}
+            <span className="font-mono tabular-nums">400</span> token output ≈{" "}
+            <span className="font-mono font-semibold tabular-nums text-ink">
+              {previewCost} poin
+            </span>
           </p>
-        </div>
+        </Card>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? "Menyimpan..." : "Simpan koneksi AI"}
-        </button>
-        <button
+        </Button>
+        {/* Mengecek koneksi tidak mengubah apa pun, jadi ia aksi kedua di baris
+            ini — bukan tombol yang sama menonjolnya dengan Simpan. */}
+        <Button
+          variant="secondary"
           onClick={handleTest}
           disabled={testing || hasUnsavedConnectionEdits}
           title={
@@ -264,20 +272,24 @@ export function AdminAiSettingsPanel() {
               ? "Simpan dulu — pengecekan menguji pengaturan yang tersimpan."
               : undefined
           }
-          className="rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
         >
           {testing ? "Mengecek..." : "Cek koneksi"}
-        </button>
-        {saved && <span className="text-xs font-semibold text-emerald-700">✓ Tersimpan</span>}
+        </Button>
+        {saved && (
+          <Badge tone="success">
+            <Icon name="check" className="h-3.5 w-3.5" />
+            Tersimpan
+          </Badge>
+        )}
         {hasUnsavedConnectionEdits && (
-          <span className="text-xs text-muted">
+          <span className="text-caption text-muted">
             Simpan dulu untuk bisa cek koneksi — pengecekan memakai pengaturan yang tersimpan.
           </span>
         )}
       </div>
 
       {testResult && <ConnectionTestReport result={testResult} />}
-    </div>
+    </Card>
   );
 }
 
@@ -297,36 +309,36 @@ function RateField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label htmlFor={id} className="text-[11px] font-semibold text-ink">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="number"
-        min="0"
-        step="any"
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`mt-1 ${inputClass}`}
-      />
-      <p className="mt-1 text-[10px] text-muted/80">{hint}</p>
-    </div>
+    <Field
+      id={id}
+      label={label}
+      hint={hint}
+      type="number"
+      min="0"
+      step="any"
+      inputMode="decimal"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={ISIAN_MONO}
+    />
   );
 }
 
 function ProbeRow({ label, probe, hint }: { label: string; probe: Probe; hint: string }) {
-  const mark = probe.ok ? "✓" : probe.skipped ? "–" : "✗";
-  const tone = probe.ok
-    ? "text-emerald-700"
-    : probe.skipped
-      ? "text-muted"
-      : "text-rose-600";
+  /**
+   * Penanda hasil dulu glyph teks. Glyph teks tidak bisa disetel ukurannya,
+   * tingginya berbeda antar huruf, dan ✓ serta ✗ tidak sama beratnya — jadi dua
+   * baris yang sejajar terlihat tidak sejajar.
+   *
+   * "Tidak dijalankan" belum punya glyph netral di daftar Icon; jam dipakai
+   * karena artinya memang "belum jalan", bukan gagal.
+   */
+  const icon: IconName = probe.ok ? "check-circle" : probe.skipped ? "clock" : "close";
+  const tone = probe.ok ? "text-success" : probe.skipped ? "text-muted" : "text-danger";
   return (
     <li className="flex gap-2">
-      <span className={`font-semibold ${tone}`}>{mark}</span>
+      <Icon name={icon} className={`mt-0.5 h-4 w-4 flex-none ${tone}`} />
       <span className="min-w-0">
         <span className="font-medium text-ink">{label}</span>{" "}
         <span className="text-muted">— {probe.ok ? hint : probe.skipped ? "tidak dijalankan" : probe.error}</span>
@@ -338,7 +350,7 @@ function ProbeRow({ label, probe, hint }: { label: string; probe: Probe; hint: s
 function ConnectionTestReport({ result }: { result: ConnectionTestResult }) {
   if (!result.configured) {
     return (
-      <p className="mt-4 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-500/20">
+      <p className="mt-4 rounded-card bg-warning-bg px-3 py-2 text-body text-warning ring-1 ring-warning/25">
         API key belum diisi — simpan key dulu, lalu cek lagi.
       </p>
     );
@@ -346,22 +358,24 @@ function ConnectionTestReport({ result }: { result: ConnectionTestResult }) {
 
   return (
     <div
-      className={`mt-4 rounded-xl px-3 py-3 text-sm ring-1 ${
-        result.ok
-          ? "bg-emerald-500/10 text-emerald-800 ring-emerald-500/20"
-          : "bg-rose-500/10 text-rose-800 ring-rose-500/20"
+      className={`mt-4 rounded-card px-3 py-3 text-body ring-1 ${
+        result.ok ? "bg-success-bg ring-success/25" : "bg-danger-bg ring-danger/25"
       }`}
     >
-      <p className="font-semibold">
+      <p className={`font-semibold ${result.ok ? "text-success" : "text-danger"}`}>
         {result.ok ? "Koneksi AI berfungsi" : "Koneksi AI bermasalah"}
-        <span className="ml-1 font-normal opacity-80">({result.model || "model default"})</span>
+        {/* Nama model mono: ia disalin bulat-bulat dari dashboard Sumopod, dan
+            satu huruf meleset berarti kesimpulan di atasnya tentang model lain. */}
+        <span className="ml-1 font-mono text-caption font-normal text-muted">
+          ({result.model || "model default"})
+        </span>
       </p>
-      <ul className="mt-2 space-y-1 text-[13px]">
+      <ul className="mt-2 space-y-1">
         <ProbeRow label="Teks" probe={result.text} hint="key valid, model merespons" />
         <ProbeRow label="Gambar" probe={result.vision} hint="model bisa membaca gambar" />
       </ul>
       {result.text.ok && !result.vision.ok && !result.vision.skipped && (
-        <p className="mt-2 text-[12px]">
+        <p className="mt-2 text-caption text-ink">
           Key-nya benar, tapi model ini tidak menerima gambar. Semua fitur metadata di
           extension butuh model vision — ganti modelnya.
         </p>

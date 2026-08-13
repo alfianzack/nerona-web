@@ -15,39 +15,41 @@ export default async function AdminMetadataPage() {
     listAllMetadataLogs(100),
   ]);
 
+  // Tanpa <main> dan tanpa pembungkus lebar: keduanya sudah datang dari layout
+  // (admin). Menambahkannya lagi di sini berarti dua landmark <main> bersarang
+  // — HTML tidak sah, dan pembaca layar melihat dua wilayah utama — plus
+  // padding samping dan vertikal yang dobel.
   return (
-    <main className="bg-canvas">
-      <div className="mx-auto max-w-4xl px-6 py-band">
-        <PageHeader
-          title="Metadata"
-          description="Metadata yang di-generate semua tenant lewat extension."
-        />
+    <>
+      <PageHeader
+        title="Metadata"
+        description="Metadata yang di-generate semua tenant lewat extension."
+      />
 
-        {/* Tanpa pembungkus kartu: MetadataLogSummary mencetak kartunya sendiri
-            lewat Stat, jadi membungkusnya lagi menghasilkan kartu di dalam
-            kartu. Pemanggil tenant di /riwayat-metadata sudah begini. */}
-        <section className="mt-8">
-          <MetadataLogSummary stats={stats} />
-        </section>
+      {/* Tanpa pembungkus kartu: MetadataLogSummary mencetak kartunya sendiri
+          lewat Stat, jadi membungkusnya lagi menghasilkan kartu di dalam
+          kartu. Pemanggil tenant di /riwayat-metadata sudah begini. */}
+      <section className="mt-8">
+        <MetadataLogSummary stats={stats} />
+      </section>
 
-        <Card padding="lg" className="mt-6">
-          <h2 className="text-title-2 text-ink">100 terakhir</h2>
-          <div className="mt-4">
-            <MetadataLogTable
-              rows={logs.map((log) => ({
-                id: log.id,
-                marketplace: log.marketplace,
-                pageUrl: log.pageUrl,
-                title: log.title,
-                keywords: log.keywords,
-                keywordCount: log.keywordCount,
-                createdAt: log.createdAt.toISOString(),
-                owner: log.user.name || log.user.email,
-              }))}
-            />
-          </div>
-        </Card>
-      </div>
-    </main>
+      <Card padding="lg" className="mt-6">
+        <h2 className="text-title-2 text-ink">100 terakhir</h2>
+        <div className="mt-4">
+          <MetadataLogTable
+            rows={logs.map((log) => ({
+              id: log.id,
+              marketplace: log.marketplace,
+              pageUrl: log.pageUrl,
+              title: log.title,
+              keywords: log.keywords,
+              keywordCount: log.keywordCount,
+              createdAt: log.createdAt.toISOString(),
+              owner: log.user.name || log.user.email,
+            }))}
+          />
+        </div>
+      </Card>
+    </>
   );
 }

@@ -1,14 +1,36 @@
-// Server-rendered area sparkline. The brand orange (#FF8B45) fails the 3:1
-// contrast check on white, so line colors are passed in pre-darkened.
+/**
+ * Grafik area kecil, dirender di server.
+ *
+ * Warnanya dulu dioper per pemanggilan sebagai hex lepas justru karena oranye
+ * merek (#FF8B45) gagal uji kontras 3:1 di atas putih dan harus digelapkan
+ * manual di tempat pemanggilan. Token sekarang sudah membawa varian
+ * aman-kontrasnya sendiri — `emphasis` ADALAH oranye yang digelapkan itu — jadi
+ * pemanggil cukup menyebut nadanya dan tidak ada lagi hex yang bisa salah
+ * ketik atau melenceng dari layar lain.
+ *
+ * `vectorEffect="non-scaling-stroke"` tetap dipertahankan: viewBox-nya
+ * diregangkan (preserveAspectRatio="none"), jadi tanpa itu garisnya ikut
+ * menebal mengikuti lebar kartu.
+ */
+type SparklineTone = "accent" | "emphasis";
+
+/**
+ * Nama kelasnya ditulis utuh, bukan dirakit dari potongan string. Pemindai
+ * Tailwind membaca berkas ini sebagai teks biasa: kelas yang tidak pernah
+ * muncul lengkap tidak akan pernah dibuat, dan grafiknya terbit tanpa warna.
+ */
+const TONES: Record<SparklineTone, { line: string; area: string; dot: string }> = {
+  accent: { line: "stroke-accent", area: "fill-accent/10", dot: "fill-accent" },
+  emphasis: { line: "stroke-emphasis", area: "fill-emphasis/10", dot: "fill-emphasis" },
+};
+
 export function Sparkline({
   data,
-  lineColor,
-  fillColor,
+  tone,
   label,
 }: {
   data: number[];
-  lineColor: string;
-  fillColor: string;
+  tone: SparklineTone;
   label: string;
 }) {
   const W = 560;
@@ -27,6 +49,7 @@ export function Sparkline({
     .join(" ");
   const last = points[points.length - 1];
   const area = `${line} L ${last[0].toFixed(1)} ${H - PAD} L ${PAD} ${H - PAD} Z`;
+  const color = TONES[tone];
 
   return (
     <svg
@@ -43,27 +66,30 @@ export function Sparkline({
           y1={PAD + innerH * f}
           x2={W - PAD - LABEL_W}
           y2={PAD + innerH * f}
-          stroke="rgba(22,35,61,.07)"
+          className="stroke-border"
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
       ))}
-      <path d={area} fill={fillColor} />
+      <path d={area} className={color.area} />
       <path
         d={line}
         fill="none"
-        stroke={lineColor}
+        className={color.line}
         strokeWidth={2}
         strokeLinejoin="round"
         strokeLinecap="round"
         vectorEffect="non-scaling-stroke"
       />
+      {/* Titik ujung: isian ikut nada, lingkaran luarnya memakai warna
+          permukaan supaya tetap terbaca saat garisnya menempel di kisi. Isian
+          dan garis luar menyetel properti berbeda, jadi dua kelas warna di satu
+          elemen ini tidak saling meniadakan. */}
       <circle
         cx={last[0]}
         cy={last[1]}
         r={4}
-        fill={lineColor}
-        stroke="#FFFFFF"
+        className={`${color.dot} stroke-surface`}
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
@@ -72,8 +98,7 @@ export function Sparkline({
         y={last[1] + 4}
         fontSize={12}
         fontWeight={600}
-        fill="#16233D"
-        style={{ fontVariantNumeric: "tabular-nums" }}
+        className="fill-ink font-mono tabular-nums"
       >
         {data[data.length - 1]}
       </text>
