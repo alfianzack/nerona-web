@@ -7,16 +7,24 @@ import { Icon } from "@/components/ui/icons";
 import { MetadataCardMockup } from "./mockups/MetadataCardMockup";
 
 /**
- * Angka-angka di baris kepercayaan diambil dari registry dan default kode,
- * bukan ditulis tangan — supaya tidak bisa melenceng dari yang sebenarnya
- * diberikan. Kalau owner menimpa poin Free di Pengaturan, kalimat ini ikut
- * salah; itu tradeoff yang sama dengan halaman-halaman marketing lain.
+ * Angka-angka di baris kepercayaan diambil dari registry dan dari paket yang
+ * benar-benar berlaku, bukan ditulis tangan.
+ *
+ * Poin Free dulu dibaca dari default KODE, dan itu bug: nilai yang berlaku
+ * diselesaikan lewat rantai DB → env → default, jadi begitu owner menimpanya di
+ * Pengaturan, hero ini berbohong tanpa ada yang memberi tahu. Docblock lamanya
+ * menyebut alternatifnya "satu query DB di halaman yang selain ini tidak butuh
+ * apa pun" — itu tidak lagi benar. Beranda sudah memanggil metadataTiers(), dan
+ * pemanggilan itu sudah menyelesaikan nilai yang benar untuk paket Free. Ia
+ * cukup dioper ke sini, tanpa satu pun query tambahan.
  */
-const HERO_FACTS = [
-  `${CLAIMABLE_MARKETPLACES.length} marketplace didukung`,
-  "Tanpa kartu kredit",
-  `${DEFAULT_PLAN_POINTS.metadata.free} poin gratis untuk mencoba`,
-];
+function heroFacts(freePoints: number) {
+  return [
+    `${CLAIMABLE_MARKETPLACES.length} marketplace didukung`,
+    "Tanpa kartu kredit",
+    `${freePoints} poin gratis untuk mencoba`,
+  ];
+}
 
 /**
  * Hero, arah Bening.
@@ -42,7 +50,11 @@ const HERO_FACTS = [
  * lama terasa kecil meski judulnya sudah 72px — bukan judulnya yang kurang
  * besar, tapi barisan di bawahnya yang tertinggal.
  */
-export function Hero() {
+export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freePoints?: number }) {
+  // Default-nya tetap konstanta kode supaya pemanggil yang belum mengoper nilai
+  // sungguhan tidak menampilkan kosong — tapi beranda WAJIB mengopernya.
+  const facts = heroFacts(freePoints);
+
   return (
     <Band align="center">
       <p className="text-body-lg font-semibold text-accent">Nerona Metadata</p>
@@ -69,7 +81,7 @@ export function Hero() {
       </div>
 
       <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-caption text-muted">
-        {HERO_FACTS.map((fact) => (
+        {facts.map((fact) => (
           <li key={fact} className="inline-flex items-center gap-2">
             <Icon name="check" className="h-3.5 w-3.5 flex-none text-accent" />
             {fact}

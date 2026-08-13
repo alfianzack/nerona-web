@@ -22,18 +22,29 @@ export function StepsSection({
   subtitle,
   steps,
   variant = "plain",
-  className = "bg-surface",
+  tone = "plain",
+  className,
 }: {
   title: string;
   subtitle?: string;
   steps: Step[];
   variant?: "plain" | "cards";
+  /**
+   * Nada pita, diteruskan ke Band.
+   *
+   * Sebelumnya latar diatur lewat className. Itu bekerja hanya karena kebetulan
+   * urutan abjad: dua kelas latar pada satu elemen dimenangkan yang jatuh
+   * belakangan di stylesheet, bukan yang ditulis belakangan. Mengandalkan itu
+   * adalah persis jebakan yang didokumentasikan di Card.tsx, jadi kebutuhannya
+   * dinaikkan jadi prop yang benar.
+   */
+  tone?: "plain" | "sunken" | "navy";
   className?: string;
 }) {
   return (
     // className tetap diteruskan apa adanya supaya pemanggil masih bisa
     // memilih latar pitanya sendiri; Band menaruhnya paling belakang.
-    <Band className={className}>
+    <Band tone={tone} className={className}>
       <h2 className="text-balance text-center text-display-2 text-ink">{title}</h2>
       {subtitle && (
         <p className="mx-auto mt-5 max-w-2xl text-balance text-center text-lead text-muted">
