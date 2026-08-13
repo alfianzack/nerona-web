@@ -1,46 +1,58 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { Band } from "@/components/ui/Band";
+import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/icons";
 
+/**
+ * Halaman ini dialihkan ke beranda selama katalognya belum dijual, jadi yang
+ * dikerjakan di sini hanya pemindahan ke lapisan token — bukan rancang ulang.
+ *
+ * Kartunya dulu memakai resep lama yang sama dengan 40 berkas lain: gradien
+ * putih menuju abu yang tidak mengerjakan apa pun, bayangan besar, dan cincin
+ * navy tembus pandang sebagai garis. Ketiganya diselesaikan oleh Card. Sisa
+ * hiasannya juga hilang: pratinjau kelas dulu sebuah emoji papan klaper 48px,
+ * yang di ukuran itu terbaca seperti klip-seni.
+ */
 export default async function LearnCatalogPage() {
   const courses = await prisma.course.findMany({ orderBy: { createdAt: "asc" } });
 
   return (
-    <main className="bg-canvas">
-      <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
-        <h1 className="text-4xl font-semibold tracking-tight text-ink sm:text-6xl">
-          Belajar
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-muted">
+    <main>
+      <Band>
+        <h1 className="text-balance text-display-1 text-ink">Belajar</h1>
+        <p className="mt-5 max-w-[38ch] text-lead text-muted">
           Video tutorial dan kelas, dijual terpisah dari langganan Nerona.
         </p>
 
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2">
           {courses.map((course) => (
+            /* Angkatan setengah piksel saat disentuh, sama seperti kartu produk
+               di beranda — sejak bayangannya dilepas, itu satu-satunya isyarat
+               bahwa kartunya bisa diklik. */
             <Link
               key={course.id}
               href={`/learn/${course.slug}`}
-              className="group overflow-hidden rounded-3xl bg-gradient-to-b from-surface to-surface2 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10 transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              className="block transition hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <div className="flex h-40 items-center justify-center bg-gradient-to-br from-surface to-surface2 text-5xl transition duration-300 group-hover:scale-105">
-                🎬
-              </div>
-              <div className="p-6">
-                <h2 className="text-xl font-semibold tracking-tight text-ink">
-                  {course.title}
-                </h2>
-                {course.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    {course.description}
+              <Card padding="none" className="h-full overflow-hidden">
+                <div className="flex h-40 items-center justify-center bg-surface-sunken text-muted">
+                  <Icon name="play" className="h-8 w-8" />
+                </div>
+                <div className="p-6">
+                  <h2 className="text-title-2 text-ink">{course.title}</h2>
+                  {course.description && (
+                    <p className="mt-2 text-body text-muted">{course.description}</p>
+                  )}
+                  <p className="mt-4 text-body font-semibold text-accent">
+                    {course.priceLabel ?? "Hubungi kami"}
                   </p>
-                )}
-                <p className="mt-4 text-sm font-semibold text-brand-blue">
-                  {course.priceLabel ?? "Hubungi kami"}
-                </p>
-              </div>
+                </div>
+              </Card>
             </Link>
           ))}
         </div>
-      </div>
+      </Band>
     </main>
   );
 }

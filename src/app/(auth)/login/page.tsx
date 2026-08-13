@@ -7,6 +7,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { TextLink } from "@/components/ui/TextLink";
 
 function LoginForm() {
   const router = useRouter();
@@ -52,26 +53,23 @@ function LoginForm() {
           error={error}
           autoComplete="current-password"
         />
-        <div className="mb-4 text-right">
-          <a href="/reset-password" className="text-sm text-muted underline">
-            Lupa kata sandi?
-          </a>
+        {/* Tautan sekunder memakai TextLink, bukan garis bawah abu-abu: satu-satunya
+            aksi yang boleh terlihat sebagai tombol di kartu ini adalah "Masuk". */}
+        <div className="mb-4 text-right text-caption">
+          <TextLink href="/reset-password">Lupa kata sandi?</TextLink>
         </div>
         <AuthButton type="submit" disabled={submitting}>
           {submitting ? "Sedang masuk..." : "Masuk"}
         </AuthButton>
       </form>
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-navy-900/5" />
-        <span className="text-xs text-muted/70">atau</span>
-        <div className="h-px flex-1 bg-navy-900/5" />
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-caption text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
       <GoogleButton callbackUrl={searchParams.get("callbackUrl")} />
-      <p className="mt-6 text-center text-sm text-muted">
-        Belum punya akun?{" "}
-        <a href="/register" className="font-medium text-ink underline">
-          Daftar sekarang
-        </a>
+      <p className="mt-6 text-center text-body text-muted">
+        Belum punya akun? <TextLink href="/register">Daftar sekarang</TextLink>
       </p>
     </AuthCard>
   );

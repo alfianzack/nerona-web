@@ -83,6 +83,58 @@ const ICONS = {
       <line x1="17" y1="16" x2="23" y2="16" />
     </>
   ),
+
+  // Ditambahkan saat emoji berhenti dipakai sebagai ikon antarmuka. Emoji
+  // dirender oleh sistem operasi, jadi bentuk dan bobotnya berbeda di tiap
+  // mesin dan tidak pernah mengikuti warna teks di sekitarnya.
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </>
+  ),
+  phone: (
+    <>
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <line x1="11" y1="18" x2="13" y2="18" />
+    </>
+  ),
+  bank: (
+    <>
+      <polyline points="3 10 12 4 21 10" />
+      <line x1="5" y1="10" x2="5" y2="18" />
+      <line x1="10" y1="10" x2="10" y2="18" />
+      <line x1="14" y1="10" x2="14" y2="18" />
+      <line x1="19" y1="10" x2="19" y2="18" />
+      <line x1="3" y1="21" x2="21" y2="21" />
+    </>
+  ),
+  check: <polyline points="4 12 10 18 20 6" />,
+  "check-circle": (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="8 12.5 11 15.5 16 9" />
+    </>
+  ),
+  close: (
+    <>
+      <line x1="5" y1="5" x2="19" y2="19" />
+      <line x1="19" y1="5" x2="5" y2="19" />
+    </>
+  ),
+  menu: (
+    <>
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </>
+  ),
+  // Penanda urutan tabel, menggantikan glyph teks ▲ dan ▼ yang tingginya
+  // berbeda-beda antar huruf dan tidak bisa disetel ukurannya.
+  "chevron-up": <polyline points="6 15 12 9 18 15" />,
+  "chevron-down": <polyline points="6 9 12 15 18 9" />,
+  play: <polygon points="7 4 20 12 7 20" />,
 } as const;
 
 export type IconName = keyof typeof ICONS;

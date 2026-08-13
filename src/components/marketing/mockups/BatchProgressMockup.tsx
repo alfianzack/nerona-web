@@ -7,24 +7,25 @@ const BATCH_ITEMS = [
 
 export function BatchProgressMockup() {
   return (
-    <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-7 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <div className="rounded-card bg-surface p-7 ring-1 ring-border">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted/70">Progres batch</p>
-        <span className="text-xs text-muted">2/4</span>
+        <p className="font-mono text-label uppercase text-muted">Progres batch</p>
+        <span className="font-mono text-caption tabular-nums text-muted">2/4</span>
       </div>
       <div className="mt-4 space-y-1">
         {BATCH_ITEMS.map((item) => (
           <div
             key={item.name}
-            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm odd:bg-navy-900/5"
+            className="flex items-center justify-between rounded-control px-3 py-2.5 text-caption odd:bg-surface-sunken"
           >
-            <span className="font-medium text-ink">{item.name}</span>
+            {/* Nama berkas adalah identitas, bukan kalimat — karena itu mono. */}
+            <span className="font-mono font-medium text-ink">{item.name}</span>
             <span
               className={
                 item.status === "Selesai"
-                  ? "text-emerald-400"
+                  ? "text-success"
                   : item.status === "Menganalisis…"
-                    ? "text-amber-400"
+                    ? "text-warning"
                     : "text-muted"
               }
             >
@@ -33,8 +34,8 @@ export function BatchProgressMockup() {
           </div>
         ))}
       </div>
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-navy-900/5">
-        <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-gold-500 to-gold-400" />
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+        <div className="h-full w-1/2 rounded-full bg-accent" />
       </div>
     </div>
   );

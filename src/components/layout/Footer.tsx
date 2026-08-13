@@ -4,7 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { homeForRole } from "@/lib/auth-redirect";
 import { AGENT_ENABLED } from "@/lib/features";
 
-const footerLink = "transition hover:text-brand-blue";
+// Hover-nya ke text-ink, bukan ke brand-blue: biru merek mentah gagal uji
+// kontras di atas putih, dan footer tidak butuh aksen sama sekali — cukup
+// tautan yang menggelap saat disentuh.
+const footerLink = "transition hover:text-ink";
 
 // Dengan agent disembunyikan, "/" ADALAH halaman metadata, jadi kedua
 // tautan produk itu menunjuk ke tempat yang sama dengan Home.
@@ -31,25 +34,25 @@ export async function Footer() {
     : [...FOOTER_LINKS, { href: "/login", label: "Masuk" }];
 
   return (
-    <footer className="border-t border-navy-900/10 bg-canvas px-6 py-12">
-      <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
-        <p className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
+    <footer className="border-t border-border bg-canvas px-6 py-16">
+      <div className="mx-auto flex max-w-band flex-col items-center text-center">
+        <p className="flex items-center gap-2 text-body font-semibold text-ink">
           <img src="/logo-nerona.svg" alt="" className="h-5 w-5" />
           Nerona
         </p>
-        <p className="mt-2 max-w-md text-xs text-muted">
+        <p className="mt-2 max-w-md text-body text-muted">
           {AGENT_ENABLED
             ? "Alat AI untuk kontributor stock dan pemilik bisnis."
             : "Alat AI untuk kontributor stock."}
         </p>
-        <nav className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted">
+        <nav className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-caption text-muted">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={footerLink}>
               {link.label}
             </Link>
           ))}
         </nav>
-        <p className="mt-8 text-xs text-muted/70">
+        <p className="mt-8 text-caption text-muted">
           &copy; {new Date().getFullYear()} Nerona. Hak cipta dilindungi.
         </p>
       </div>

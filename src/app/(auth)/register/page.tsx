@@ -5,6 +5,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { TextLink } from "@/components/ui/TextLink";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -46,7 +47,7 @@ export default function RegisterPage() {
   return (
     <AuthCard title="Buat akun" subtitle="Mulai kelola lisensi Nerona Anda.">
       {submitted ? (
-        <p className="text-center text-sm text-muted">
+        <p className="text-center text-body text-muted">
           Periksa kotak masuk Anda — kami mengirim tautan verifikasi untuk menyelesaikan pendaftaran.
         </p>
       ) : (
@@ -102,16 +103,13 @@ export default function RegisterPage() {
             </AuthButton>
           </form>
           <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-navy-900/5" />
-            <span className="text-xs text-muted/70">atau</span>
-            <div className="h-px flex-1 bg-navy-900/5" />
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-caption text-muted">atau</span>
+            <div className="h-px flex-1 bg-border" />
           </div>
           <GoogleButton />
-          <p className="mt-6 text-center text-sm text-muted">
-            Sudah punya akun?{" "}
-            <a href="/login" className="font-medium text-ink underline">
-              Masuk
-            </a>
+          <p className="mt-6 text-center text-body text-muted">
+            Sudah punya akun? <TextLink href="/login">Masuk</TextLink>
           </p>
         </>
       )}

@@ -11,9 +11,14 @@ export interface PricingProduct {
   tiersByDuration: Record<number, PricingTier[]>;
 }
 
+/**
+ * Warna tab aktif per produk. Keduanya dulu hex lepas (#3B65C4 dan #C25717) —
+ * kini token, dan yang dipakai untuk teks selalu varian -ink karena warna merek
+ * mentah gagal uji kontras di atas putih.
+ */
 const ACTIVE_STYLES: Record<string, string> = {
-  metadata: "bg-brand-blue/15 text-[#3B65C4]",
-  agent: "bg-brand-orange/15 text-[#C25717]",
+  metadata: "bg-brand-blue/10 text-brand-blue-ink",
+  agent: "bg-brand-orange/10 text-brand-orange-ink",
 };
 
 
@@ -39,10 +44,12 @@ export function PricingSwitcher({
           Tab durasi tetap, karena itu memang pilihan. */}
       {products.length > 1 && (
         <div className="flex justify-center">
+          {/* `rounded-action` bukan `rounded-full`: komponen ini juga dipakai di
+              /paket, dan di dalam aplikasi bentuk pil bukan bahasa yang benar. */}
           <div
             role="tablist"
             aria-label="Pilih produk"
-            className="flex gap-1 rounded-full bg-surface p-1.5 shadow-md shadow-navy-900/5 ring-1 ring-navy-900/10"
+            className="flex gap-1 rounded-action bg-surface p-1.5 ring-1 ring-border"
           >
             {products.map((product) => (
               <button
@@ -50,9 +57,9 @@ export function PricingSwitcher({
                 role="tab"
                 aria-selected={active === product.key}
                 onClick={() => setActive(product.key)}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+                className={`rounded-action px-5 py-2 text-body font-semibold transition ${
                   active === product.key
-                    ? ACTIVE_STYLES[product.key] ?? "bg-navy-900/10 text-ink"
+                    ? ACTIVE_STYLES[product.key] ?? "bg-surface-sunken text-ink"
                     : "text-muted hover:text-ink"
                 }`}
               >
@@ -72,8 +79,18 @@ export function PricingSwitcher({
         masih dihitung server untuk order lama, dan membuangnya menyentuh
         rantai pemanggil yang jauh lebih panjang daripada nilainya hari ini.
       */}
-      <p className="mt-3.5 text-center text-sm text-muted">{current.subheading}</p>
-      <div className="mx-auto mt-11 max-w-5xl">
+      {/* Jaraknya menyusul tablist, jadi ia hanya ada kalau tablist-nya ada —
+          kalau tidak, baris ini yang paling atas dan jaraknya milik pemanggil. */}
+      <p
+        className={`mx-auto max-w-[52ch] text-center text-body-lg text-muted ${
+          products.length > 1 ? "mt-5" : ""
+        }`}
+      >
+        {current.subheading}
+      </p>
+      {/* `text-left` eksplisit: pemanggil di halaman harga adalah pita yang rata
+          tengah, dan daftar fitur yang ikut rata tengah tidak bisa dibaca. */}
+      <div className="mx-auto mt-12 max-w-band text-left">
         <PricingTierGrid tiers={tiers} />
       </div>
     </div>

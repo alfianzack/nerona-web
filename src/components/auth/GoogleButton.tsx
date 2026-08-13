@@ -1,8 +1,13 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { AuthButton } from "./AuthButton";
+import { Button } from "@/components/ui/Button";
 
+/**
+ * Empat path berwarna resmi Google. Warnanya tidak boleh ikut token mana pun —
+ * pedoman merek Google mengunci keempat hex ini, jadi logo ini satu-satunya
+ * tempat di layar auth yang memakai warna di luar palet Nerona.
+ */
 function GoogleLogo() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none" aria-hidden="true">
@@ -33,12 +38,18 @@ export function GoogleButton({ callbackUrl }: { callbackUrl?: string | null }) {
     ? `/post-login?next=${encodeURIComponent(callbackUrl)}`
     : "/post-login";
 
+  // Tingkat kedua, bukan tombol utama: kartu masuk sudah punya satu aksi utama,
+  // dan dua tombol dengan bobot sama membuat keduanya berhenti menonjol.
+  // Bingkainya diambil langsung dari Button — pembungkus span lama tidak lagi
+  // diperlukan karena Button sendiri sudah inline-flex dengan jarak antar anak.
   return (
-    <AuthButton variant="secondary" onClick={() => signIn("google", { callbackUrl: next })}>
-      <span className="flex items-center justify-center gap-2.5">
-        <GoogleLogo />
-        Lanjutkan dengan Google
-      </span>
-    </AuthButton>
+    <Button
+      variant="secondary"
+      full
+      onClick={() => signIn("google", { callbackUrl: next })}
+    >
+      <GoogleLogo />
+      Lanjutkan dengan Google
+    </Button>
   );
 }

@@ -139,7 +139,9 @@ export async function HomeMetadataOnly() {
         tiers={tiers}
       />
 
-      <FaqSection id="faq" items={METADATA_FAQ} className="bg-surface" />
+      {/* Nada pitanya diserahkan ke FaqSection sendiri — nilai yang dulu
+          dioper di sini persis sama dengan default komponennya. */}
+      <FaqSection id="faq" items={METADATA_FAQ} />
 
       <CtaBanner
         title="Coba gratis hari ini"

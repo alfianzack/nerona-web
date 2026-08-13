@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { activeHref, type NavItem } from "@/lib/nav";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Icon } from "@/components/ui/icons";
 
 export function MarketingNavLinks({
   items,
@@ -19,26 +21,24 @@ export function MarketingNavLinks({
   // Signed-in visitors keep full access to the marketing pages, so the auth
   // area becomes a way back in rather than a redirect. (/pricing is the one
   // exception — it hands tenants over to /paket, where the sidebar is.)
-  // Bar-nya navy-900, jadi setiap warna di sini terang: teks gelap warisan
-  // lama tidak akan terlihat sama sekali di atasnya.
+  //
+  // Satu tombol berisi saja di bilah ini. "Coba Gratis" memakai variant
+  // primary, yang di permukaan pemasaran keluar sebagai pil biru; pil emas
+  // yang dulu berdiri di sini adalah warna uang, dan header tidak menjual
+  // apa pun. "Masuk" turun jadi tautan teks supaya kedua aksi berhenti
+  // terlihat sama penting.
   const authArea = dashboardHref ? (
-    <Link
-      href={dashboardHref}
-      className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white ring-1 ring-white/15 transition hover:bg-white/20"
-    >
+    <ButtonLink href={dashboardHref} variant="secondary" size="sm">
       Dashboard →
-    </Link>
+    </ButtonLink>
   ) : (
     <>
-      <Link href="/login" className="text-xs text-navy-100 transition hover:text-white">
+      <Link href="/login" className="text-caption text-muted transition hover:text-ink">
         Masuk
       </Link>
-      <Link
-        href="/register"
-        className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
-      >
+      <ButtonLink href="/register" size="sm">
         Coba Gratis
-      </Link>
+      </ButtonLink>
     </>
   );
 
@@ -53,10 +53,10 @@ export function MarketingNavLinks({
               key={item.href}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className={`text-xs transition ${
+              className={`text-caption transition ${
                 isActive
-                  ? "-mb-px border-b-2 border-brand-sky pb-px font-semibold text-white"
-                  : "text-navy-100 hover:text-white"
+                  ? "-mb-px border-b-2 border-accent pb-px font-semibold text-ink"
+                  : "text-muted hover:text-ink"
               }`}
             >
               {item.label}
@@ -72,33 +72,32 @@ export function MarketingNavLinks({
         onClick={() => setOpen((v) => !v)}
         aria-label="Menu"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-white ring-1 ring-white/15 transition hover:bg-white/10 sm:hidden"
+        className="flex h-8 w-8 items-center justify-center rounded-control text-ink ring-1 ring-border transition hover:bg-surface-sunken sm:hidden"
       >
-        <span className="text-lg leading-none" aria-hidden="true">
-          {open ? "✕" : "☰"}
-        </span>
+        <Icon name={open ? "close" : "menu"} className="h-4 w-4" />
       </button>
 
-      {/* Mobile dropdown */}
+      {/* Mobile dropdown — satu-satunya lapisan di halaman publik yang memang
+          melayang, jadi satu-satunya yang boleh berbayang (shadow-float). */}
       {open && (
-        <div className="absolute left-0 right-0 top-12 border-b border-white/10 bg-navy-900/95 shadow-lg shadow-navy-900/40 backdrop-blur-xl sm:hidden">
-          <nav className="mx-auto flex max-w-5xl flex-col gap-1 px-6 py-3">
+        <div className="absolute left-0 right-0 top-14 border-b border-border bg-canvas/95 shadow-float backdrop-blur-xl sm:hidden">
+          <nav className="mx-auto flex max-w-band flex-col gap-1 px-6 py-3">
             {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
                 aria-current={item.href === active ? "page" : undefined}
-                className={`rounded-lg px-2 py-2 text-sm transition hover:bg-white/10 ${
+                className={`rounded-control px-2 py-2 text-body transition hover:bg-surface-sunken ${
                   item.href === active
-                    ? "bg-white/10 font-semibold text-white"
-                    : "text-navy-100"
+                    ? "bg-surface-sunken font-semibold text-ink"
+                    : "text-muted"
                 }`}
               >
                 {item.label}
               </Link>
             ))}
-            <div className="mt-2 flex items-center gap-3 border-t border-white/10 pt-3">
+            <div className="mt-2 flex items-center gap-3 border-t border-divider pt-3">
               {authArea}
             </div>
           </nav>

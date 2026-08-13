@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Band } from "@/components/ui/Band";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
 import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
@@ -58,31 +59,27 @@ export default async function PricingPage() {
 
   return (
     <main className="bg-canvas">
-      <section className="relative overflow-hidden px-6 pb-20 pt-16 sm:pt-20">
-        <div
-          className="pointer-events-none absolute -left-20 -top-24 h-80 w-80 rounded-full bg-gold-400 opacity-[0.12] blur-[100px]"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full bg-brand-blue opacity-30 blur-[100px]"
-          aria-hidden="true"
-        />
-        <div className="relative">
-          <h1 className="text-balance text-center text-4xl font-semibold tracking-tight text-ink sm:text-6xl">
-            Harga sederhana,{" "}
-            <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
-              coba dulu tanpa bayar.
-            </span>
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-center text-lg text-muted">
-            Setiap produk Nerona memberi poin percobaan gratis sekali per akun — pakai untuk
-            menilai sendiri, lalu pilih paket kalau cocok.
-          </p>
-          <div className="mt-9">
-            <PricingSwitcher products={products} discounts={discounts} />
-          </div>
+      {/* Judulnya satu warna sekarang. Gradien lamanya menyebut perhentian
+          tengah dan akhir dengan warna yang sama, jadi gradien yang dipotong
+          ke dalam huruf itu sebenarnya cuma dua perhentian. Dua blob kabur di
+          belakangnya ikut hilang: keduanya tidak menandai apa pun, dan keduanya
+          satu-satunya sebab bagian ini butuh pemotongan luapan.
+
+          Nama kelas sengaja tidak ditulis di komentar ini: pemindai Tailwind
+          ikut membaca komentar, jadi menyebut kelas yang baru saja dibuang
+          justru menghidupkannya kembali di bundel CSS. */}
+      <Band align="center">
+        <h1 className="mx-auto max-w-[16ch] text-balance text-display-1 text-ink">
+          Harga sederhana, coba dulu tanpa bayar.
+        </h1>
+        <p className="mx-auto mt-5 max-w-[46ch] text-balance text-lead text-muted">
+          Setiap produk Nerona memberi poin percobaan gratis sekali per akun — pakai untuk
+          menilai sendiri, lalu pilih paket kalau cocok.
+        </p>
+        <div className="mt-14">
+          <PricingSwitcher products={products} discounts={discounts} />
         </div>
-      </section>
+      </Band>
 
       <TopupSection packages={topupPackages} />
 
@@ -106,7 +103,9 @@ export default async function PricingPage() {
         ]}
       />
 
-      <FaqSection items={PRICING_FAQ} className="bg-canvas" />
+      {/* Tanpa kelas latar: pita polos sudah bg-canvas, dan di lapisan token
+          pemasaran canvas dan surface sama-sama putih. */}
+      <FaqSection items={PRICING_FAQ} />
 
       {/* Mengajak orang yang sudah punya akun untuk "Buat akun gratis" jelas keliru,
           dan sejak pengalihan ke /paket dilepas, mereka memang sampai di sini. */}

@@ -1,4 +1,8 @@
-import Link from "next/link";
+import { Band } from "@/components/ui/Band";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/components/ui/cn";
+import { Icon } from "@/components/ui/icons";
 
 export interface PricingTierFeature {
   label: string;
@@ -7,6 +11,13 @@ export interface PricingTierFeature {
 
 export interface PricingTier {
   name: string;
+  /**
+   * Tidak dirender lagi. Isinya emoji tingkat paket (🆓 / ⚡ / 👑) yang dipasang
+   * di lib/pricing-tiers.ts, dan kisi ini melayani dua produk sekaligus — tidak
+   * ada satu ikon pun yang benar untuk ketiga paket di kedua produk, sementara
+   * emoji dirender oleh sistem operasi sehingga bentuk dan bobotnya berbeda di
+   * tiap mesin. Kolomnya dipertahankan supaya lib/ tidak ikut berubah.
+   */
   icon: string;
   tagline: string;
   priceLabel: string;
@@ -24,77 +35,97 @@ export interface PricingTier {
   featured?: boolean;
 }
 
+/**
+ * Centang memakai satu-satunya warna aksen halaman, dan tanda silang justru
+ * turun jadi abu-abu.
+ *
+ * Merah di sebelah fitur yang memang tidak termasuk paket terbaca seperti
+ * kesalahan, padahal itu cuma ketiadaan. Sebelumnya keduanya ditulis sebagai
+ * lingkaran berlatar emerald/rose dengan glyph ✓ dan ✕ — dua warna status
+ * tambahan di kartu yang sudah punya biru, emas, dan hijau sekaligus.
+ */
 function FeatureIcon({ included }: { included: boolean }) {
   return (
-    <span
-      className={`mt-0.5 flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full text-[10px] font-bold ${
-        included ? "bg-emerald-400/15 text-emerald-600" : "bg-rose-400/10 text-rose-500"
-      }`}
-      aria-hidden="true"
-    >
-      {included ? "✓" : "✕"}
-    </span>
+    <Icon
+      name={included ? "check" : "close"}
+      className={cn("mt-1 h-4 w-4 flex-none", included ? "text-accent" : "text-muted")}
+    />
   );
 }
 
 export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-7 sm:grid-cols-3">
-      {tiers.map((tier) => (
-        <div
-          key={tier.name}
-          className={`relative flex flex-col rounded-3xl bg-gradient-to-b from-surface to-surface2 p-7 shadow-2xl shadow-navy-900/10 ring-1 ${
-            tier.featured
-              ? "ring-2 ring-gold-400 sm:-translate-y-3 sm:shadow-gold-400/20"
-              : "ring-navy-900/10"
-          }`}
-        >
-          {tier.featured && (
-            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-1 text-[11px] font-extrabold tracking-wide text-navy-900">
-              PALING POPULER
-            </span>
-          )}
-          <div
-            className={`flex h-11 w-11 items-center justify-center rounded-xl text-lg ${
-              tier.featured ? "bg-gradient-to-br from-gold-600 to-gold-400" : "bg-navy-900/5"
-            }`}
-            aria-hidden="true"
+    <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-3">
+      {tiers.map((tier) => {
+        // Varian accent, bukan default plus cincin dari luar: menimpa cincin
+        // lewat className gagal secara diam-diam. Sebabnya ditulis di Card.tsx.
+        return (
+          <Card
+            key={tier.name}
+            variant={tier.featured ? "accent" : "default"}
+            padding="lg"
+            className="relative flex flex-col"
           >
-            {tier.icon}
-          </div>
-          <h3 className="mt-4 text-lg font-extrabold text-ink">{tier.name}</h3>
-          <p className="mt-0.5 text-xs text-muted">{tier.tagline}</p>
-          <p className="mt-4 text-3xl font-extrabold text-[#3B65C4]">{tier.priceLabel}</p>
-          {tier.savingsLabel && (
-            <p className="mt-1 text-xs font-medium text-emerald-600">{tier.savingsLabel}</p>
-          )}
-          <div className="my-5 h-px bg-navy-900/5" />
-          <ul className="flex-1 space-y-2.5 text-[13px] text-ink">
-            {tier.features.map((feature) => (
-              <li key={feature.label} className="flex items-start gap-2.5">
-                <FeatureIcon included={feature.included} />
-                <span className={feature.included ? "" : "text-muted line-through"}>
-                  {feature.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <Link
-            href={tier.href}
-            className={`mt-7 block rounded-full py-2.5 text-center text-[13px] font-bold transition ${
-              tier.featured || tier.priceLabel !== "Rp 0"
-                ? "bg-gradient-to-br from-gold-500 to-gold-400 text-navy-900 hover:brightness-110"
-                : "bg-navy-900/5 text-ink ring-1 ring-navy-900/10 hover:bg-navy-900/10"
-            }`}
-          >
-            {tier.cta}
-          </Link>
-        </div>
-      ))}
+            {/* Aksen, bukan emas: halaman publik hanya punya satu warna aksen,
+                dan emas disimpan untuk aksi yang menggerakkan uang di dalam
+                aplikasi. */}
+            {tier.featured && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-chip bg-accent px-3 py-1 font-mono text-label font-semibold uppercase text-white">
+                PALING POPULER
+              </span>
+            )}
+
+            <h3 className="text-title-2 text-ink">{tier.name}</h3>
+            <p className="mt-1 text-caption text-muted">{tier.tagline}</p>
+            <p className="mt-5 text-title-1 tabular-nums text-ink">{tier.priceLabel}</p>
+            {tier.savingsLabel && (
+              <p className="mt-1.5 text-caption text-success">{tier.savingsLabel}</p>
+            )}
+
+            <div className="my-6 h-px bg-divider" />
+
+            <ul className="flex-1 space-y-3 text-body text-ink">
+              {tier.features.map((feature) => (
+                <li key={feature.label} className="flex items-start gap-2.5">
+                  <FeatureIcon included={feature.included} />
+                  <span className={feature.included ? "" : "text-muted line-through"}>
+                    {feature.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Ketiga tombol setingkat. Yang membedakan paket unggulan adalah
+                cincin dan pitanya — bukan tombolnya, karena tombol emas di
+                sebelah tombol abu-abu membuat paket lain terlihat seperti
+                pilihan yang salah. */}
+            <ButtonLink href={tier.href} full className="mt-7">
+              {tier.cta}
+            </ButtonLink>
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
+/**
+ * Pita harga, arah Bening.
+ *
+ * Yang dibuang: dua blob kabur 320px (emas di kiri atas, biru di kanan bawah)
+ * yang tidak menandai apa pun dan menjadi satu-satunya alasan bagian ini butuh
+ * pemotongan luapan, bayangan terbesar di setiap kartu, gradien putih menuju
+ * #F4F8FD yang tidak mengerjakan apa pun, dan angkatan ke atas pada kartu
+ * unggulan.
+ *
+ * Nama kelas sengaja tidak ditulis di komentar ini: pemindai Tailwind ikut
+ * membaca komentar, jadi menyebut kelas yang baru saja dibuang justru
+ * menghidupkannya kembali di bundel CSS.
+ *
+ * Yang naik: `heading` berhenti jadi label kecil huruf besar dan menjadi judul
+ * bagian sungguhan, `subheading` naik dari 14px ke text-lead. Selama ini kedua
+ * baris itu ditulis lebih kecil daripada isi kartunya sendiri.
+ */
 export function PricingTiers({
   id,
   heading,
@@ -107,31 +138,20 @@ export function PricingTiers({
   tiers: PricingTier[];
 }) {
   return (
-    <section id={id} className="relative overflow-hidden bg-canvas px-6 py-24 sm:py-28">
-      <div
-        className="pointer-events-none absolute -left-20 -top-24 h-80 w-80 rounded-full bg-gold-400 opacity-[0.12] blur-[100px]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full bg-brand-blue opacity-30 blur-[100px]"
-        aria-hidden="true"
-      />
+    <Band id={id} align="center">
+      <h2 className="text-balance text-display-2 text-ink">{heading}</h2>
+      <p className="mx-auto mt-5 max-w-[46ch] text-balance text-lead text-muted">{subheading}</p>
 
-      <div className="relative mx-auto max-w-5xl">
-        <h2 className="text-center text-sm font-bold uppercase tracking-[0.08em] text-brand-blue">
-          {heading}
-        </h2>
-        <p className="mt-1 text-center text-sm text-muted">{subheading}</p>
-
-        <div className="mt-12">
-          <PricingTierGrid tiers={tiers} />
-        </div>
-
-        <p className="mt-10 text-center text-xs text-muted/80">
-          Pembayaran diatur langsung dengan tim Nerona — pilih paket, kirim order, selesaikan
-          pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
-        </p>
+      {/* Yang rata tengah cuma judul pitanya; isi kartu tetap rata kiri supaya
+          daftar fiturnya bisa dibaca menurun. */}
+      <div className="mt-14 text-left">
+        <PricingTierGrid tiers={tiers} />
       </div>
-    </section>
+
+      <p className="mx-auto mt-10 max-w-[64ch] text-caption text-muted">
+        Pembayaran diatur langsung dengan tim Nerona — pilih paket, kirim order, selesaikan
+        pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
+      </p>
+    </Band>
   );
 }

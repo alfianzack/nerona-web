@@ -1,9 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AGENT_ENABLED } from "@/lib/features";
 import { AgentChatMockup } from "@/components/marketing/mockups/AgentChatMockup";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { agentTiers } from "@/lib/pricing-tiers";
+import { Band } from "@/components/ui/Band";
+import Link from "next/link";
+import { Icon } from "@/components/ui/icons";
 
 const FEATURES = [
   {
@@ -31,6 +33,23 @@ const CAPABILITIES = [
   "Minta ringkasan omzet harian, mingguan, atau bulanan",
 ];
 
+/**
+ * Halaman ini mati secara bawaan, jadi yang dikerjakan hanya pemindahan ke
+ * lapisan token dan primitive — bukan rancang ulang. Sebabnya: begitu saklarnya
+ * dinyalakan lagi, halaman harus langsung sepakat dengan halaman publik yang
+ * lain, bukan muncul sebagai peninggalan yang tampil beda sendiri.
+ *
+ * Tiga hal yang dibuang, sama persis dengan yang dibuang di hero beranda:
+ *
+ * 1. Gradien pada teks judul. Judulnya sekarang satu warna, dan perhentian
+ *    tengah gradien lamanya toh sama dengan perhentian akhirnya.
+ * 2. Blob emas kabur di belakang judul, beserta pemotongan luapan yang
+ *    satu-satunya alasan keberadaannya adalah blob itu. Emas juga tidak lagi
+ *    muncul di halaman publik sama sekali.
+ * 3. Centang emoji hijau di daftar kemampuan. Bentuk dan bobotnya berbeda di
+ *    tiap sistem operasi, dan hijaunya adalah warna keempat di halaman yang
+ *    seharusnya cuma punya satu aksen.
+ */
 export default async function AgentMarketingPage() {
   // Agent sedang tidak dijual; tautan lama mendarat di beranda, bukan 404.
   if (!AGENT_ENABLED) redirect("/");
@@ -39,62 +58,51 @@ export default async function AgentMarketingPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden bg-canvas px-6 pb-24 pt-20 text-center sm:pt-28">
-        <div
-          className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-gold-400 opacity-[0.08] blur-[110px]"
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-4xl">
-          <p className="text-sm font-medium text-brand-blue">Nerona Agent</p>
-          <h1 className="mt-3 text-5xl font-semibold tracking-tight text-ink sm:text-7xl">
-            Asisten AI yang{" "}
-            <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
-              chat langsung di WhatsApp.
-            </span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
-            Asisten pribadi untuk pemilik usaha kecil: catat pesanan, cek stok, dan tanya omzet
-            toko Anda — semua lewat WhatsApp yang sudah Anda pakai setiap hari.
-          </p>
-          <div className="mx-auto mt-16 max-w-lg">
-            <AgentChatMockup />
-          </div>
-        </div>
-      </section>
+      <Band align="center">
+        <p className="text-body-lg font-semibold text-accent">Nerona Agent</p>
 
-      <section className="bg-surface2 px-6 py-24 sm:py-32">
-        <div className="mx-auto grid max-w-5xl gap-12 sm:grid-cols-2">
+        <h1 className="mx-auto mt-3 max-w-[17ch] text-balance text-display-1 text-ink">
+          Asisten AI yang chat langsung di WhatsApp.
+        </h1>
+
+        <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-muted">
+          Asisten pribadi untuk pemilik usaha kecil: catat pesanan, cek stok, dan tanya omzet
+          toko Anda — semua lewat WhatsApp yang sudah Anda pakai setiap hari.
+        </p>
+
+        <div className="mx-auto mt-16 max-w-lg">
+          <AgentChatMockup />
+        </div>
+      </Band>
+
+      <Band tone="sunken">
+        <div className="grid gap-12 sm:grid-cols-2">
           {FEATURES.map((feature) => (
             <div key={feature.title}>
-              <h2 className="text-2xl font-semibold tracking-tight text-ink">
-                {feature.title}
-              </h2>
-              <p className="mt-3 text-base leading-relaxed text-muted">{feature.body}</p>
+              <h2 className="text-balance text-title-2 text-ink">{feature.title}</h2>
+              <p className="mt-3 text-body-lg text-muted">{feature.body}</p>
             </div>
           ))}
         </div>
-      </section>
+      </Band>
 
-      <section className="bg-canvas px-6 py-24 sm:py-32">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            Yang bisa Anda minta
-          </h2>
-          <p className="mx-auto mt-3.5 max-w-xl text-center text-base leading-relaxed text-muted">
-            Tulis dengan bahasa sehari-hari — Agent yang mengerjakan sisanya.
-          </p>
-          <ul className="mx-auto mt-10 grid gap-x-10 gap-y-4 sm:grid-cols-2">
-            {CAPABILITIES.map((capability) => (
-              <li key={capability} className="flex gap-2.5 text-[15px] leading-relaxed text-ink">
-                <span className="mt-0.5 font-bold text-emerald-600" aria-hidden="true">
-                  ✓
-                </span>
-                {capability}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <Band align="center">
+        <h2 className="text-balance text-display-2 text-ink">Yang bisa Anda minta</h2>
+        <p className="mx-auto mt-5 max-w-[44ch] text-balance text-lead text-muted">
+          Tulis dengan bahasa sehari-hari — Agent yang mengerjakan sisanya.
+        </p>
+
+        {/* Yang rata tengah cuma judul pitanya; daftarnya tetap rata kiri supaya
+            keenam barisnya bisa dibaca menurun. */}
+        <ul className="mx-auto mt-12 grid max-w-3xl gap-x-10 gap-y-4 text-left sm:grid-cols-2">
+          {CAPABILITIES.map((capability) => (
+            <li key={capability} className="flex items-start gap-2.5 text-body text-ink">
+              <Icon name="check" className="mt-[3px] h-4 w-4 flex-none text-accent" />
+              {capability}
+            </li>
+          ))}
+        </ul>
+      </Band>
 
       <PricingTiers
         id="pricing"
@@ -103,10 +111,15 @@ export default async function AgentMarketingPage() {
         tiers={tiers}
       />
 
-      <section className="bg-canvas px-6 py-16 text-center">
-        <p className="text-sm text-muted">
+      {/* Tanpa padding atas: pita harga di atasnya sudah menyumbang satu pita
+          penuh di bawah isinya. */}
+      <section className="px-6 pb-band text-center">
+        {/* Tautan biasa, bukan TextLink: TextLink memasang kurung sudut di
+            belakang anaknya karena ia dibuat untuk aksi kedua sebuah hero.
+            Di tengah kalimat, tanda itu terbaca seperti salah ketik. */}
+        <p className="text-body text-muted">
           Sudah pelanggan?{" "}
-          <Link href="/login" className="font-medium text-brand-blue hover:underline">
+          <Link href="/login" className="text-accent transition hover:underline">
             Masuk ke akun Anda
           </Link>
         </p>
