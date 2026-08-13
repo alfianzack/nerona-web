@@ -14,7 +14,6 @@ import {
 import type { PricingTier } from "@/components/marketing/PricingTiers";
 
 const TIER_ORDER = ["Free", "Pro", "Business"];
-const TIER_ICONS: Record<string, string> = { Free: "🆓", Pro: "⚡", Business: "👑" };
 
 const METADATA_TAGLINES: Record<string, string> = {
   Free: "Coba dulu, tanpa kartu kredit",
@@ -79,7 +78,6 @@ export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTi
       const discount = discounts[planMonths] ?? 0;
       return {
         name: plan.name,
-        icon: TIER_ICONS[plan.name] ?? "✨",
         tagline: METADATA_TAGLINES[plan.name] ?? "",
         // TANPA "/bulan". Label itu menjanjikan penagihan bulanan yang tidak
         // pernah terjadi, dan salah paham semacam itu berakhir di permintaan
@@ -133,7 +131,6 @@ export async function agentTiers(monthsInput: number = 1): Promise<PricingTier[]
       const limit = AGENT_PLAN_LIMITS[key];
       return {
         name,
-        icon: TIER_ICONS[name] ?? "✨",
         tagline: AGENT_TAGLINES[key] ?? "",
         priceLabel: priceLabelFor(monthly, planMonths, discount),
         savingsLabel: savingsLabelFor(monthly, planMonths, discount),

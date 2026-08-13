@@ -4,7 +4,7 @@ import { Input } from "./Input";
 /**
  * Label, isian, petunjuk, dan galat sebagai satu benda.
  *
- * Markup ini sebelumnya dijahit ulang di setiap formulir — AuthInput punya
+ * Markup ini sebelumnya dijahit ulang di setiap formulir: layar auth punya
  * versinya sendiri, panel admin punya versinya sendiri, formulir toko punya
  * versinya sendiri. Menyatukannya di sini juga menyelesaikan hal yang selama
  * ini terlewat di semuanya: `aria-describedby` yang benar-benar menyambungkan

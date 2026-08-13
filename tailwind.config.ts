@@ -122,10 +122,6 @@ const config: Config = {
         canvas: token("canvas"),
         surface: token("surface"),
         "surface-sunken": token("surface-sunken"),
-        // Alias sementara. 57 pemanggilan `from-surface to-surface2` masih
-        // hidup sampai Gelombang 4; alias ini dihapus di Gelombang 5.
-        surface2: token("surface-sunken"),
-
         ink: token("ink"),
         muted: token("muted"),
         border: token("border"),
@@ -144,24 +140,30 @@ const config: Config = {
         danger: token("danger"),
         "danger-bg": token("danger-bg"),
 
-        // Masih dibutuhkan pita gelap pemasaran dan CtaBanner. Berhenti
-        // dipakai untuk garis batas.
+        /**
+         * Dua deret warisan, dipangkas ke langkah yang benar-benar dipakai.
+         *
+         * navy hanya melayani permukaan gelap yang tersisa — pita CtaBanner,
+         * pita navy di Band, teks di atasnya, dan warna avatar admin. Ia
+         * berhenti dipakai untuk garis batas dan latar tembus pandang, yang
+         * sekarang punya tokennya sendiri.
+         *
+         * gold bertahan hanya di dalam aplikasi, menandai aksi yang
+         * menggerakkan uang. Halaman publik tidak memakainya sama sekali.
+         *
+         * Langkah yang sudah tidak dipanggil siapa pun dihapus, bukan
+         * disimpan "untuk berjaga-jaga": palet yang menyimpan warna tak
+         * terpakai adalah palet yang mengundang warna tak terpakai dipakai.
+         */
         navy: {
           100: "#C7CDEB",
-          300: "#8B93C9",
           500: "#3D44A8",
           700: "#10107A",
-          800: "#0A0A5C",
           900: "#16233D",
-          950: "#000024",
         },
-        // Gradien emas bertahan hanya di dalam aplikasi, menandai aksi yang
-        // menggerakkan uang. Halaman publik tidak memakainya sama sekali.
         gold: {
-          300: "#FFE08A",
           400: "#FFCB5C",
           500: "#FF9E42",
-          600: "#FF8B45",
         },
       },
     },

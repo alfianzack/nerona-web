@@ -9,7 +9,7 @@ export interface FaqItem {
 /**
  * Pertanyaan umum, arah Bening.
  *
- * Setiap pertanyaan dulu sebuah kartu tersendiri: latar surface2, cincin, sudut
+ * Setiap pertanyaan dulu sebuah kartu tersendiri: latar cekung, cincin, sudut
  * 16px, dan jarak antar kartu. Sepuluh kartu bertumpuk membuat halaman terlihat
  * seperti daftar panel, bukan daftar pertanyaan. Sekarang satu daftar yang
  * dipisah garis rambut — permukaannya tidak berubah saat dibuka, yang berubah

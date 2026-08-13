@@ -3,9 +3,11 @@ import { cn } from "./cn";
 /**
  * Judul halaman aplikasi.
  *
- * Menggantikan baris yang sama persis, disalin 16 kali:
- *
- *   <h1 className="text-3xl font-semibold tracking-tight text-ink">
+ * Menggantikan satu baris judul yang disalin persis 16 kali di seluruh repo:
+ * sebuah h1 berukuran 30px, setengah tebal, dengan tracking dirapatkan dan
+ * warna tinta. Ukurannya sengaja dijabarkan dengan kata di sini — pemindai
+ * Tailwind membaca komentar sebagai teks biasa, jadi menuliskan nama kelasnya
+ * akan membuat ukuran yang baru saja ditinggalkan tetap terbit di bundel CSS.
  *
  * Slot `actions` ada karena tanpanya setiap halaman menjahit sendiri baris
  * flex untuk menaruh tombolnya di sebelah judul, dan tidak ada dua yang

@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { AuthCard } from "@/components/auth/AuthCard";
-import { AuthInput } from "@/components/auth/AuthInput";
-import { AuthButton } from "@/components/auth/AuthButton";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
 
 export default function ConfirmResetPage({ params }: { params: { token: string } }) {
   const router = useRouter();
@@ -40,29 +40,38 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
   }
 
   return (
-    <AuthCard title="Kata sandi baru">
-      <form onSubmit={handleSubmit}>
-        <AuthInput
-          label="Kata sandi baru"
-          type="password"
-          name="password"
-          value={password}
-          onChange={setPassword}
-          autoComplete="new-password"
-        />
-        <AuthInput
-          label="Ulangi kata sandi baru"
-          type="password"
-          name="confirmPassword"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          error={error}
-          autoComplete="new-password"
-        />
-        <AuthButton type="submit" disabled={submitting}>
-          {submitting ? "Menyimpan..." : "Simpan kata sandi"}
-        </AuthButton>
-      </form>
-    </AuthCard>
+    <main className="flex flex-1 items-center justify-center bg-canvas px-4 py-16">
+      <Card padding="lg" className="w-full max-w-sm">
+        <h1 className="text-center text-title-1 text-ink">Kata sandi baru</h1>
+        <div className="mt-8">
+          <form onSubmit={handleSubmit}>
+            <Field
+              id="password"
+              name="password"
+              label="Kata sandi baru"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              className="mb-4"
+            />
+            <Field
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Ulangi kata sandi baru"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={error}
+              autoComplete="new-password"
+              className="mb-4"
+            />
+            <Button type="submit" variant="primary" size="md" full disabled={submitting}>
+              {submitting ? "Menyimpan..." : "Simpan kata sandi"}
+            </Button>
+          </form>
+        </div>
+      </Card>
+    </main>
   );
 }

@@ -38,9 +38,9 @@ const HERO_FACTS = [
  * 4. Centang emoji. Bentuk dan bobotnya berbeda di tiap sistem operasi dan
  *    tidak pernah mengikuti warna teks di sekitarnya.
  *
- * Yang naik: sub-judul dari text-lg/xl (18–20px) ke text-lead (18–26px).
- * Inilah sebab hero lama terasa kecil meski judulnya sudah 72px — bukan
- * judulnya yang kurang besar, tapi barisan di bawahnya yang tertinggal.
+ * Yang naik: sub-judul dari 18–20px ke skala lead, 18–26px. Inilah sebab hero
+ * lama terasa kecil meski judulnya sudah 72px — bukan judulnya yang kurang
+ * besar, tapi barisan di bawahnya yang tertinggal.
  */
 export function Hero() {
   return (

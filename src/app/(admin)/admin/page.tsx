@@ -147,21 +147,37 @@ export default async function AdminDashboardPage() {
           bukan heading. Layar dashboard tenant memasang PageHeader yang sama. */}
       <PageHeader title="Dashboard" />
 
+      {/* Angka dilewatkan pemformat lokal, sama dengan sisi tenant. Sebelumnya
+          admin mencetak angka mentah sementara dashboard tenant memisah ribuan,
+          jadi jumlah yang sama tampil "1240" di satu layar dan "1.240" di layar
+          lain. Ini pemformatan tampilan, bukan perubahan data.
+
+          "Order menunggu" memakai nada siaga begitu antriannya terisi: angka itu
+          satu-satunya di baris ini yang menuntut tindakan, bukan sekadar kabar. */}
       <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Total pengguna" value={totalUsers} hint={`+${newUsersThisWeek} minggu ini`} />
+        <Stat
+          label="Total pengguna"
+          icon="users"
+          value={totalUsers.toLocaleString("id-ID")}
+          hint={`+${newUsersThisWeek.toLocaleString("id-ID")} minggu ini`}
+        />
         <Stat
           label="Lisensi aktif"
-          value={totalActiveLicenses}
+          icon="key"
+          value={totalActiveLicenses.toLocaleString("id-ID")}
           hint={licenseByPlan.map((l) => `${l.name}: ${l.count}`).join(" · ") || "belum ada"}
         />
         <Stat
           label="Agent aktif"
-          value={totalActiveAgents}
+          icon="chat"
+          value={totalActiveAgents.toLocaleString("id-ID")}
           hint={agentGroups.map((g) => `${g.plan}: ${g._count._all}`).join(" · ") || "belum ada"}
         />
         <Stat
           label="Order menunggu"
-          value={pendingOrders}
+          icon="clock"
+          tone={pendingOrders > 0 ? "attention" : "default"}
+          value={pendingOrders.toLocaleString("id-ID")}
           hint={pendingOrders > 0 ? "Perlu diproses" : "tidak ada antrian"}
         />
       </div>

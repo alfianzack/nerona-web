@@ -11,14 +11,6 @@ export interface PricingTierFeature {
 
 export interface PricingTier {
   name: string;
-  /**
-   * Tidak dirender lagi. Isinya emoji tingkat paket (🆓 / ⚡ / 👑) yang dipasang
-   * di lib/pricing-tiers.ts, dan kisi ini melayani dua produk sekaligus — tidak
-   * ada satu ikon pun yang benar untuk ketiga paket di kedua produk, sementara
-   * emoji dirender oleh sistem operasi sehingga bentuk dan bobotnya berbeda di
-   * tiap mesin. Kolomnya dipertahankan supaya lib/ tidak ikut berubah.
-   */
-  icon: string;
   tagline: string;
   priceLabel: string;
   /**

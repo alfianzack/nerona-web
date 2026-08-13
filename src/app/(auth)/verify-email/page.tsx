@@ -3,11 +3,11 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
 
 /**
- * Satu-satunya layar auth yang tidak lewat AuthCard, karena hasilnya sudah
- * ditentukan sebelum halaman dirender dan tidak ada formulir di dalamnya.
- * Kerangkanya tetap disamakan dengan AuthCard supaya kartunya duduk di tempat
- * yang sama seperti layar auth lain — termasuk `flex-1`, bukan `min-h-screen`
- * kedua, karena layout grup (auth) sudah memegang tinggi layarnya.
+ * Satu-satunya layar auth tanpa formulir: hasilnya sudah ditentukan di server
+ * sebelum halaman dirender. Kerangka kartunya tetap ditulis sama persis seperti
+ * tiga layar auth lain supaya kartunya duduk di tempat yang sama — termasuk
+ * `flex-1`, bukan tinggi layar kedua, karena layout grup (auth) sudah memegang
+ * tinggi layarnya.
  */
 export default async function VerifyEmailPage({
   searchParams,

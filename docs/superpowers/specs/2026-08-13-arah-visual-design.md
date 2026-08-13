@@ -263,6 +263,16 @@ These got real attention and must not be flattened:
 - **`AppShell`'s three-breakpoint sidebar** — drawer below `sm`, 56px strip to `xl`, labelled rail above. Chosen in CSS rather than JS to avoid a hydration flash. The mechanism stays.
 - **`StepsSection.tsx`** — per-step accents and `text-balance`.
 
+## Two traps found during implementation
+
+Both were discovered by reading build output rather than by reasoning, both bite silently, and both will bite again. They are documented in the code as well — the first in `Card.tsx`, the second wherever a comment describes a class that was removed.
+
+**Tailwind sorts colour utilities alphabetically by class name.** When two classes set the same property on one element, the winner is whichever falls later in the generated stylesheet — not whichever was written later in `className`, and not the order of keys in `tailwind.config.ts`. Verified by reading the built CSS: `ring-border` beats `ring-accent`, `text-muted` beats `text-accent`, `bg-transparent` beats `bg-surface`.
+
+The consequence is that **overriding a primitive's own colour from the outside fails silently**. `<Card className="ring-2 ring-accent">` renders a grey ring: correct-looking code, wrong screen. The fix is structural — every such need becomes a variant (`Card variant="accent"`, `Stat tone="attention"`, `Badge tone="emphasis"`), so the mistake cannot be written. When a need has no variant, add one; do not patch it with `className`.
+
+**The Tailwind scanner reads comments.** `content` globs match file text, not JSX, so naming a class inside a comment keeps that class in the bundle even after every real use is gone. Three comments were resurrecting the very card recipe this work deleted — including the docblock in `Card.tsx`, the file that exists to replace it. Describe removed classes in words, never by name.
+
 ## Verification
 
 The test suite cannot catch visual regressions here: all 97 test files live in `tests/lib/` and exercise logic only — none renders a component or asserts on a class name. Verification is therefore build correctness plus manual passes.
