@@ -2,9 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { tautanAman, UNDUHAN_KOSONG, type UnduhanSettings } from "@/lib/unduhan";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/icons";
 
-const inputClass =
-  "w-full rounded-xl bg-surface px-3 py-2 text-sm text-ink ring-1 ring-navy-900/[.12] placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+/**
+ * Field meneruskan `className` ke pembungkusnya, bukan ke isian di dalamnya,
+ * jadi mono harus diarahkan langsung ke elemen isiannya. Kalau ditempel di
+ * pembungkus, labelnya ikut berubah jadi mono padahal yang perlu hanya URL-nya.
+ *
+ * Isian tetap selebar kartunya dan menggulir sendiri ke samping saat URL-nya
+ * lebih panjang — itulah sebabnya URL panjang tidak pernah memaksa kolom ini
+ * melebar.
+ */
+const ISIAN_MONO = "[&_input]:font-mono";
 
 type Kolom = {
   key: keyof UnduhanSettings;
@@ -120,45 +133,59 @@ export function AdminDownloadSettingsPanel() {
 
   function renderKolom(field: Kolom) {
     const aman = field.url ? tautanAman(values[field.key]) : null;
+    const bahayaId = `unduh-${field.key}-bahaya`;
     return (
       <div
         key={field.key}
         className={
-          field.bahaya ? "rounded-xl bg-rose-500/[0.06] p-3 ring-1 ring-rose-500/25" : undefined
+          field.bahaya ? "rounded-card bg-danger-bg p-4 ring-1 ring-danger/25" : undefined
         }
       >
-        <div className="flex items-baseline justify-between gap-2">
-          <label htmlFor={`unduh-${field.key}`} className="text-xs font-semibold text-ink">
-            {field.label}
-          </label>
-          {field.url &&
-            (aman ? (
-              <a
-                href={aman}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-[11px] font-semibold text-[#1F7FAE] underline underline-offset-2"
-              >
-                Uji ↗
-              </a>
-            ) : (
-              <span className="text-[11px] text-muted/70">
-                {values[field.key].trim() ? "bukan URL https" : "kosong"}
-              </span>
-            ))}
-        </div>
-        <input
+        {/*
+          Petunjuk kolom berbahaya tidak dilewatkan sebagai `hint` — petunjuk
+          Field selalu tenang, dan yang ini harus merah. Ia juga tidak boleh
+          dilewatkan sebagai `error`: itu akan menyalakan `aria-invalid` dan
+          memberi tahu pembaca layar bahwa isiannya salah, padahal kosong justru
+          keadaan yang benar. Jadi ia dicetak sendiri dan disambungkan balik
+          lewat `aria-describedby`.
+        */}
+        <Field
           id={`unduh-${field.key}`}
+          label={field.label}
           type="text"
           value={values[field.key]}
           onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
           placeholder={field.placeholder}
-          className={`mt-1.5 ${inputClass}`}
+          hint={field.bahaya ? undefined : field.help}
+          aria-describedby={field.bahaya && field.help ? bahayaId : undefined}
+          className={field.url ? ISIAN_MONO : undefined}
         />
-        {field.help && (
-          <p className={`mt-1 text-[11px] ${field.bahaya ? "text-rose-700" : "text-muted/80"}`}>
+        {field.bahaya && field.help && (
+          <p id={bahayaId} className="mt-1.5 text-caption text-danger">
             {field.help}
           </p>
+        )}
+        {/* "Uji" turun ke bawah isian karena baris label kini milik Field.
+            Tempatnya justru jadi lebih benar: ia menguji apa yang barusan
+            ditempel, tepat di bawah tempat menempelkannya. */}
+        {field.url && (
+          <div className="mt-1.5 flex justify-end">
+            {aman ? (
+              <a
+                href={aman}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1 text-caption font-medium text-accent underline underline-offset-2"
+              >
+                Uji
+                <Icon name="external-link" className="h-3.5 w-3.5" />
+              </a>
+            ) : (
+              <span className="text-caption text-muted">
+                {values[field.key].trim() ? "bukan URL https" : "kosong"}
+              </span>
+            )}
+          </div>
         )}
       </div>
     );
@@ -168,46 +195,33 @@ export function AdminDownloadSettingsPanel() {
   const otomatis = FIELDS.filter((f) => f.otomatis);
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <Card>
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-sky/25 text-[#1F7FAE]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className="h-[18px] w-[18px]"
-          >
-            <path d="M12 3v12" />
-            <path d="m7 10 5 5 5-5" />
-            <path d="M5 21h14" />
-          </svg>
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-chip bg-brand-sky/25 text-brand-sky-ink">
+          <Icon name="download" />
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-ink">Tautan unduhan</h2>
-          <p className="text-xs text-muted">Aset rilis di nerona-hub-releases</p>
+          <h2 className="text-title-2 text-ink">Tautan unduhan</h2>
+          <p className="text-caption text-muted">Aset rilis di nerona-hub-releases</p>
         </div>
       </div>
 
-      <p className="mt-3 rounded-xl bg-navy-900/[0.03] p-3 text-[11px] text-muted ring-1 ring-navy-900/10">
+      <Card variant="sunken" padding="sm" className="mt-3 text-caption text-muted">
         Kolom URL dan versi <b>diisi sendiri oleh CI</b> setiap kali tag <code>hub-v*</code>{" "}
         atau <code>ext-v*</code> diterbitkan, jadi biasanya tidak ada yang perlu disentuh di
         sini.
-      </p>
+      </Card>
 
-      {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-2 text-body text-danger">{error}</p>}
 
       <div className="mt-4 space-y-4">{manual.map(renderKolom)}</div>
 
-      <details className="mt-4 rounded-xl bg-navy-900/[0.03] ring-1 ring-navy-900/10">
-        <summary className="cursor-pointer p-3 text-[11px] font-semibold text-muted">
+      <details className="mt-4 rounded-card bg-surface-sunken ring-1 ring-border">
+        <summary className="cursor-pointer p-3 text-caption font-medium text-muted">
           Kolom yang diisi CI — buka hanya untuk menambal keadaan darurat
         </summary>
         <div className="px-3 pb-3">
-          <p className="mb-3 text-[11px] text-muted/80">
+          <p className="mb-3 text-caption text-muted">
             Suntingan di sini <b>akan tertimpa</b> pada rilis berikutnya. Kolom kosong membuat
             tombolnya di <code>/unduh</code> mati dan bertuliskan &quot;Belum tersedia&quot;.
             Setelah menempel URL dengan tangan, klik <b>Uji</b> — tidak ada pemeriksaan lain
@@ -218,15 +232,16 @@ export function AdminDownloadSettingsPanel() {
       </details>
 
       <div className="mt-5 flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? "Menyimpan..." : "Simpan tautan"}
-        </button>
-        {saved && <span className="text-xs font-semibold text-emerald-700">✓ Tersimpan</span>}
+        </Button>
+        {saved && (
+          <Badge tone="success">
+            <Icon name="check" className="h-3.5 w-3.5" />
+            Tersimpan
+          </Badge>
+        )}
       </div>
-    </div>
+    </Card>
   );
 }

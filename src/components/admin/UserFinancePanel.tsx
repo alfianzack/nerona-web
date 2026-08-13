@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import type { PurchaseView, TxnView } from "@/components/admin/UserDetailTabs";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
 
-const cardClass =
-  "rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10";
-const inputClass =
-  "rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
-const primaryBtn =
-  "rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50";
+/**
+ * Belum ada primitive untuk <select>. Bentuknya dijiplak dari Input — radius
+ * kendali, cincin border, dan cincin fokus aksen yang sama — supaya pemilih
+ * "Aksi" berdiri sejajar dengan kedua isian di baris yang sama.
+ */
+const selectClass =
+  "rounded-control bg-surface px-3.5 py-2.5 text-body text-ink ring-1 ring-border transition focus:outline-none focus:ring-2 focus:ring-accent";
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -76,75 +80,85 @@ export function UserFinancePanel(props: {
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cardClass}>
-        <div className="flex items-baseline justify-between">
-          <h3 className="text-sm font-semibold text-ink">Poin</h3>
-          <span className="text-lg font-semibold tabular-nums text-ink">
+    <div className="space-y-6">
+      <Card padding="lg">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 className="text-title-2 text-ink">Poin</h3>
+          <span className="font-mono text-title-2 tabular-nums text-ink">
             {balance.toLocaleString("id-ID")} poin
           </span>
         </div>
 
-        <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Aksi
+        {/* Field membawa label, isian, dan sambungan aria-nya sebagai satu
+            benda. Versi sebelumnya membungkus isian di dalam <label> tanpa
+            htmlFor, jadi labelnya tidak pernah benar-benar tersambung bagi
+            pembaca layar. Pemilih "Aksi" tetap dijahit tangan karena Field
+            hanya melayani <input>. */}
+        <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="grid gap-1.5">
+            <label htmlFor="poin-aksi" className="text-caption font-medium text-muted">
+              Aksi
+            </label>
             <select
+              id="poin-aksi"
               value={direction}
               onChange={(e) => setDirection(e.target.value as "add" | "sub")}
-              className={inputClass}
+              className={selectClass}
             >
               <option value="add">Tambah</option>
               <option value="sub">Kurangi</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Jumlah
-            <input
-              type="number"
-              min="1"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0"
-              className={`${inputClass} w-28`}
-            />
-          </label>
-          <label className="flex flex-1 flex-col gap-1 text-xs text-muted">
-            Catatan (opsional)
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="mis. bonus promo"
-              className={inputClass}
-            />
-          </label>
-          <button type="submit" disabled={loading} className={primaryBtn}>
+          </div>
+          <Field
+            id="poin-jumlah"
+            label="Jumlah"
+            type="number"
+            min="1"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
+            className="w-28"
+          />
+          <Field
+            id="poin-catatan"
+            label="Catatan (opsional)"
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="mis. bonus promo"
+            className="flex-1"
+          />
+          {/* Menyesuaikan poin memang menyentuh saldo, tapi tidak ada uang yang
+              berpindah di sini — emas disimpan untuk top-up dan pembayaran. */}
+          <Button type="submit" disabled={loading}>
             {loading ? "..." : "Simpan"}
-          </button>
+          </Button>
         </form>
-        {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
+        {error && <p className="mt-2 text-caption text-danger">{error}</p>}
 
-        <div className="mt-5">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">Riwayat poin</h4>
+        <div className="mt-6">
+          <h4 className="font-mono text-label uppercase text-muted">Riwayat poin</h4>
           {transactions.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">Belum ada transaksi poin.</p>
+            <p className="mt-2 text-body text-muted">Belum ada transaksi poin.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-navy-900/10">
+            <ul className="mt-2 divide-y divide-divider">
               {transactions.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 py-2">
+                <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm text-ink">
+                    <p className="text-body text-ink">
                       {reasonLabel(t.reason)}
                       {t.note ? <span className="text-muted"> · {t.note}</span> : null}
                     </p>
-                    <p className="text-xs text-muted">
+                    {/* Baris keterangan pakai mono huruf kecil biasa: isinya
+                        tanggal dan nama, bukan label kolom. */}
+                    <p className="mt-0.5 font-mono text-label text-muted">
                       {fmtDate(t.createdAt)}
                       {t.createdByName ? ` · ${t.createdByName}` : ""}
                     </p>
                   </div>
                   <span
-                    className={`whitespace-nowrap text-sm font-semibold tabular-nums ${
-                      t.delta >= 0 ? "text-emerald-600" : "text-rose-500"
+                    className={`whitespace-nowrap font-mono text-body font-semibold tabular-nums ${
+                      t.delta >= 0 ? "text-success" : "text-danger"
                     }`}
                   >
                     {t.delta >= 0 ? "+" : ""}
@@ -155,25 +169,25 @@ export function UserFinancePanel(props: {
             </ul>
           )}
         </div>
-      </section>
+      </Card>
 
-      <section className={cardClass}>
-        <h3 className="text-sm font-semibold text-ink">Pembelian</h3>
+      <Card padding="lg">
+        <h3 className="text-title-2 text-ink">Pembelian</h3>
         {props.purchases.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">Belum ada pembelian.</p>
+          <p className="mt-2 text-body text-muted">Belum ada pembelian.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-navy-900/10">
+          <ul className="mt-4 divide-y divide-divider">
             {props.purchases.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+              <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-sm text-ink">{p.label}</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body text-ink">{p.label}</p>
+                  <p className="mt-0.5 font-mono text-label text-muted">
                     {fmtDate(p.date)}
                     {p.detail ? ` · ${p.detail}` : ""}
                   </p>
                 </div>
                 {p.amount != null && (
-                  <span className="whitespace-nowrap text-sm font-medium tabular-nums text-ink">
+                  <span className="whitespace-nowrap font-mono text-body tabular-nums text-ink">
                     Rp {p.amount.toLocaleString("id-ID")}
                   </span>
                 )}
@@ -181,7 +195,7 @@ export function UserFinancePanel(props: {
             ))}
           </ul>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

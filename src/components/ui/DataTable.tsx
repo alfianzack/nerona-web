@@ -1,6 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
+import { Button } from "./Button";
+import { Card } from "./Card";
+import { Icon } from "./icons";
 
 export interface Column<T> {
   key: string;
@@ -53,23 +56,51 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-gradient-to-b from-surface to-surface2 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <Card padding="none" className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-body">
           <thead>
-            <tr className="border-b border-navy-900/10 text-xs uppercase tracking-wide text-muted">
+            <tr className="border-b border-border font-mono text-label uppercase text-muted">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  onClick={() => handleHeaderClick(col)}
-                  className={`px-4 py-3 font-medium ${col.sortable ? "cursor-pointer select-none hover:text-ink" : ""} ${col.className ?? ""}`}
+                  scope="col"
+                  aria-sort={
+                    col.sortable
+                      ? sort === col.key
+                        ? order === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                      : undefined
+                  }
+                  className={`px-4 py-3 ${col.className ?? ""}`}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && sort === col.key && (
-                      <span aria-hidden="true">{order === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </span>
+                  {/* Kepala kolom yang bisa diurutkan adalah tombol sungguhan,
+                      bukan <th> ber-onClick. Sebelumnya pengurutan sama sekali
+                      tidak bisa dicapai dari papan ketik: elemennya tidak
+                      pernah menerima fokus, jadi aturan :focus-visible global
+                      pun tidak menolong. */}
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleHeaderClick(col)}
+                      className="inline-flex select-none items-center gap-1.5 rounded-control transition hover:text-ink"
+                    >
+                      {col.header}
+                      {/* Ikon, bukan glyph teks: glyph panah dirender font
+                          sistem, tingginya berbeda antar mesin, ukurannya tidak
+                          bisa disetel, dan warnanya tidak ikut teks sekitarnya. */}
+                      {sort === col.key && (
+                        <Icon
+                          name={order === "asc" ? "chevron-up" : "chevron-down"}
+                          className="h-3.5 w-3.5"
+                        />
+                      )}
+                    </button>
+                  ) : (
+                    col.header
+                  )}
                 </th>
               ))}
             </tr>
@@ -91,7 +122,7 @@ export function DataTable<T>({
             )}
             {!loading &&
               rows.map((row) => (
-                <tr key={rowKey(row)} className="border-b border-navy-900/5 last:border-0">
+                <tr key={rowKey(row)} className="border-b border-divider last:border-0">
                   {columns.map((col) => (
                     <td key={col.key} className={`px-4 py-3 text-ink ${col.className ?? ""}`}>
                       {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? "")}
@@ -102,30 +133,33 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-navy-900/10 px-4 py-3 text-sm text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-caption text-muted">
         <span>
-          Menampilkan {from}–{to} dari {total}
+          Menampilkan <span className="font-mono tabular-nums text-ink">{from}–{to}</span> dari{" "}
+          <span className="font-mono tabular-nums text-ink">{total}</span>
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="rounded-full bg-navy-900/5 px-3 py-1 font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-40"
           >
             Sebelumnya
-          </button>
-          <span className="text-ink">
+          </Button>
+          <span className="font-mono tabular-nums text-ink">
             {page} / {totalPages}
           </span>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            className="rounded-full bg-navy-900/5 px-3 py-1 font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-40"
           >
             Berikutnya
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

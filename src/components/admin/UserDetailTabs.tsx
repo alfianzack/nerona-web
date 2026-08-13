@@ -40,17 +40,23 @@ export function UserDetailTabs(props: {
 
   return (
     <div>
-      <div className="flex gap-1.5 border-b border-navy-900/10">
+      {/* Tab aktif ditandai batang aksen, bukan emas: emas di dalam aplikasi
+          hanya menandai aksi yang menggerakkan uang, sedangkan "tab yang
+          sedang dibuka" adalah keadaan diam — pola yang sama dipakai keadaan
+          aktif di sidebar. Tab tak-aktif tetap menyediakan tebal batangnya
+          dalam warna tembus pandang supaya labelnya tidak bergeser 2px saat
+          tab berpindah. */}
+      <div className="flex gap-1.5 border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             aria-pressed={tab === t.key}
             onClick={() => setTab(t.key)}
-            className={`-mb-px rounded-t-lg px-4 py-2 text-sm font-semibold transition ${
+            className={`-mb-px border-b-2 px-4 py-2 text-body font-semibold transition ${
               tab === t.key
-                ? "border-b-2 border-gold-400 text-ink"
-                : "text-muted hover:text-ink"
+                ? "border-accent text-ink"
+                : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t.label}

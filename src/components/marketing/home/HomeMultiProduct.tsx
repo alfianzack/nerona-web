@@ -1,4 +1,7 @@
-import Link from "next/link";
+import { Band } from "@/components/ui/Band";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { TextLink } from "@/components/ui/TextLink";
+import { Icon } from "@/components/ui/icons";
 import { FeatureSection } from "@/components/marketing/FeatureSection";
 import { ProductCards } from "@/components/marketing/ProductCards";
 import { StepsSection } from "@/components/marketing/StepsSection";
@@ -58,62 +61,51 @@ const HOME_FAQ = [
  *
  * Disimpan, bukan dihapus: kalau ini dihapus, menyalakan kembali
  * AGENT_ENABLED akan memulihkan nav dan route tapi meninggalkan beranda
- * satu-produk, dan saklarnya jadi berbohong. Isinya sengaja dibiarkan
- * apa adanya sejak dipindah dari app/(marketing)/page.tsx.
+ * satu-produk, dan saklarnya jadi berbohong. Isi dan urutan bagiannya tetap
+ * seperti saat dipindah dari app/(marketing)/page.tsx — yang berubah hanya
+ * lapisan visualnya, supaya halaman ini tidak lahir sebagai layar lama begitu
+ * saklarnya dinyalakan lagi.
  */
 export function HomeMultiProduct() {
   return (
     <main>
-      <section className="relative overflow-hidden bg-canvas px-6 pb-16 pt-20 text-center sm:pt-28">
-        <div
-          className="pointer-events-none absolute -top-24 left-1/3 h-96 w-96 rounded-full bg-gold-400 opacity-[0.09] blur-[110px]"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-brand-blue opacity-30 blur-[110px]"
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-4xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-brand-blue/25 bg-brand-blue/10 px-3.5 py-1.5 text-xs font-semibold text-[#3B65C4]">
-            <span className="h-2 w-2 rounded-full bg-brand-blue" aria-hidden="true" />
-            AI untuk kreator &amp; UMKM Indonesia
-          </span>
-          <h1 className="mt-5 text-balance text-5xl font-semibold tracking-tight text-ink sm:text-7xl">
-            Satu perusahaan,{" "}
-            <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
-              alat AI untuk kontributor dan pemilik bisnis.
-            </span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
-            Dari metadata otomatis untuk kontributor stock, sampai asisten AI WhatsApp untuk
-            pemilik usaha kecil — Nerona membangun alat yang bekerja untuk Anda.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
-            <Link
-              href="/register"
-              className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-6 py-2.5 text-sm font-semibold text-navy-900 shadow-lg shadow-gold-500/30 transition hover:brightness-110"
-            >
-              Mulai gratis
-            </Link>
-            <Link
-              href="/pricing"
-              className="rounded-full bg-surface px-6 py-2.5 text-sm font-medium text-ink ring-1 ring-navy-900/15 transition hover:bg-surface2"
-            >
-              Lihat harga
-            </Link>
-          </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[13px] text-muted">
-            {HERO_FACTS.map((fact) => (
-              <span key={fact} className="inline-flex items-center gap-1.5">
-                <span className="font-bold text-emerald-600" aria-hidden="true">
-                  ✓
-                </span>
-                {fact}
-              </span>
-            ))}
-          </div>
+      {/* Susunannya sengaja dibuat sama persis dengan Hero.tsx: eyebrow, judul
+          satu warna, sub-judul text-lead, satu pil plus satu tautan teks, lalu
+          baris fakta. Dua blob kabur di belakang judul dibuang — keduanya tidak
+          menandai apa pun dan hanya itu alasan bagian ini butuh
+          `overflow-hidden`. */}
+      <Band align="center">
+        <p className="text-body-lg font-semibold text-accent">
+          AI untuk kreator &amp; UMKM Indonesia
+        </p>
+
+        <h1 className="mx-auto mt-3 max-w-[18ch] text-balance text-display-1 text-ink">
+          Satu perusahaan, alat AI untuk kontributor dan pemilik bisnis.
+        </h1>
+
+        <p className="mx-auto mt-5 max-w-[40ch] text-balance text-lead text-muted">
+          Dari metadata otomatis untuk kontributor stock, sampai asisten AI WhatsApp untuk pemilik
+          usaha kecil — Nerona membangun alat yang bekerja untuk Anda.
+        </p>
+
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+          <ButtonLink href="/register" size="lg">
+            Mulai gratis
+          </ButtonLink>
+          <TextLink href="/pricing" className="text-body-lg">
+            Lihat harga
+          </TextLink>
         </div>
-      </section>
+
+        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-caption text-muted">
+          {HERO_FACTS.map((fact) => (
+            <li key={fact} className="inline-flex items-center gap-2">
+              <Icon name="check" className="h-3.5 w-3.5 flex-none text-accent" />
+              {fact}
+            </li>
+          ))}
+        </ul>
+      </Band>
 
       <ProductCards />
 

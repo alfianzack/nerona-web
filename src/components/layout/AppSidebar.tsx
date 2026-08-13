@@ -28,14 +28,21 @@ export function AppSidebar({
         <div key={section.title ?? `section-${index}`}>
           {section.title &&
             (showLabels ? (
-              <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/70">
+              <p className="px-2 pb-1.5 font-mono text-label uppercase text-muted">
                 {section.title}
               </p>
             ) : (
               // "AKUN & TAGIHAN" cannot fit 56px, so the grouping survives as
               // a rule instead of a caption.
-              <hr className="mx-2 mb-2 border-navy-900/10" />
+              <hr className="mx-2 mb-2 border-divider" />
             ))}
+          {/* Keadaan aktif berhenti ditandai dengan latar biru merek tembus
+              pandang. Di dalam aplikasi warna merek disimpan untuk hal yang
+              bergerak, sedangkan "halaman yang sedang dibuka" adalah keadaan
+              diam: permukaan cekung, teks ink tebal, dan satu batang aksen 2px
+              di tepi kiri. Batangnya dipasang sebagai pseudo-elemen supaya
+              butir yang tidak aktif tidak perlu ikut menyediakan ruang 2px —
+              tanpa itu setiap perpindahan halaman menggeser seluruh daftar. */}
           <ul className="flex flex-col gap-0.5">
             {section.items.map((item) => {
               const isActive = item.href === active;
@@ -47,16 +54,16 @@ export function AppSidebar({
                     title={item.label}
                     aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
-                    className={`flex items-center rounded-lg transition ${
+                    className={`relative flex items-center rounded-control transition ${
                       showLabels ? "gap-2.5 px-2 py-1.5" : "h-10 w-10 justify-center"
                     } ${
                       isActive
-                        ? "bg-brand-blue/10 font-semibold text-ink"
-                        : "text-muted hover:bg-navy-900/5 hover:text-ink"
+                        ? "bg-surface-sunken font-semibold text-ink before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-accent"
+                        : "text-muted hover:bg-surface-sunken hover:text-ink"
                     }`}
                   >
                     <Icon name={item.icon} className="h-[18px] w-[18px] flex-none" />
-                    {showLabels && <span className="truncate text-sm">{item.label}</span>}
+                    {showLabels && <span className="truncate text-body">{item.label}</span>}
                   </Link>
                 </li>
               );

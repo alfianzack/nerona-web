@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Icon } from "@/components/ui/icons";
 
 const PESAN: Record<string, string> = {
   not_found: "Kode tidak dikenal. Periksa lagi kode yang tampil di Nerona Hub.",
@@ -45,45 +48,49 @@ export function FormPersetujuan({ kodeAwal }: { kodeAwal: string }) {
 
   if (hasil === "disetujui") {
     return (
-      <p className="text-sm text-ink">
-        ✓ Tersambung. Kembali ke Nerona Hub — layarnya akan berubah sendiri dalam
-        beberapa detik. Tab ini boleh ditutup.
+      <p className="flex items-start gap-2.5 text-body text-ink">
+        {/* Centangnya dulu glyph teks di dalam kalimat. Glyph dirender oleh font
+            sistem, jadi tinggi dan tebalnya berbeda-beda antar mesin dan tidak
+            bisa disetel mengikuti warna status. */}
+        <Icon name="check-circle" className="mt-0.5 h-4 w-4 flex-none text-success" />
+        <span>
+          Tersambung. Kembali ke Nerona Hub — layarnya akan berubah sendiri dalam beberapa
+          detik. Tab ini boleh ditutup.
+        </span>
       </p>
     );
   }
   if (hasil === "ditolak") {
-    return <p className="text-sm text-ink">Permintaan ditolak. Tidak ada akses yang diberikan.</p>;
+    return <p className="text-body text-ink">Permintaan ditolak. Tidak ada akses yang diberikan.</p>;
   }
 
   return (
     <>
-      <label htmlFor="kode" className="text-xs font-semibold text-muted">
+      <label htmlFor="kode" className="font-mono text-label uppercase text-muted">
         Kode dari Nerona Hub
       </label>
-      <input
+      {/* Kode pasangan adalah ID, jadi mono dengan jarak huruf lebar: yang
+          dicocokkan mata adalah karakter per karakter dengan layar Hub, dan
+          huruf proporsional membuat 0/O dan 1/I saling menyamar. */}
+      <Input
         id="kode"
         value={kode}
         onChange={(e) => setKode(e.target.value)}
         placeholder="4KQ9-7ZTM"
         autoComplete="off"
-        className="mt-1 w-full rounded-2xl bg-navy-900/[0.03] px-4 py-3 text-center text-2xl font-semibold tracking-[0.3em] text-ink ring-1 ring-navy-900/10"
+        className="mt-1.5 text-center font-mono tracking-[0.3em] tabular-nums"
       />
-      {galat && <p className="mt-3 text-sm text-rose-500">{galat}</p>}
+      {galat && <p className="mt-3 text-caption text-danger">{galat}</p>}
       <div className="mt-4 flex gap-3">
-        <button
-          onClick={() => kirim(true)}
-          disabled={sibuk || !kode.trim()}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-5 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+        <Button onClick={() => kirim(true)} disabled={sibuk || !kode.trim()}>
           {sibuk ? "Memproses..." : "Setujui"}
-        </button>
-        <button
-          onClick={() => kirim(false)}
-          disabled={sibuk || !kode.trim()}
-          className="rounded-full bg-navy-900/5 px-5 py-2 text-sm font-medium text-ink ring-1 ring-navy-900/10 transition hover:bg-navy-900/10 disabled:opacity-50"
-        >
+        </Button>
+        {/* Tolak sengaja bukan varian bahaya. Menolak justru langkah yang aman
+            di sini — merah akan membacanya terbalik, seolah menolak yang
+            berisiko. */}
+        <Button variant="secondary" onClick={() => kirim(false)} disabled={sibuk || !kode.trim()}>
           Tolak
-        </button>
+        </Button>
       </div>
     </>
   );

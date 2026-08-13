@@ -1,6 +1,9 @@
-import Link from "next/link";
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
+import { Band } from "@/components/ui/Band";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { TextLink } from "@/components/ui/TextLink";
+import { Icon } from "@/components/ui/icons";
 import { MetadataCardMockup } from "./mockups/MetadataCardMockup";
 
 /**
@@ -15,67 +18,71 @@ const HERO_FACTS = [
   `${DEFAULT_PLAN_POINTS.metadata.free} poin gratis untuk mencoba`,
 ];
 
+/**
+ * Hero, arah Bening.
+ *
+ * Empat hal yang dibuang, dan masing-masing punya sebab:
+ *
+ * 1. Gradien pada judul. Selain tidak pernah dipakai halaman yang jadi acuan,
+ *    gradien lamanya memberi perhentian tengah dan akhir warna yang sama
+ *    persis, jadi gradien tiga-perhentian itu sebenarnya hanya dua.
+ *
+ *    (Nama kelas sengaja tidak disebut di komentar mana pun setelah kelasnya
+ *    dibuang: pemindai Tailwind ikut membaca komentar, jadi menyebutnya justru
+ *    menghidupkan kembali kelas itu di bundel CSS.)
+ * 2. Blob emas kabur 340px di belakang judul. Hiasan yang tidak menandai apa
+ *    pun, dan satu-satunya alasan bagian ini butuh `overflow-hidden`.
+ * 3. Pil kedua di sebelah pil pertama. Dua pil berdampingan membuat keduanya
+ *    terlihat sama penting; aksi kedua turun jadi tautan teks supaya satu
+ *    ajakan benar-benar terbaca sebagai satu ajakan.
+ * 4. Centang emoji. Bentuk dan bobotnya berbeda di tiap sistem operasi dan
+ *    tidak pernah mengikuti warna teks di sekitarnya.
+ *
+ * Yang naik: sub-judul dari 18–20px ke skala lead, 18–26px. Inilah sebab hero
+ * lama terasa kecil meski judulnya sudah 72px — bukan judulnya yang kurang
+ * besar, tapi barisan di bawahnya yang tertinggal.
+ */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-canvas px-6 pb-24 pt-20 text-center sm:pt-28">
-      <div
-        className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-gold-400 opacity-[0.08] blur-[110px]"
-        aria-hidden="true"
-      />
-      <div className="relative mx-auto max-w-4xl">
-        <p className="text-sm font-medium text-brand-blue">Ekstensi Chrome Nerona Metadata</p>
-        <h1 className="mt-3 text-5xl font-semibold tracking-tight text-ink sm:text-7xl">
-          Metadata untuk kontributor stock,{" "}
-          <span className="bg-gradient-to-r from-brand-blue via-brand-orange to-brand-orange bg-clip-text text-transparent">
-            ditulis otomatis.
-          </span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
-          Nerona membuat judul, deskripsi, dan kata kunci dengan AI, lalu mengisinya langsung ke
-          formulir unggah marketplace Anda.
-        </p>
-        {/* Halaman jualan meminta pendaftaran lebih dulu; harga jadi pilihan
-            kedua. Sebelumnya "Lihat Harga" adalah satu-satunya tombol, yang
-            menggeser orang ke tabel harga sebelum mereka punya alasan. */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
-          <Link
-            href="/register"
-            className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-6 py-2.5 text-sm font-semibold text-navy-900 shadow-lg shadow-gold-500/30 transition hover:brightness-110"
-          >
-            Mulai gratis
-          </Link>
-          <Link
-            href="#pricing"
-            className="rounded-full bg-surface px-6 py-2.5 text-sm font-medium text-ink ring-1 ring-navy-900/15 transition hover:bg-surface2"
-          >
-            Lihat harga
-          </Link>
-          {/* Learn is temporarily hidden — uncomment to re-enable (also remove the /learn redirect in next.config.mjs)
-          <Link
-            href="/learn"
-            className="text-sm font-medium text-brand-blue transition hover:underline"
-          >
-            Pelajari caranya <span aria-hidden="true">›</span>
-          </Link>
-          */}
-        </div>
-        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[13px] text-muted">
-          {HERO_FACTS.map((fact) => (
-            <li key={fact} className="inline-flex items-center gap-1.5">
-              <span className="font-bold text-emerald-600" aria-hidden="true">
-                ✓
-              </span>
-              {fact}
-            </li>
-          ))}
-        </ul>
-        {/* Satu-satunya animasi di halaman ini, dan letaknya di atas lipatan
-            supaya benar-benar dilihat: kartu memainkan urutan pembuatannya
-            sekali saat halaman dibuka. */}
-        <div className="mx-auto mt-16 max-w-lg">
-          <MetadataCardMockup animated />
-        </div>
+    <Band align="center">
+      <p className="text-body-lg font-semibold text-accent">Nerona Metadata</p>
+
+      <h1 className="mx-auto mt-3 max-w-[15ch] text-balance text-display-1 text-ink">
+        Metadata untuk kontributor stock, ditulis otomatis.
+      </h1>
+
+      <p className="mx-auto mt-5 max-w-[34ch] text-balance text-lead text-muted">
+        Judul, deskripsi, dan kata kunci dibuat AI — lalu diisikan langsung ke formulir unggah
+        marketplace Anda.
+      </p>
+
+      {/* Halaman jualan meminta pendaftaran lebih dulu; harga jadi pilihan
+          kedua. Sebelumnya "Lihat Harga" adalah satu-satunya tombol, yang
+          menggeser orang ke tabel harga sebelum mereka punya alasan. */}
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+        <ButtonLink href="/register" size="lg">
+          Mulai gratis
+        </ButtonLink>
+        <TextLink href="#pricing" className="text-body-lg">
+          Lihat harga
+        </TextLink>
       </div>
-    </section>
+
+      <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-caption text-muted">
+        {HERO_FACTS.map((fact) => (
+          <li key={fact} className="inline-flex items-center gap-2">
+            <Icon name="check" className="h-3.5 w-3.5 flex-none text-accent" />
+            {fact}
+          </li>
+        ))}
+      </ul>
+
+      {/* Satu-satunya animasi di halaman ini, dan letaknya di atas lipatan
+          supaya benar-benar dilihat: kartu memainkan urutan pembuatannya
+          sekali saat halaman dibuka. */}
+      <div className="mx-auto mt-16 max-w-lg">
+        <MetadataCardMockup animated />
+      </div>
+    </Band>
   );
 }

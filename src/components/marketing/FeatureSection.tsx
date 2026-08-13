@@ -1,3 +1,7 @@
+import { Band } from "@/components/ui/Band";
+import { Icon } from "@/components/ui/icons";
+import { cn } from "@/components/ui/cn";
+
 interface FeatureSectionProps {
   title: string;
   body: string;
@@ -9,9 +13,21 @@ interface FeatureSectionProps {
   id?: string;
 }
 
-// "dark" sits on the page canvas and "light" is a slightly lifted surface, so
-// sections alternate subtly down the page. "navy" is a true dark band with
-// inverted text for sections that should stand out.
+/**
+ * Nama tema di sini lebih tua dari lapisan token dan tidak bisa diganti tanpa
+ * menyentuh berkas pemanggil: "dark" duduk di kanvas halaman, "light" adalah
+ * permukaan yang sedikit terangkat, sehingga bagian-bagian berselang-seling
+ * menuruni halaman. "navy" satu-satunya pita yang benar-benar gelap.
+ *
+ * Pemetaan ke tone Band ditulis sebagai tabel supaya nama lama itu berhenti
+ * membingungkan di badan komponen.
+ */
+const BAND_TONE = {
+  dark: "plain",
+  light: "sunken",
+  navy: "navy",
+} as const;
+
 export function FeatureSection({
   title,
   body,
@@ -21,48 +37,43 @@ export function FeatureSection({
   bullets,
   id,
 }: FeatureSectionProps) {
+  // Di pita navy warnanya dibalik tangan: token ink/muted tetap warna terang
+  // karena permukaan gelap belum punya set tokennya sendiri.
   const navy = theme === "navy";
-  const sectionClass = navy ? "bg-navy-900" : theme === "dark" ? "bg-canvas" : "bg-surface2";
 
   return (
-    <section id={id} className={`${sectionClass} px-6 py-24 sm:py-32`}>
+    <Band id={id} tone={BAND_TONE[theme]}>
       <div
-        className={`mx-auto flex max-w-5xl flex-col items-center gap-14 md:flex-row md:gap-20 ${
-          imageSide === "left" ? "md:flex-row-reverse" : ""
-        }`}
+        className={cn(
+          "flex flex-col items-center gap-14 md:flex-row md:gap-20",
+          imageSide === "left" && "md:flex-row-reverse",
+        )}
       >
         <div className="flex-1">
-          <h2
-            className={`text-3xl font-semibold tracking-tight sm:text-5xl ${
-              navy ? "text-white" : "text-ink"
-            }`}
-          >
+          <h2 className={cn("text-balance text-display-2", navy ? "text-white" : "text-ink")}>
             {title}
           </h2>
-          <p
-            className={`mt-5 text-lg leading-relaxed ${navy ? "text-navy-100" : "text-muted"}`}
-          >
-            {body}
-          </p>
+          <p className={cn("mt-5 text-body-lg", navy ? "text-navy-100" : "text-muted")}>{body}</p>
           {bullets && bullets.length > 0 && (
-            <ul className="mt-6 space-y-2.5">
+            <ul className="mt-7 space-y-3">
               {bullets.map((bullet) => (
                 <li
                   key={bullet}
-                  className={`flex items-start gap-2.5 text-[15px] ${
-                    navy ? "text-navy-100" : "text-ink"
-                  }`}
+                  className={cn(
+                    "flex items-start gap-2.5 text-body",
+                    navy ? "text-navy-100" : "text-ink",
+                  )}
                 >
-                  <span
-                    className={`mt-1 flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full text-[10px] font-bold ${
-                      navy
-                        ? "bg-brand-sky/20 text-brand-sky"
-                        : "bg-emerald-400/15 text-emerald-600"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    ✓
-                  </span>
+                  {/* Centangnya dulu emoji ✓ di dalam lingkaran berwarna:
+                      bentuknya beda di tiap sistem operasi dan lingkarannya
+                      tidak menandai apa pun. */}
+                  <Icon
+                    name="check"
+                    className={cn(
+                      "mt-[3px] h-4 w-4 flex-none",
+                      navy ? "text-brand-sky" : "text-accent",
+                    )}
+                  />
                   {bullet}
                 </li>
               ))}
@@ -71,6 +82,6 @@ export function FeatureSection({
         </div>
         <div className="w-full flex-1">{mockup}</div>
       </div>
-    </section>
+    </Band>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 export function ResendVerificationButton() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
@@ -12,16 +13,18 @@ export function ResendVerificationButton() {
   }
 
   if (status === "sent") {
-    return <p className="text-sm text-emerald-400">Email verifikasi terkirim — periksa kotak masuk Anda.</p>;
+    return (
+      <p className="text-body text-success">
+        Email verifikasi terkirim — periksa kotak masuk Anda.
+      </p>
+    );
   }
 
+  // Tautan kecil di dalam kotak pemberitahuan, jadi varian ghost — bukan tombol
+  // penuh, yang akan bersaing dengan aksi utama halaman ini.
   return (
-    <button
-      onClick={handleClick}
-      disabled={status === "sending"}
-      className="text-sm font-medium text-brand-blue underline disabled:opacity-50"
-    >
+    <Button variant="ghost" size="sm" onClick={handleClick} disabled={status === "sending"}>
       {status === "sending" ? "Mengirim..." : "Kirim ulang email verifikasi"}
-    </button>
+    </Button>
   );
 }

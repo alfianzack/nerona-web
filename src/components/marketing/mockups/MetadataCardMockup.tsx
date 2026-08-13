@@ -21,23 +21,23 @@ export function MetadataCardMockup({ animated = false }: { animated?: boolean })
   const pop = animated ? "animate-nerona-pop motion-reduce:animate-none" : "";
 
   return (
-    <div className="rounded-3xl bg-gradient-to-b from-surface to-surface2 p-7 text-left shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <div className="rounded-card bg-surface p-7 text-left ring-1 ring-border">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted/70">
-          Metadata yang dihasilkan
-        </p>
+        <p className="font-mono text-label uppercase text-muted">Metadata yang dihasilkan</p>
         <span className="flex h-2 w-2">
+          {/* Warna diam memakai token; saat animated, keyframe nerona-done yang
+              memegang warnanya dari kuning ke hijau. */}
           <span
-            className={`h-2 w-2 rounded-full bg-emerald-400 ${
+            className={`h-2 w-2 rounded-full bg-success ${
               animated ? "animate-nerona-done motion-reduce:animate-none" : ""
             }`}
           />
         </span>
       </div>
-      <p className={`mt-4 text-[15px] font-semibold text-ink ${rise} [animation-delay:250ms]`}>
+      <p className={`mt-4 text-body font-semibold text-ink ${rise} [animation-delay:250ms]`}>
         Cakrawala kota pesisir saat jam emas
       </p>
-      <p className={`mt-2 text-sm leading-relaxed text-muted ${rise} [animation-delay:650ms]`}>
+      <p className={`mt-2 text-body text-muted ${rise} [animation-delay:650ms]`}>
         Pemandangan udara cakrawala kota pesisir modern bermandikan cahaya keemasan, dengan air
         pelabuhan yang tenang memantulkan gedung-gedung.
       </p>
@@ -45,7 +45,7 @@ export function MetadataCardMockup({ animated = false }: { animated?: boolean })
         {KEYWORDS.map((word, index) => (
           <span
             key={word}
-            className={`rounded-full bg-gold-400/10 px-3 py-1 text-xs font-medium text-brand-blue ${pop}`}
+            className={`rounded-chip bg-accent/10 px-3 py-1 text-caption font-medium text-accent ${pop}`}
             style={animated ? { animationDelay: `${1100 + index * 120}ms` } : undefined}
           >
             {word}

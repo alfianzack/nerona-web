@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Card } from "@/components/ui/Card";
+import { buttonClass } from "@/components/ui/button-styles";
 
 interface KartuHubProps {
   os: "windows" | "mac";
@@ -63,35 +65,45 @@ const LANGKAH: Record<KartuHubProps["os"], ReactNode> = {
 
 export function KartuHub({ os, url, versi }: KartuHubProps) {
   return (
-    <div className="rounded-3xl bg-navy-900/[0.03] p-5 ring-1 ring-navy-900/10">
+    <Card variant="sunken">
       <div className="min-w-0">
-        <p className="font-semibold text-ink">{JUDUL[os]}</p>
-        <p className="mt-0.5 text-xs text-muted">
+        <h3 className="text-title-2 text-ink">{JUDUL[os]}</h3>
+        <p className="mt-1 text-caption text-muted">
           {BERKAS[os]}
-          {versi ? ` · versi ${versi}` : ""}
+          {versi ? (
+            <>
+              {" · versi "}
+              <span className="font-mono tabular-nums">{versi}</span>
+            </>
+          ) : (
+            ""
+          )}
         </p>
       </div>
-      <div className="mt-3 flex justify-center">
+      <div className="mt-4 flex justify-center">
         {url ? (
-          <a
-            href={url}
-            download
-            className="whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110"
-          >
+          // Mengunduh installer tidak memindahkan uang, jadi tombolnya setingkat
+          // aksi utama biasa. Emas disimpan untuk beli, top-up, dan perpanjang.
+          <a href={url} download className={buttonClass({ variant: "primary" })}>
             Download Nerona Hub
           </a>
         ) : (
+          /*
+            Bukan tombol yang dinonaktifkan: elemen disabled tidak memunculkan
+            tooltip `title` di Chrome, dan kalimat itulah satu-satunya yang
+            menjelaskan bahwa yang kosong adalah pengaturan admin, bukan rilisnya.
+          */
           <span
-            className="cursor-not-allowed whitespace-nowrap rounded-full bg-navy-900/5 px-4 py-2 text-sm font-semibold text-muted ring-1 ring-navy-900/10"
+            className="inline-flex cursor-not-allowed items-center justify-center whitespace-nowrap rounded-action bg-surface px-4 py-2 text-body font-medium text-muted ring-1 ring-border"
             title="Tautan unduhan belum diisi di pengaturan admin."
           >
             Belum tersedia
           </span>
         )}
       </div>
-      <ol className="mt-4 list-inside list-decimal space-y-1.5 text-xs text-muted">
+      <ol className="mt-4 list-inside list-decimal space-y-1.5 text-caption text-muted">
         {LANGKAH[os]}
       </ol>
-    </div>
+    </Card>
   );
 }

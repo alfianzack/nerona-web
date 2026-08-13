@@ -1,4 +1,8 @@
-import Link from "next/link";
+import { Badge } from "@/components/ui/Badge";
+import { Band } from "@/components/ui/Band";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/components/ui/cn";
+import { TextLink } from "@/components/ui/TextLink";
 import { formatRupiah } from "@/lib/plan-duration";
 import { perPointLabel, topupLabel, type TopupPackage } from "@/lib/topup";
 
@@ -22,51 +26,47 @@ export function TopupSection({ packages }: { packages: TopupPackage[] }) {
   const termurah = packages.reduce((a, b) => (b.price / b.points < a.price / a.points ? b : a));
 
   return (
-    <section className="px-6 py-16">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-ink">
-          Kehabisan poin? Isi ulang.
-        </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-muted">
-          Paket di atas dibeli sekali dan aksesnya berlaku selamanya. Yang habis hanya poin —
-          dan poin bisa diisi kapan saja, tanpa berlangganan.
-        </p>
+    <Band align="center">
+      <h2 className="text-balance text-display-2 text-ink">Kehabisan poin? Isi ulang.</h2>
+      <p className="mx-auto mt-5 max-w-[46ch] text-balance text-lead text-muted">
+        Paket di atas dibeli sekali dan aksesnya berlaku selamanya. Yang habis hanya poin —
+        dan poin bisa diisi kapan saja, tanpa berlangganan.
+      </p>
 
-        <div className="mt-9 grid gap-4 sm:grid-cols-3">
-          {packages.map((pkg) => {
-            const hemat = pkg === termurah && packages.length > 1;
-            return (
-              <div
-                key={pkg.points}
-                className={`rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 text-center shadow-lg shadow-navy-900/10 ring-1 ${
-                  hemat ? "ring-gold-400/50" : "ring-navy-900/10"
-                }`}
-              >
-                {hemat && (
-                  <span className="inline-block rounded-full bg-gold-400/20 px-3 py-0.5 text-[11px] font-bold text-gold-700">
-                    Paling hemat
-                  </span>
-                )}
-                <p className={`text-2xl font-extrabold text-ink ${hemat ? "mt-2" : ""}`}>
-                  {topupLabel(pkg.points)}
-                </p>
-                <p className="mt-1 text-lg font-semibold text-brand-blue">
-                  {formatRupiah(pkg.price)}
-                </p>
-                <p className="mt-1 text-xs text-muted">{perPointLabel(pkg)}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted">
-          Poin terpakai setiap kali AI bekerja, dan yang belum terpakai tidak hangus. Isi ulang
-          butuh paket yang aktif — poin tidak bisa dipakai sendirian.{" "}
-          <Link href="/finance" className="font-semibold text-brand-blue hover:underline">
-            Isi ulang di halaman Keuangan ›
-          </Link>
-        </p>
+      <div className="mt-12 grid gap-6 sm:grid-cols-3">
+        {packages.map((pkg) => {
+          const hemat = pkg === termurah && packages.length > 1;
+          // Ditandai cincin aksen, bukan emas. Perlakuannya sengaja sama persis
+          // dengan kartu unggulan di PricingTierGrid.
+          return (
+            <Card
+              key={pkg.points}
+              variant={hemat ? "accent" : "default"}
+              padding="lg"
+              className="text-center"
+            >
+              {hemat && <Badge tone="info">Paling hemat</Badge>}
+              <p className={cn("text-title-1 tabular-nums text-ink", hemat && "mt-4")}>
+                {topupLabel(pkg.points)}
+              </p>
+              <p className="mt-1.5 font-mono text-body-lg font-semibold tabular-nums text-accent">
+                {formatRupiah(pkg.price)}
+              </p>
+              <p className="mt-1.5 text-caption text-muted">{perPointLabel(pkg)}</p>
+            </Card>
+          );
+        })}
       </div>
-    </section>
+
+      {/* Tanda › tidak ditulis di kalimatnya lagi — TextLink yang memasangnya,
+          dan dua kali berarti dua tanda. */}
+      <p className="mx-auto mt-8 max-w-[64ch] text-caption text-muted">
+        Poin terpakai setiap kali AI bekerja, dan yang belum terpakai tidak hangus. Isi ulang
+        butuh paket yang aktif — poin tidak bisa dipakai sendirian.{" "}
+        <TextLink href="/finance" className="font-semibold">
+          Isi ulang di halaman Keuangan
+        </TextLink>
+      </p>
+    </Band>
   );
 }

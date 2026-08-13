@@ -1,11 +1,80 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * Warna dibaca dari custom property di globals.css, bukan ditulis sebagai hex
+ * di sini. Bentuk `rgb(var(--x) / <alpha-value>)` penting: tanpa itu, sintaks
+ * alfa yang sudah dipakai ratusan kali (`ring-navy-900/10`, `bg-brand-blue/10`)
+ * akan berhenti bekerja begitu warnanya jadi variabel.
+ */
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        // Angka, label, ID, dan baris keterangan metadata.
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+      },
+      /**
+       * Skala tipografi.
+       *
+       * Sebelumnya tidak ada skala sama sekali: 437 dari 547 deklarasi ukuran
+       * (80%) adalah text-sm atau text-xs, dan text-base muncul tiga kali di
+       * seluruh aplikasi. Pemasaran melompat dari text-sm langsung ke text-7xl.
+       *
+       * Tracking merapat seiring ukuran membesar — inilah detail yang membuat
+       * judul besar terlihat disetel, bukan sekadar diperbesar.
+       */
+      fontSize: {
+        "display-1": [
+          "clamp(2.375rem, 6.6vw, 5rem)",
+          { lineHeight: "1.04", letterSpacing: "-0.024em", fontWeight: "600" },
+        ],
+        "display-2": [
+          "clamp(1.8125rem, 4.6vw, 3.25rem)",
+          { lineHeight: "1.07", letterSpacing: "-0.022em", fontWeight: "600" },
+        ],
+        // Sub-judul hero. Ukuran yang selama ini hilang: hero terasa kecil
+        // bukan karena judulnya kurang besar, tapi karena barisan ini 18px.
+        lead: [
+          "clamp(1.125rem, 2.2vw, 1.625rem)",
+          { lineHeight: "1.36", letterSpacing: "-0.012em" },
+        ],
+        "title-1": [
+          "2rem",
+          { lineHeight: "1.08", letterSpacing: "-0.032em", fontWeight: "600" },
+        ],
+        "title-2": [
+          "1.25rem",
+          { lineHeight: "1.25", letterSpacing: "-0.015em", fontWeight: "600" },
+        ],
+        "body-lg": ["1.0625rem", { lineHeight: "1.5", letterSpacing: "-0.003em" }],
+        body: ["0.9375rem", { lineHeight: "1.6" }],
+        caption: ["0.75rem", { lineHeight: "1.5" }],
+        // Bobot ikut didefinisikan di sini. Tanpa itu label render di bobot 400
+        // dan setiap pemanggil harus mengingat menambahkan bobotnya sendiri —
+        // yang langsung terbukti: sebagian tempat menulis font-semibold, sebagian
+        // tidak, dan hasilnya label yang sama tampil dua tebal berbeda.
+        label: ["0.6875rem", { lineHeight: "1.4", letterSpacing: "0.085em", fontWeight: "500" }],
+      },
+      borderRadius: {
+        card: "var(--radius-card)",
+        control: "var(--radius-control)",
+        action: "var(--radius-action)",
+        chip: "var(--radius-chip)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        float: "var(--shadow-float)",
+      },
+      spacing: {
+        // Irama vertikal antar bagian: 72px di aplikasi, 104px di pemasaran.
+        band: "var(--band)",
+      },
+      maxWidth: {
+        band: "980px",
       },
       /**
        * Urutan "AI sedang menulis metadata" di kartu hero.
@@ -36,38 +105,65 @@ const config: Config = {
         "nerona-pop": "nerona-pop 400ms ease-out both",
         "nerona-done": "nerona-done 1900ms ease-in-out both",
       },
-      // Light brand palette derived from the Pill-N logo: a sky→blue and a
-      // gold→orange gradient on a soft, sky-tinted off-white ground.
       colors: {
-        // Logo gradient stops, reusable as solid accents.
+        // Perhentian gradien logo, plus varian aman-kontras untuk teks di
+        // atas putih. Yang -ink sebelumnya hex lepas di enam berkas.
         brand: {
-          sky: "#6EC9F2",
-          blue: "#4A7DE8",
-          gold: "#FFD65C",
-          orange: "#FF8B45",
+          sky: token("brand-sky"),
+          blue: token("brand-blue"),
+          gold: token("brand-gold"),
+          orange: token("brand-orange"),
+          "sky-ink": token("brand-sky-ink"),
+          "blue-ink": token("brand-blue-ink"),
+          "gold-ink": token("brand-gold-ink"),
+          "orange-ink": token("brand-orange-ink"),
         },
-        // Surfaces & text (semantic tokens).
-        canvas: "#EEF4FB", // page background
-        surface: "#FFFFFF", // cards, panels
-        surface2: "#F4F8FD", // subtle gradient bottom / lifted sections
-        ink: "#16233D", // primary text (blue-biased near-black)
-        muted: "#5C6B85", // secondary text
-        // Kept for dark text on gold buttons/badges and low-opacity lines.
+
+        canvas: token("canvas"),
+        surface: token("surface"),
+        "surface-sunken": token("surface-sunken"),
+        ink: token("ink"),
+        muted: token("muted"),
+        border: token("border"),
+        divider: token("divider"),
+        accent: token("accent"),
+        emphasis: token("emphasis"),
+        action: token("action"),
+        "on-action": token("on-action"),
+
+        // Peran semantik yang selama ini tidak punya token, sehingga rose dan
+        // emerald melayang antara langkah 400 sampai 800 di 40+ berkas.
+        success: token("success"),
+        "success-bg": token("success-bg"),
+        warning: token("warning"),
+        "warning-bg": token("warning-bg"),
+        danger: token("danger"),
+        "danger-bg": token("danger-bg"),
+
+        /**
+         * Dua deret warisan, dipangkas ke langkah yang benar-benar dipakai.
+         *
+         * navy hanya melayani permukaan gelap yang tersisa — pita CtaBanner,
+         * pita navy di Band, teks di atasnya, dan warna avatar admin. Ia
+         * berhenti dipakai untuk garis batas dan latar tembus pandang, yang
+         * sekarang punya tokennya sendiri.
+         *
+         * gold bertahan hanya di dalam aplikasi, menandai aksi yang
+         * menggerakkan uang. Halaman publik tidak memakainya sama sekali.
+         *
+         * Langkah yang sudah tidak dipanggil siapa pun dihapus, bukan
+         * disimpan "untuk berjaga-jaga": palet yang menyimpan warna tak
+         * terpakai adalah palet yang mengundang warna tak terpakai dipakai.
+         */
         navy: {
           100: "#C7CDEB",
-          300: "#8B93C9",
           500: "#3D44A8",
           700: "#10107A",
-          800: "#0A0A5C",
           900: "#16233D",
-          950: "#000024",
         },
-        // Warm accent, retuned to the logo's gold→orange for buttons & rings.
         gold: {
-          300: "#FFE08A",
           400: "#FFCB5C",
           500: "#FF9E42",
-          600: "#FF8B45",
         },
       },
     },

@@ -1,10 +1,21 @@
+import { Band } from "@/components/ui/Band";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/components/ui/cn";
+
 export interface Step {
   title: string;
   body: string;
 }
 
-// Fixed number-badge colors for steps 1..3 (blue, orange, dark gold).
-const STEP_COLORS = ["#4A7DE8", "#FF8B45", "#9A6B08"];
+/**
+ * Aksen tetap per langkah 1..3 (biru, jingga, emas).
+ *
+ * Sebelumnya tiga hex lepas dipasang lewat `style={{ backgroundColor }}`, dan
+ * dua di antaranya membawa teks putih di atas warna merek mentah — #FF8B45
+ * dengan putih hanya 2:1. Yang dipakai sekarang varian -ink dari lapisan
+ * token: warna yang sama, cukup gelap untuk menahan angka putih di atasnya.
+ */
+const STEP_ACCENTS = ["bg-brand-blue-ink", "bg-brand-orange-ink", "bg-brand-gold-ink"];
 
 export function StepsSection({
   title,
@@ -20,36 +31,44 @@ export function StepsSection({
   className?: string;
 }) {
   return (
-    <section className={`px-6 py-20 ${className}`}>
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-balance text-center text-3xl font-semibold tracking-tight text-ink">
-          {title}
-        </h2>
-        {subtitle && <p className="mt-2.5 text-center text-[15px] text-muted">{subtitle}</p>}
-        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-          {steps.map((step, i) => (
-            <div
-              key={step.title}
-              className={
-                variant === "cards"
-                  ? "rounded-2xl bg-surface2 p-5 ring-1 ring-navy-900/[.07]"
-                  : "p-5 text-center"
-              }
-            >
+    // className tetap diteruskan apa adanya supaya pemanggil masih bisa
+    // memilih latar pitanya sendiri; Band menaruhnya paling belakang.
+    <Band className={className}>
+      <h2 className="text-balance text-center text-display-2 text-ink">{title}</h2>
+      {subtitle && (
+        <p className="mx-auto mt-5 max-w-2xl text-balance text-center text-lead text-muted">
+          {subtitle}
+        </p>
+      )}
+      <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        {steps.map((step, i) => {
+          const body = (
+            <>
               <span
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${
-                  variant === "plain" ? "mx-auto" : ""
-                }`}
-                style={{ backgroundColor: STEP_COLORS[i % STEP_COLORS.length] }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full font-mono text-caption font-semibold text-white",
+                  STEP_ACCENTS[i % STEP_ACCENTS.length],
+                  variant === "plain" && "mx-auto",
+                )}
               >
                 {i + 1}
               </span>
-              <h3 className="mt-3.5 text-base font-semibold text-ink">{step.title}</h3>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{step.body}</p>
+              <h3 className="mt-4 text-title-2 text-ink">{step.title}</h3>
+              <p className="mt-1.5 text-body text-muted">{step.body}</p>
+            </>
+          );
+
+          return variant === "cards" ? (
+            <Card key={step.title} variant="sunken">
+              {body}
+            </Card>
+          ) : (
+            <div key={step.title} className="p-5 text-center">
+              {body}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
-    </section>
+    </Band>
   );
 }

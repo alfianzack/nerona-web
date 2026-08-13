@@ -1,9 +1,25 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import { AGENT_ENABLED } from "@/lib/features";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+
+/**
+ * Satu-satunya huruf baru.
+ *
+ * Acuan tampilan halaman publik adalah apple.com, dan Apple memakai SF Pro —
+ * yang tidak bisa dilisensikan untuk web di luar platformnya. Kerabat
+ * terdekatnya adalah Inter, yang sudah terpasang di sini, jadi tidak ada huruf
+ * judul baru sama sekali. Plex Mono hanya untuk angka, label, ID, dan baris
+ * keterangan metadata: di sana ia mengerjakan sesuatu yang Inter tidak bisa,
+ * yaitu membuat kolom angka benar-benar berbaris.
+ */
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+});
 
 /**
  * Deskripsi situs ikut saklar produk.
@@ -25,7 +41,7 @@ export const metadata: Metadata = {
 // footer, (app) and (admin) have the sidebar shell, (auth) has none.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={inter.variable}>
+    <html lang="id" className={`${inter.variable} ${plexMono.variable}`}>
       <body className="bg-canvas font-sans text-ink antialiased">{children}</body>
     </html>
   );

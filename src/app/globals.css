@@ -1,3 +1,116 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Lapisan token.
+ *
+ * Sebelumnya berkas ini tiga baris, dan setiap warna hidup sebagai hex mati di
+ * tailwind.config.ts — tanpa lapisan perantara, satu permukaan tidak bisa
+ * tampil beda dari permukaan lain, dan mode gelap mustahil.
+ *
+ * Nilainya ditulis sebagai kanal RGB terpisah spasi, bukan hex, supaya
+ * `rgb(var(--x) / <alpha-value>)` di config tetap melayani sintaks alfa yang
+ * sudah dipakai di mana-mana (`ring-navy-900/10`, `bg-brand-blue/10`).
+ *
+ * `:root` memegang Presisi — perlakuan aplikasi. Halaman publik dan auth
+ * menimpanya lewat satu atribut, tanpa JavaScript dan tanpa kedip.
+ */
+@layer base {
+  :root {
+    /* ---- Merek: empat perhentian gradien logo. Tidak diubah. ---- */
+    --brand-sky: 110 201 242;    /* #6EC9F2 */
+    --brand-blue: 74 125 232;    /* #4A7DE8 */
+    --brand-gold: 255 214 92;    /* #FFD65C */
+    --brand-orange: 255 139 69;  /* #FF8B45 */
+
+    /**
+     * Varian aman-kontras. Keempatnya sebelumnya ditulis tangan sebagai hex
+     * lepas di enam berkas, karena warna merek asli gagal uji kontras 3:1 di
+     * atas putih. #E0661C dan #B45309 ikut lebur ke sini — keduanya lebih
+     * terang dari penggantinya, jadi lolos di mana pun keduanya dulu lolos.
+     */
+    --brand-sky-ink: 31 127 174;     /* #1F7FAE */
+    --brand-blue-ink: 59 101 196;    /* #3B65C4 */
+    --brand-orange-ink: 194 87 23;   /* #C25717 */
+    --brand-gold-ink: 154 107 8;     /* #9A6B08 */
+
+    /* ---- Permukaan: Presisi (aplikasi + admin) ---- */
+    --canvas: 255 255 255;
+    --surface: 255 255 255;
+    --surface-sunken: 245 247 250;
+    --border: 226 231 238;
+    --divider: 237 240 245;
+    --ink: 15 23 36;
+    --muted: 90 100 115;
+    --accent: 59 101 196;
+    --emphasis: 194 87 23;
+
+    --action: 22 35 61;
+    --on-action: 255 255 255;
+
+    /* ---- Status: satu langkah masing-masing ---- */
+    --success: 4 120 87;
+    --success-bg: 236 253 245;
+    --warning: 180 83 9;
+    --warning-bg: 255 251 235;
+    --danger: 190 18 60;
+    --danger-bg: 255 241 242;
+
+    --radius-card: 12px;
+    --radius-control: 8px;
+    --radius-action: 8px;
+    --radius-chip: 6px;
+
+    /* Kartu diam tidak punya bayangan sama sekali; permukaan dipisahkan oleh
+       garis rambut. Bayangan hanya untuk lapisan yang benar-benar melayang. */
+    --shadow-card: none;
+    --shadow-float: 0 8px 24px -8px rgb(15 23 36 / 0.18);
+
+    --band: 72px;
+  }
+
+  /**
+   * Bening — halaman publik dan auth.
+   *
+   * Auth ikut permukaan pemasaran, bukan aplikasi: layar-layar itu dicapai
+   * dari header publik dan masih bagian dari corong pendaftaran.
+   */
+  [data-surface="marketing"] {
+    --canvas: 255 255 255;
+    --surface: 255 255 255;
+    --surface-sunken: 245 247 250;
+    --border: 228 233 240;
+    --divider: 237 241 246;
+    --ink: 22 35 61;
+    --muted: 92 107 133;
+    --accent: 46 82 192;
+    --action: 46 82 192;
+
+    --radius-card: 14px;
+    --radius-control: 10px;
+    /* Pil hanya milik pemasaran. Isian tidak pernah memakainya. */
+    --radius-action: 980px;
+    --radius-chip: 6px;
+
+    --band: 104px;
+  }
+
+  /**
+   * Satu aturan ini menyelesaikan 43 tombol utama yang selama ini tidak punya
+   * jejak fokus papan ketik sama sekali.
+   */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgb(var(--brand-sky) / 0.28);
+  }
+
+  /* Angka yang berbaris harus benar-benar berbaris. */
+  [type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+}

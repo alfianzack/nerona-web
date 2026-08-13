@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBalance, listTransactions } from "@/lib/points";
 import { UserDetailTabs, type PurchaseView } from "@/components/admin/UserDetailTabs";
+import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Icon } from "@/components/ui/icons";
 
 export default async function AdminUserDetailPage({ params }: { params: { id: string } }) {
   const user = await prisma.user.findUnique({
@@ -51,19 +54,27 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
 
   return (
     <div className="max-w-2xl">
-      <Link href="/admin/users" className="text-sm text-brand-blue hover:underline">
-        ‹ Kembali ke daftar pengguna
+      {/* Panah kiri sebagai ikon sungguhan, bukan glyph kurung sudut: glyph
+          dirender font sistem, jadi tingginya berbeda antar mesin dan tidak
+          bisa disetel ukurannya. TextLink tidak dipakai di sini karena ia
+          menambahkan kurung sudut di kanan — arah yang salah untuk "kembali". */}
+      <Link
+        href="/admin/users"
+        className="inline-flex items-center gap-1.5 text-caption text-accent transition hover:underline"
+      >
+        <Icon name="arrow-left" className="h-4 w-4 flex-none" />
+        Kembali ke daftar pengguna
       </Link>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-ink">{user.name ?? user.email}</h2>
-          <p className="truncate text-xs text-muted">{user.email}</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-sm font-semibold text-navy-900">
-          {balance.toLocaleString("id-ID")} poin
-        </span>
-      </div>
+      {/* Surel memakai mono karena ia identitas, bukan kalimat — dan ia berdiri
+          sendiri di bawah PageHeader, sebab prop `description` hanya menerima
+          teks biasa dan akan mencetaknya dalam huruf sans. */}
+      <PageHeader
+        className="mt-4"
+        title={user.name ?? user.email}
+        actions={<Badge tone="points">{balance.toLocaleString("id-ID")} poin</Badge>}
+      />
+      <p className="mt-2 truncate font-mono text-caption text-muted">{user.email}</p>
 
       <div className="mt-6">
         <UserDetailTabs

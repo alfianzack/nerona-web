@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Player from "@vimeo/player";
+import { Icon } from "@/components/ui/icons";
 
 interface LessonPlayerProps {
   lessonId: string;
@@ -45,7 +46,15 @@ export function LessonPlayer({
   return (
     <div>
       <div ref={containerRef} />
-      {completed && <p className="mt-2 text-sm text-emerald-400">✓ Selesai</p>}
+      {/* Centangnya dulu emoji hijau muda: bentuknya berbeda di tiap sistem
+          operasi, dan langkah warnanya terlalu terang untuk dibaca di atas
+          permukaan putih. Sekarang ikon plus token status. */}
+      {completed && (
+        <p className="mt-2 inline-flex items-center gap-1.5 text-caption text-success">
+          <Icon name="check" className="h-3.5 w-3.5 flex-none" />
+          Selesai
+        </p>
+      )}
     </div>
   );
 }

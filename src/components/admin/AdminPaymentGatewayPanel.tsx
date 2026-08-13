@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 interface Keadaan {
   enabled: boolean;
@@ -62,9 +64,12 @@ export function AdminPaymentGatewayPanel() {
   }
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
+    <Card>
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-sky/25 text-[#1F7FAE]">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-chip bg-brand-sky/25 text-brand-sky-ink">
+          {/* Daftar Icon belum punya glyph kode QR, jadi gambarnya tetap di
+              sini. Warnanya diwarisi dari warna teks induknya, bukan ditulis di
+              SVG-nya, supaya ia ikut token seperti ikon lain. */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -82,40 +87,46 @@ export function AdminPaymentGatewayPanel() {
           </svg>
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-ink">Pembayaran QRIS</h2>
-          <p className="text-xs text-muted">SumoPod Managed Payment</p>
+          <h2 className="text-title-2 text-ink">Pembayaran QRIS</h2>
+          <p className="text-caption text-muted">SumoPod Managed Payment</p>
         </div>
       </div>
 
-      {galat && <p className="mt-2 text-sm text-rose-500">{galat}</p>}
+      {galat && <p className="mt-2 text-body text-danger">{galat}</p>}
 
       {keadaan === null ? (
-        <p className="mt-4 text-sm text-muted">Memuat…</p>
+        <p className="mt-4 text-body text-muted">Memuat…</p>
       ) : (
         <>
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-navy-900/[0.03] p-3 ring-1 ring-navy-900/10">
+          <Card
+            variant="sunken"
+            padding="sm"
+            className="mt-4 flex items-center justify-between gap-3"
+          >
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-body font-semibold text-ink">
                 {keadaan.enabled ? "Menyala" : "Mati"}
               </p>
-              <p className="mt-0.5 text-[11px] text-muted">
+              <p className="mt-0.5 text-caption text-muted">
                 {keadaan.enabled
                   ? "Tombol Bayar dengan QRIS tampil di halaman order."
                   : "Pelanggan hanya melihat transfer manual."}
               </p>
             </div>
-            <button
+            {/*
+              Saklar ini tidak memindahkan uang siapa pun — ia hanya menentukan
+              tombol mana yang tampil ke pelanggan — jadi tidak ada emas di sini.
+              Menyalakan adalah aksi utamanya; mematikan adalah langkah mundur
+              yang harus tetap mudah dijangkau tapi tidak menarik jari.
+            */}
+            <Button
+              variant={keadaan.enabled ? "secondary" : "primary"}
               onClick={() => ubah(!keadaan.enabled)}
               disabled={sibuk || (!keadaan.configured && !keadaan.enabled)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                keadaan.enabled
-                  ? "bg-navy-900/5 text-ink ring-1 ring-navy-900/10 hover:bg-navy-900/10"
-                  : "bg-gradient-to-br from-gold-500 to-gold-400 text-navy-900 hover:brightness-110"
-              }`}
             >
               {sibuk ? "Menyimpan..." : keadaan.enabled ? "Matikan" : "Nyalakan"}
-            </button>
-          </div>
+            </Button>
+          </Card>
 
           {/*
             Membedakan "saklarnya mati" dari "kuncinya belum ada". Tanpa baris
@@ -123,7 +134,7 @@ export function AdminPaymentGatewayPanel() {
             yang tidak muncul — tanpa sebab yang bisa dilihat siapa pun.
           */}
           {!keadaan.configured && (
-            <p className="mt-3 rounded-xl bg-rose-500/10 p-3 text-xs text-ink ring-1 ring-rose-500/30">
+            <p className="mt-3 rounded-card bg-danger-bg p-3 text-caption text-ink ring-1 ring-danger/25">
               Kunci API belum terpasang di server. Isi <code>SUMOPOD_PAY_API_BASE</code>,{" "}
               <code>SUMOPOD_PAY_API_KEY</code>, dan <code>SUMOPOD_PAY_WEBHOOK_SECRET</code> di
               environment, lalu deploy ulang. Saklar ini tidak bisa dinyalakan sebelum itu.
@@ -138,16 +149,19 @@ export function AdminPaymentGatewayPanel() {
           */}
           {keadaan.configured && (
             <p
-              className={`mt-3 rounded-xl p-3 text-xs ring-1 ${
+              className={`mt-3 rounded-card p-3 text-caption text-ink ring-1 ${
                 keadaan.webhookLastOk
-                  ? "bg-emerald-500/10 text-ink ring-emerald-500/30"
-                  : "bg-rose-500/10 text-ink ring-rose-500/30"
+                  ? "bg-success-bg ring-success/25"
+                  : "bg-danger-bg ring-danger/25"
               }`}
             >
               {keadaan.webhookLastOk ? (
                 <>
                   Webhook terverifikasi terakhir{" "}
-                  <b>{new Date(keadaan.webhookLastOk).toLocaleString("id-ID")}</b>.
+                  <b className="font-mono tabular-nums">
+                    {new Date(keadaan.webhookLastOk).toLocaleString("id-ID")}
+                  </b>
+                  .
                 </>
               ) : (
                 <>
@@ -161,10 +175,10 @@ export function AdminPaymentGatewayPanel() {
 
           {keadaan.configured && (
             <p
-              className={`mt-3 rounded-xl p-3 text-xs ring-1 ${
+              className={`mt-3 rounded-card p-3 text-caption text-ink ring-1 ${
                 keadaan.sandbox
-                  ? "bg-gold-400/15 text-ink ring-gold-400/40"
-                  : "bg-emerald-500/10 text-ink ring-emerald-500/30"
+                  ? "bg-warning-bg ring-warning/25"
+                  : "bg-success-bg ring-success/25"
               }`}
             >
               {keadaan.sandbox
@@ -180,29 +194,29 @@ export function AdminPaymentGatewayPanel() {
             tidak setiap kegagalan jadi satu putaran tebak-menebak lagi.
           */}
           {keadaan.lastFailure && (
-            <div className="mt-3 rounded-xl bg-navy-900/[0.03] p-3 ring-1 ring-navy-900/10">
-              <p className="text-[11px] font-semibold text-ink">
+            <Card variant="sunken" padding="sm" className="mt-3">
+              <p className="font-mono text-label uppercase text-muted">
                 Kegagalan terakhir dari gateway ·{" "}
                 {new Date(keadaan.lastFailure.waktu).toLocaleString("id-ID")}
               </p>
-              <code className="mt-1 block break-all text-[11px] leading-relaxed text-muted">
+              <code className="mt-1.5 block break-all font-mono text-caption leading-relaxed text-muted">
                 {keadaan.lastFailure.pesan}
               </code>
-              <p className="mt-1.5 text-[11px] text-muted/80">
+              <p className="mt-1.5 text-caption text-muted">
                 <b>401</b> biasanya kunci API salah, atau kunci sandbox dipakai ke alamat live
                 (dan sebaliknya). <b>400</b> biasanya jumlah atau{" "}
                 <code>payment_method_type_code</code> — bisa ditimpa lewat{" "}
                 <code>SUMOPOD_PAY_METHOD_CODE</code> tanpa deploy kode.
               </p>
-            </div>
+            </Card>
           )}
 
-          <p className="mt-3 text-[11px] text-muted/80">
+          <p className="mt-3 text-caption text-muted">
             Mematikan saklar ini tidak membatalkan tagihan QRIS yang sudah terlanjur dibuat;
             yang sudah dibayar tetap diproses webhook seperti biasa.
           </p>
         </>
       )}
-    </div>
+    </Card>
   );
 }

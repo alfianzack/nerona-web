@@ -1,6 +1,14 @@
 import type { MetadataLogStats } from "@/lib/metadata-log";
+import { Badge } from "@/components/ui/Badge";
+import { Stat } from "@/components/ui/Stat";
 
-/** Ringkasan angka di atas daftar. Dipakai dashboard tenant maupun admin. */
+/**
+ * Ringkasan angka di atas daftar. Dipakai dashboard tenant maupun admin.
+ *
+ * Ketiga kotaknya sekarang memakai Stat, jadi angkanya ikut mono dan berbaris
+ * rapi antar kolom. Karena Stat membawa kartunya sendiri, pemanggil TIDAK boleh
+ * membungkus komponen ini dengan kartu lagi.
+ */
 export function MetadataLogSummary({ stats }: { stats: MetadataLogStats }) {
   const tiles = [
     { label: "Total metadata", value: stats.total },
@@ -10,30 +18,19 @@ export function MetadataLogSummary({ stats }: { stats: MetadataLogStats }) {
 
   return (
     <div>
-      <dl className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {tiles.map((tile) => (
-          <div
-            key={tile.label}
-            className="rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10"
-          >
-            <dt className="text-[11px] text-muted">{tile.label}</dt>
-            <dd className="mt-1 text-2xl font-semibold tabular-nums text-ink">
-              {tile.value.toLocaleString("id-ID")}
-            </dd>
-          </div>
+          <Stat key={tile.label} label={tile.label} value={tile.value.toLocaleString("id-ID")} />
         ))}
-      </dl>
+      </div>
       {stats.perMarketplace.length > 0 && (
         <ul className="mt-3 flex flex-wrap gap-2">
           {stats.perMarketplace.map((row) => (
-            <li
-              key={row.marketplace}
-              className="rounded-full bg-navy-900/5 px-3 py-1 text-xs text-ink ring-1 ring-navy-900/10"
-            >
-              {row.marketplace}
-              <span className="ml-1.5 font-semibold tabular-nums">
-                {row.count.toLocaleString("id-ID")}
-              </span>
+            <li key={row.marketplace}>
+              <Badge>
+                {row.marketplace}
+                <span className="text-ink">{row.count.toLocaleString("id-ID")}</span>
+              </Badge>
             </li>
           ))}
         </ul>

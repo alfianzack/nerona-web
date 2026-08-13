@@ -8,6 +8,12 @@ import { getTopupPackages, perPointLabel } from "@/lib/topup";
 import { AGENT_ENABLED } from "@/lib/features";
 import { formatRupiah } from "@/lib/money";
 import { TopupCard } from "@/components/finance/TopupCard";
+import { Badge } from "@/components/ui/Badge";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Stat } from "@/components/ui/Stat";
+import { TextLink } from "@/components/ui/TextLink";
 
 export const metadata = { title: "Finance — Nerona" };
 
@@ -24,9 +30,6 @@ function fmtDate(d: Date): string {
 function fmtDateOrNull(d: Date | null): string {
   return d ? fmtDate(d) : "—";
 }
-
-const cardClass =
-  "rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10";
 
 export default async function FinancePage() {
   const session = await requireUser();
@@ -88,160 +91,184 @@ export default async function FinancePage() {
 
   return (
     <main className="bg-canvas">
-      <div className="mx-auto max-w-3xl px-6 py-14 sm:py-16">
+      <div className="mx-auto max-w-3xl px-6 py-band">
+        {/* Tagihan yang jatuh tempo memakai nada peringatan, bukan emas: emas di
+            layar ini menandai tombol yang menggerakkan uang, dan kalau panelnya
+            ikut emas tombolnya kehilangan tanda. */}
         {renewals.length > 0 && (
-          <div className="mb-6 rounded-2xl bg-gold-400/15 p-4 ring-1 ring-gold-400/40">
-            <p className="text-sm font-semibold text-ink">Perpanjangan paket jatuh tempo</p>
-            <ul className="mt-2 space-y-1">
+          <div className="mb-8 rounded-card bg-warning-bg p-4 ring-1 ring-warning/25">
+            <p className="text-body font-semibold text-ink">Perpanjangan paket jatuh tempo</p>
+            <ul className="mt-3 space-y-2">
               {renewals.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-ink">
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-body text-ink">
                     {r.product === "agent" ? "Agent WhatsApp" : "Metadata"} — {r.planName}
                   </span>
                   {r.proofUploadedAt ? (
                     <Link
                       href={`/order/${r.id}`}
-                      className="whitespace-nowrap text-xs text-muted underline-offset-2 hover:underline"
+                      className="whitespace-nowrap font-mono text-label uppercase text-muted underline-offset-2 hover:underline"
                     >
                       Menunggu verifikasi admin
                     </Link>
                   ) : (
-                    <Link
-                      href={`/order/${r.id}`}
-                      className="whitespace-nowrap rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
-                    >
+                    <ButtonLink href={`/order/${r.id}`} variant="money" size="sm">
                       Upload bukti transfer
-                    </Link>
+                    </ButtonLink>
                   )}
                 </li>
               ))}
             </ul>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight text-ink">Finance</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/20 px-3.5 py-1.5 text-sm font-semibold text-[#9A6B08] ring-1 ring-gold-400/40">
-            {balance.toLocaleString("id-ID")} poin
-          </span>
+
+        <PageHeader title="Finance" />
+
+        {/* Halaman ini seluruhnya daftar, dan daftar tidak bisa dibaca sekilas.
+            Dua angka di atasnya menjawab pertanyaan yang membawa orang ke sini.
+
+            Sempat ada angka ketiga, "Poin terpakai", dijumlahkan dari daftar
+            transaksi di halaman ini. Angka itu dibuang: daftarnya dibatasi 50
+            baris, jadi bagi akun yang sudah lewat 50 aktivitas ia diam-diam
+            terlalu kecil — dan sebuah angka besar di layar uang terbaca sebagai
+            total seumur akun berapa pun keterangan di bawahnya. Menampilkannya
+            dengan benar butuh agregat di sisi basis data, dan itu pekerjaan
+            lain, bukan pekerjaan tampilan. */}
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Stat
+            label="Saldo poin"
+            value={balance.toLocaleString("id-ID")}
+            hint="Bisa dipakai selama paket aktif."
+          />
+          <Stat
+            label="Pembelian"
+            value={purchases.length.toLocaleString("id-ID")}
+            hint="Seluruh riwayat di bawah."
+          />
         </div>
 
-        <section className={`mt-8 ${cardClass}`}>
-          <h2 className="text-sm font-semibold text-ink">Paket</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {/* Baris Agent hanya ada kalau produknya ditampilkan: agentProfile
-                di-null-kan di atas saat AGENT_ENABLED false. */}
-            {agentProfile && (
-              <li className="flex items-center justify-between gap-3">
-                <span className="text-ink">
-                  Agent WhatsApp
-                  <span className="text-muted"> · {agentProfile.plan}</span>
-                </span>
-                <span className="text-xs text-muted">
-                  {agentProfile.plan === "free"
-                    ? "Paket free"
-                    : isAgentPlanExpired(agentProfile)
-                      ? "Berakhir — silakan perpanjang"
-                      : `Berlaku sampai ${fmtDateOrNull(agentProfile.planExpiresAt)}`}
-                </span>
-              </li>
-            )}
-            {license && (
-              <li className="flex items-center justify-between gap-3">
-                <span className="text-ink">
-                  Metadata
-                  {license.plan?.name ? <span className="text-muted"> · {license.plan.name}</span> : null}
-                </span>
-                <span className="text-xs text-muted">
-                  {license.validUntil ? `Berlaku sampai ${fmtDate(license.validUntil)}` : "Aktif"}
-                </span>
-              </li>
-            )}
-            {/* Dengan baris Agent hilang, daftar ini bisa jadi kosong — dulu
-                selalu ada minimal satu baris. Daftar hampa tanpa penjelasan
-                lebih buruk daripada mengakui belum ada paket. */}
-            {!agentProfile && !license && (
-              <li className="flex flex-wrap items-center justify-between gap-2 py-1">
-                <span className="text-muted">Belum ada paket aktif.</span>
-                <Link href="/paket" className="text-xs text-brand-blue hover:underline">
-                  Lihat paket ›
-                </Link>
-              </li>
-            )}
-          </ul>
-        </section>
-
-        <section className={`mt-6 ${cardClass}`}>
-          <TopupCard
-            options={topupOptions}
-            hasActivePlan={
-              Boolean(license) ||
-              Boolean(agentProfile && agentProfile.plan !== "free" && !isAgentPlanExpired(agentProfile))
-            }
-          />
-        </section>
-
-        <section className={`mt-6 ${cardClass}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-ink">Poin</h2>
-            <Link
-              href="/paket"
-              className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-3.5 py-1.5 text-xs font-semibold text-navy-900 transition hover:brightness-110"
-            >
-              Beli / perpanjang paket
-            </Link>
-          </div>
-          <p className="mt-1 text-xs text-muted">Poin terpakai setiap kali AI bekerja.</p>
-          <ul className="mt-3 divide-y divide-navy-900/10">
-            {transactions.length === 0 && (
-              <li className="py-2 text-sm text-muted">Belum ada aktivitas poin.</li>
-            )}
-            {transactions.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm text-ink">
-                    {POINT_REASON_LABEL[t.reason] ?? t.reason}
-                    {t.note ? <span className="text-muted"> · {t.note}</span> : null}
-                  </p>
-                  <p className="text-xs text-muted">{fmtDate(t.createdAt)}</p>
-                </div>
-                <span
-                  className={`whitespace-nowrap text-sm font-semibold tabular-nums ${
-                    t.delta >= 0 ? "text-emerald-600" : "text-rose-500"
-                  }`}
-                >
-                  {t.delta >= 0 ? "+" : ""}
-                  {t.delta.toLocaleString("id-ID")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className={`mt-6 ${cardClass}`}>
-          <h2 className="text-sm font-semibold text-ink">Pembelian</h2>
-          <p className="mt-1 text-xs text-muted">Riwayat pembelian & aktivasi paket di Nerona.</p>
-          <ul className="mt-3 divide-y divide-navy-900/10">
-            {purchases.length === 0 && (
-              <li className="py-2 text-sm text-muted">Belum ada pembelian.</li>
-            )}
-            {purchases.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm text-ink">{p.label}</p>
-                  <p className="text-xs text-muted">
-                    {fmtDate(p.date)}
-                    {p.detail ? ` · ${p.detail}` : ""}
-                  </p>
-                </div>
-                {p.amount != null && (
-                  <span className="whitespace-nowrap text-sm font-medium tabular-nums text-ink">
-                    Rp {p.amount.toLocaleString("id-ID")}
+        <div className="mt-6 space-y-6">
+          <Card>
+            <h2 className="text-title-2 text-ink">Paket</h2>
+            <ul className="mt-4 space-y-3">
+              {/* Baris Agent hanya ada kalau produknya ditampilkan: agentProfile
+                  di-null-kan di atas saat AGENT_ENABLED false. */}
+              {agentProfile && (
+                <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <span className="text-body text-ink">
+                    Agent WhatsApp
+                    <span className="text-muted"> · {agentProfile.plan}</span>
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+                  {agentProfile.plan === "free" ? (
+                    <Badge>Paket free</Badge>
+                  ) : isAgentPlanExpired(agentProfile) ? (
+                    <Badge tone="danger">Berakhir — silakan perpanjang</Badge>
+                  ) : (
+                    <Badge tone="success">
+                      Berlaku sampai {fmtDateOrNull(agentProfile.planExpiresAt)}
+                    </Badge>
+                  )}
+                </li>
+              )}
+              {license && (
+                <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <span className="text-body text-ink">
+                    Metadata
+                    {license.plan?.name ? <span className="text-muted"> · {license.plan.name}</span> : null}
+                  </span>
+                  <Badge tone="success">
+                    {license.validUntil ? `Berlaku sampai ${fmtDate(license.validUntil)}` : "Aktif"}
+                  </Badge>
+                </li>
+              )}
+              {/* Dengan baris Agent hilang, daftar ini bisa jadi kosong — dulu
+                  selalu ada minimal satu baris. Daftar hampa tanpa penjelasan
+                  lebih buruk daripada mengakui belum ada paket. */}
+              {!agentProfile && !license && (
+                <li className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-body text-muted">Belum ada paket aktif.</span>
+                  <TextLink href="/paket" className="text-caption">
+                    Lihat paket
+                  </TextLink>
+                </li>
+              )}
+            </ul>
+          </Card>
+
+          <Card>
+            <TopupCard
+              options={topupOptions}
+              hasActivePlan={
+                Boolean(license) ||
+                Boolean(agentProfile && agentProfile.plan !== "free" && !isAgentPlanExpired(agentProfile))
+              }
+            />
+          </Card>
+
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-title-2 text-ink">Poin</h2>
+              <ButtonLink href="/paket" variant="money" size="sm">
+                Beli / perpanjang paket
+              </ButtonLink>
+            </div>
+            <p className="mt-1 text-caption text-muted">Poin terpakai setiap kali AI bekerja.</p>
+            <ul className="mt-4 divide-y divide-divider">
+              {transactions.length === 0 && (
+                <li className="py-3 text-body text-muted">Belum ada aktivitas poin.</li>
+              )}
+              {transactions.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-body text-ink">
+                      {POINT_REASON_LABEL[t.reason] ?? t.reason}
+                      {t.note ? <span className="text-muted"> · {t.note}</span> : null}
+                    </p>
+                    <p className="mt-0.5 font-mono text-label uppercase tabular-nums text-muted">
+                      {fmtDate(t.createdAt)}
+                    </p>
+                  </div>
+                  <span
+                    className={`whitespace-nowrap text-right font-mono text-body font-semibold tabular-nums ${
+                      t.delta >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {t.delta >= 0 ? "+" : ""}
+                    {t.delta.toLocaleString("id-ID")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card>
+            <h2 className="text-title-2 text-ink">Pembelian</h2>
+            <p className="mt-1 text-caption text-muted">Riwayat pembelian & aktivasi paket di Nerona.</p>
+            <ul className="mt-4 divide-y divide-divider">
+              {purchases.length === 0 && (
+                <li className="py-3 text-body text-muted">Belum ada pembelian.</li>
+              )}
+              {purchases.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-body text-ink">{p.label}</p>
+                    {/* Tanggalnya mono supaya berbaris menurun; catatannya tetap
+                        huruf biasa karena isinya kalimat, bukan angka. */}
+                    <p className="mt-0.5 text-caption text-muted">
+                      <span className="font-mono tabular-nums">{fmtDate(p.date)}</span>
+                      {p.detail ? ` · ${p.detail}` : ""}
+                    </p>
+                  </div>
+                  {p.amount != null && (
+                    <span className="whitespace-nowrap text-right font-mono text-body tabular-nums text-ink">
+                      Rp {p.amount.toLocaleString("id-ID")}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
       </div>
     </main>
   );

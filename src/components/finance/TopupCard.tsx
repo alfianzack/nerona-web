@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export interface TopupOption {
   points: number;
@@ -46,15 +48,19 @@ export function TopupCard({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-ink">Beli poin</h2>
-        <span className="text-xs text-muted">Transfer bank · aktif setelah dikonfirmasi admin</span>
+        <h2 className="text-title-2 text-ink">Beli poin</h2>
+        <span className="font-mono text-label uppercase text-muted">
+          Transfer bank · aktif setelah dikonfirmasi admin
+        </span>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-caption text-muted">
         Poin yang dibeli tidak hangus dan menambah saldo yang ada.
       </p>
 
+      {/* Nada peringatan, bukan emas: ini syarat yang perlu dibaca sebelum
+          membeli, dan emas di layar ini milik tombolnya. */}
       {!hasActivePlan && (
-        <p className="mt-3 rounded-xl bg-gold-400/15 px-3 py-2 text-xs text-[#9A6B08] ring-1 ring-gold-400/40">
+        <p className="mt-4 rounded-card bg-warning-bg px-3 py-2 text-caption text-warning ring-1 ring-warning/25">
           Anda belum punya paket aktif. Poin boleh dibeli sekarang, tapi baru bisa dipakai setelah
           paket Metadata atau Agent Anda aktif.
         </p>
@@ -62,29 +68,41 @@ export function TopupCard({
 
       <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {options.map((option) => (
-          <li
-            key={option.points}
-            className="flex flex-col rounded-2xl bg-navy-900/[0.03] p-4 ring-1 ring-navy-900/10"
-          >
-            <p className="text-lg font-extrabold text-ink">
-              {option.points.toLocaleString("id-ID")}
-              <span className="ml-1 text-xs font-medium text-muted">poin</span>
-            </p>
-            <p className="mt-0.5 text-sm font-semibold text-brand-blue">{option.priceLabel}</p>
-            <p className="mt-0.5 text-[11px] text-muted">{option.perPointLabel}</p>
-            <button
-              type="button"
-              onClick={() => buy(option.points)}
-              disabled={pending !== 0}
-              className="mt-3 rounded-full bg-gradient-to-br from-gold-500 to-gold-400 py-2 text-xs font-bold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
+          <li key={option.points}>
+            {/* Paket yang sedang diproses ditandai dengan varian accent, bukan
+                cincin tambahan lewat className — menimpa cincin dari luar gagal
+                secara diam-diam, sebabnya ditulis di Card.tsx. */}
+            <Card
+              variant={pending === option.points ? "accent" : "sunken"}
+              padding="sm"
+              className="flex h-full flex-col"
             >
-              {pending === option.points ? "Memproses..." : "Beli"}
-            </button>
+              <p className="font-mono text-title-2 tabular-nums text-ink">
+                {option.points.toLocaleString("id-ID")}
+                <span className="ml-1 font-sans text-caption font-normal text-muted">poin</span>
+              </p>
+              <p className="mt-1 font-mono text-body font-semibold tabular-nums text-brand-blue-ink">
+                {option.priceLabel}
+              </p>
+              <p className="mt-0.5 font-mono text-caption tabular-nums text-muted">
+                {option.perPointLabel}
+              </p>
+              <Button
+                variant="money"
+                size="sm"
+                full
+                className="mt-4"
+                onClick={() => buy(option.points)}
+                disabled={pending !== 0}
+              >
+                {pending === option.points ? "Memproses..." : "Beli"}
+              </Button>
+            </Card>
           </li>
         ))}
       </ul>
 
-      {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
+      {error && <p className="mt-3 text-body text-danger">{error}</p>}
     </div>
   );
 }

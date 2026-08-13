@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
 
 interface ProfileFormProps {
   initialName: string;
   initialPhone: string;
   initialBusinessName: string;
 }
-
-const inputClass =
-  "w-full rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
 
 export function ProfileForm({ initialName, initialPhone, initialBusinessName }: ProfileFormProps) {
   const [name, setName] = useState(initialName);
@@ -36,36 +36,39 @@ export function ProfileForm({ initialName, initialPhone, initialBusinessName }: 
   }
 
   return (
-    <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <p className="text-sm font-semibold text-ink">Informasi pelanggan</p>
-      <div className="mt-3 space-y-3">
-        <div>
-          <label className="text-sm text-muted">Nama</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="text-sm text-muted">Nomor HP</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="text-sm text-muted">Nama bisnis / toko</label>
-          <input
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-            className={inputClass}
-          />
-        </div>
+    <Card>
+      <h2 className="text-title-2 text-ink">Informasi pelanggan</h2>
+      {/*
+        Field, bukan label plus input yang dijahit sendiri: ketiga label di sini
+        sebelumnya tidak pernah tersambung ke isiannya, jadi mengkliknya tidak
+        memindahkan fokus dan pembaca layar membacakan isian tanpa nama.
+      */}
+      <div className="mt-4 space-y-4">
+        <Field
+          id="profil-nama"
+          label="Nama"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Field
+          id="profil-hp"
+          label="Nomor HP"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <Field
+          id="profil-bisnis"
+          label="Nama bisnis / toko"
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+        />
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? "Menyimpan..." : "Simpan"}
-        </button>
-        {message && <span className="text-sm text-muted">{message}</span>}
+        </Button>
+        {message && <span className="text-body text-muted">{message}</span>}
       </div>
-    </div>
+    </Card>
   );
 }

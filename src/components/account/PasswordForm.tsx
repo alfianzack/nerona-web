@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-
-const inputClass =
-  "w-full rounded-xl bg-navy-900/5 px-3 py-2 text-sm text-ink ring-1 ring-navy-900/10 placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-gold-400";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
 
 export function PasswordForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -40,36 +40,38 @@ export function PasswordForm() {
   }
 
   return (
-    <div className="mt-6 rounded-3xl bg-gradient-to-b from-surface to-surface2 p-6 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10">
-      <p className="text-sm font-semibold text-ink">Ganti password</p>
-      <div className="mt-3 space-y-3">
-        <input
+    <Card>
+      <h2 className="text-title-2 text-ink">Ganti password</h2>
+      {/*
+        Kata-katanya sama persis dengan placeholder yang dulu dipakai, hanya
+        pindah jadi label. Placeholder lenyap begitu orang mulai mengetik —
+        di formulir dua isian yang keduanya bertitik-titik, itu justru
+        menghapus satu-satunya penanda mana yang lama dan mana yang baru.
+      */}
+      <div className="mt-4 space-y-4">
+        <Field
+          id="password-lama"
+          label="Password lama"
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
-          placeholder="Password lama"
-          className={inputClass}
         />
-        <input
+        <Field
+          id="password-baru"
+          label="Password baru (min. 8 karakter)"
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Password baru (min. 8 karakter)"
-          className={inputClass}
         />
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving || !currentPassword || !newPassword}
-          className="rounded-full bg-gradient-to-br from-gold-500 to-gold-400 px-4 py-2 text-sm font-semibold text-navy-900 transition hover:brightness-110 disabled:opacity-50"
-        >
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button onClick={handleSave} disabled={saving || !currentPassword || !newPassword}>
           {saving ? "Menyimpan..." : "Ubah password"}
-        </button>
+        </Button>
         {message && (
-          <span className={`text-sm ${ok ? "text-emerald-600" : "text-rose-500"}`}>{message}</span>
+          <span className={`text-body ${ok ? "text-success" : "text-danger"}`}>{message}</span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

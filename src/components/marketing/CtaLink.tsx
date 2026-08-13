@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 
 interface CtaLinkProps {
   href: string;
@@ -6,16 +6,28 @@ interface CtaLinkProps {
   children: React.ReactNode;
 }
 
+/**
+ * Ajakan pemasaran yang sama, dipakai di atas kanvas terang dan di dalam pita
+ * navy.
+ *
+ * Berkas ini yang terakhir memakai biru bawaan Tailwind — dua langkah warna
+ * yang tidak ada di palet mana pun — dan di jalur terangnya isian biru itu
+ * dipasangkan dengan teks `ink`: gelap di atas gelap, nyaris tidak terbaca.
+ * Sekarang bentuk, ukuran, dan jejak fokusnya diserahkan ke ButtonLink,
+ * sehingga sama persis dengan tombol utama di halaman yang sama.
+ *
+ * Nama kelas lamanya sengaja tidak ditulis di komentar ini: pemindai Tailwind
+ * membaca komentar juga, dan akan menghidupkan kembali kelas yang baru dibuang.
+ *
+ * `onDark` memakai variant secondary, bukan warna khusus: di dalam pita navy,
+ * `bg-surface` tetap putih dan `text-ink` tetap navy gelap, jadi variant itu
+ * memang sudah pil putih berteks gelap. `primary` justru tidak bisa dipakai di
+ * sana — token `--action` adalah warna yang sedang jadi latar.
+ */
 export function CtaLink({ href, tone = "onLight", children }: CtaLinkProps) {
-  const base = "inline-block rounded-full px-6 py-2.5 text-sm font-medium transition";
-  const styles =
-    tone === "onDark"
-      ? "bg-white text-blue-700 hover:bg-blue-50"
-      : "bg-blue-600 text-ink hover:bg-blue-700";
-
   return (
-    <Link href={href} className={`${base} ${styles}`}>
+    <ButtonLink href={href} variant={tone === "onDark" ? "secondary" : "primary"} size="lg">
       {children}
-    </Link>
+    </ButtonLink>
   );
 }

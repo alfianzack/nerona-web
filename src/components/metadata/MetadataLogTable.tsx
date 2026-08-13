@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 
 export interface MetadataLogRow {
   id: string;
@@ -43,26 +45,29 @@ function KeywordCell({ keywords, count }: { keywords: string; count: number }) {
     }
   }
 
-  if (!keywords) return <span className="text-xs text-muted">—</span>;
+  if (!keywords) return <span className="text-caption text-muted">—</span>;
 
   return (
     <div className="min-w-0">
-      <p className={`text-xs text-muted ${open ? "" : "line-clamp-2"}`}>{keywords}</p>
-      <div className="mt-1 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-[11px] font-medium text-ink underline-offset-2 hover:underline"
-        >
-          {open ? "Tutup" : `Lihat ${count} keyword`}
-        </button>
-        <button
-          type="button"
-          onClick={copy}
-          className="text-[11px] font-medium text-ink underline-offset-2 hover:underline"
-        >
+      <p className={`text-caption text-muted ${open ? "" : "line-clamp-2"}`}>{keywords}</p>
+      {/* Margin kiri negatif menarik padding tombol pertama kembali sejajar
+          dengan teks di atasnya — tanpa itu barisnya terlihat menjorok. */}
+      <div className="-ml-3 mt-1 flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
+          {/* Satu span membungkus seluruh label karena isi tombol ditata
+              dengan flex: dua potongan teks yang berdiri sendiri akan diberi
+              jarak antar-item, bukan spasi biasa. */}
+          {open ? (
+            "Tutup"
+          ) : (
+            <span>
+              Lihat <span className="font-mono tabular-nums">{count}</span> keyword
+            </span>
+          )}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={copy}>
           {copied ? "Tersalin" : "Salin"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -71,7 +76,7 @@ function KeywordCell({ keywords, count }: { keywords: string; count: number }) {
 export function MetadataLogTable({ rows }: { rows: MetadataLogRow[] }) {
   if (rows.length === 0) {
     return (
-      <p className="py-6 text-sm text-muted">
+      <p className="py-6 text-body text-muted">
         Belum ada metadata yang tercatat. Riwayat terisi otomatis setiap kali extension
         selesai men-generate satu gambar.
       </p>
@@ -79,16 +84,18 @@ export function MetadataLogTable({ rows }: { rows: MetadataLogRow[] }) {
   }
 
   return (
-    <ul className="divide-y divide-navy-900/10">
+    <ul className="divide-y divide-divider">
       {rows.map((row) => (
         <li key={row.id} className="py-3">
           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-            <p className="min-w-0 flex-1 text-sm font-medium text-ink">{row.title || "(tanpa judul)"}</p>
-            <span className="whitespace-nowrap rounded-full bg-navy-900/5 px-2.5 py-0.5 text-[11px] font-medium text-ink ring-1 ring-navy-900/10">
-              {row.marketplace}
-            </span>
+            <p className="min-w-0 flex-1 text-body font-medium text-ink">
+              {row.title || "(tanpa judul)"}
+            </p>
+            <Badge className="whitespace-nowrap">{row.marketplace}</Badge>
           </div>
-          <p className="mt-0.5 text-[11px] text-muted">
+          {/* Baris keterangan: mono supaya tanggal dan URL berbaris, tapi huruf
+              kecil biasa karena isinya bukan label kolom. */}
+          <p className="mt-1 font-mono text-label text-muted">
             {fmtDateTime(row.createdAt)}
             {row.owner ? ` · ${row.owner}` : ""}
             {row.pageUrl ? (

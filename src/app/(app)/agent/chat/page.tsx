@@ -5,6 +5,7 @@ import { getOwnProfile } from "@/lib/agent/profile";
 import { listChatHistory } from "@/lib/agent/messages";
 import { getBalance } from "@/lib/points";
 import { AGENT_ENABLED } from "@/lib/features";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AgentChatPanel } from "@/components/agent/AgentChatPanel";
 
 export default async function AgentChatPage() {
@@ -16,12 +17,13 @@ export default async function AgentChatPage() {
 
   if (!profile || profile.status !== "active") {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-16">
-        <h1 className="text-2xl font-semibold text-ink">Chat Asisten</h1>
-        <p className="mt-4 text-sm text-muted">
-          Akun agent Anda belum aktif. Lakukan pembayaran lalu hubungi admin Nerona untuk
-          mengaktifkan asisten AI Anda.
-        </p>
+      <main className="bg-canvas">
+        <div className="mx-auto max-w-2xl px-6 py-band">
+          <PageHeader
+            title="Chat Asisten"
+            description="Akun agent Anda belum aktif. Lakukan pembayaran lalu hubungi admin Nerona untuk mengaktifkan asisten AI Anda."
+          />
+        </div>
       </main>
     );
   }
@@ -32,24 +34,30 @@ export default async function AgentChatPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-2xl font-semibold text-ink">Chat Asisten</h1>
-      <p className="mt-2 text-sm text-muted">
-        Asisten yang sama dengan WhatsApp.{" "}
-        <Link href="/agent/dashboard" className="text-gold-500 hover:underline">
-          Hubungkan nomor WhatsApp
-        </Link>{" "}
-        kalau ingin memakainya dari HP juga.
-      </p>
+    <main className="bg-canvas">
+      <div className="mx-auto max-w-2xl px-6 py-band">
+        <PageHeader title="Chat Asisten" />
 
-      <AgentChatPanel
-        initialMessages={history.map((m) => ({
-          direction: m.direction,
-          body: m.body,
-          channel: m.channel,
-        }))}
-        initialPoints={points}
-      />
+        {/* Tautan di tengah kalimat memakai warna aksen biasa, bukan TextLink:
+            kurung sudut milik aksi kedua yang berdiri sendiri, dan di tengah
+            kalimat ia terbaca sebagai tanda baca yang salah. */}
+        <p className="mt-3 text-body text-muted">
+          Asisten yang sama dengan WhatsApp.{" "}
+          <Link href="/agent/dashboard" className="text-accent hover:underline">
+            Hubungkan nomor WhatsApp
+          </Link>{" "}
+          kalau ingin memakainya dari HP juga.
+        </p>
+
+        <AgentChatPanel
+          initialMessages={history.map((m) => ({
+            direction: m.direction,
+            body: m.body,
+            channel: m.channel,
+          }))}
+          initialPoints={points}
+        />
+      </div>
     </main>
   );
 }

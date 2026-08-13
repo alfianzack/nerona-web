@@ -35,7 +35,11 @@ export async function pricingProducts(agentEnabled: boolean = AGENT_ENABLED): Pr
   const products: PricingProduct[] = [
     {
       key: "metadata",
-      label: "🖼️ Metadata",
+      // Tanpa emoji. Label ini dirender apa adanya sebagai isi tab di
+      // PricingSwitcher, dan emoji di sana dirender oleh sistem operasi —
+      // bentuk, bobot, dan warnanya berbeda di tiap mesin. Ikon produknya
+      // hidup di sisi tampilan, tempat ia bisa mengikuti warna teks.
+      label: "Metadata",
       subheading: "Metadata otomatis untuk kontributor stock.",
       tiersByDuration: byDuration(metadataSets),
     },
@@ -44,7 +48,7 @@ export async function pricingProducts(agentEnabled: boolean = AGENT_ENABLED): Pr
   if (agentSets) {
     products.push({
       key: "agent",
-      label: "💬 Agent",
+      label: "Agent",
       subheading: "Asisten AI WhatsApp untuk pemilik bisnis.",
       tiersByDuration: byDuration(agentSets),
     });

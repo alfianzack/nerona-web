@@ -2,11 +2,10 @@ import { requireAdmin } from "@/lib/session-guards";
 import { getMetadataLogStats, listAllMetadataLogs } from "@/lib/metadata-log";
 import { MetadataLogSummary } from "@/components/metadata/MetadataLogSummary";
 import { MetadataLogTable } from "@/components/metadata/MetadataLogTable";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata = { title: "Metadata — Admin Nerona" };
-
-const cardClass =
-  "rounded-2xl bg-gradient-to-b from-surface to-surface2 p-5 shadow-lg shadow-navy-900/10 ring-1 ring-navy-900/10";
 
 export default async function AdminMetadataPage() {
   await requireAdmin();
@@ -16,36 +15,41 @@ export default async function AdminMetadataPage() {
     listAllMetadataLogs(100),
   ]);
 
+  // Tanpa <main> dan tanpa pembungkus lebar: keduanya sudah datang dari layout
+  // (admin). Menambahkannya lagi di sini berarti dua landmark <main> bersarang
+  // — HTML tidak sah, dan pembaca layar melihat dua wilayah utama — plus
+  // padding samping dan vertikal yang dobel.
   return (
-    <main className="bg-canvas">
-      <div className="mx-auto max-w-4xl px-6 py-14 sm:py-16">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Metadata</h1>
-        <p className="mt-1 text-sm text-muted">
-          Metadata yang di-generate semua tenant lewat extension.
-        </p>
+    <>
+      <PageHeader
+        title="Metadata"
+        description="Metadata yang di-generate semua tenant lewat extension."
+      />
 
-        <section className={`mt-8 ${cardClass}`}>
-          <MetadataLogSummary stats={stats} />
-        </section>
+      {/* Tanpa pembungkus kartu: MetadataLogSummary mencetak kartunya sendiri
+          lewat Stat, jadi membungkusnya lagi menghasilkan kartu di dalam
+          kartu. Pemanggil tenant di /riwayat-metadata sudah begini. */}
+      <section className="mt-8">
+        <MetadataLogSummary stats={stats} />
+      </section>
 
-        <section className={`mt-6 ${cardClass}`}>
-          <h2 className="text-sm font-semibold text-ink">100 terakhir</h2>
-          <div className="mt-2">
-            <MetadataLogTable
-              rows={logs.map((log) => ({
-                id: log.id,
-                marketplace: log.marketplace,
-                pageUrl: log.pageUrl,
-                title: log.title,
-                keywords: log.keywords,
-                keywordCount: log.keywordCount,
-                createdAt: log.createdAt.toISOString(),
-                owner: log.user.name || log.user.email,
-              }))}
-            />
-          </div>
-        </section>
-      </div>
-    </main>
+      <Card padding="lg" className="mt-6">
+        <h2 className="text-title-2 text-ink">100 terakhir</h2>
+        <div className="mt-4">
+          <MetadataLogTable
+            rows={logs.map((log) => ({
+              id: log.id,
+              marketplace: log.marketplace,
+              pageUrl: log.pageUrl,
+              title: log.title,
+              keywords: log.keywords,
+              keywordCount: log.keywordCount,
+              createdAt: log.createdAt.toISOString(),
+              owner: log.user.name || log.user.email,
+            }))}
+          />
+        </div>
+      </Card>
+    </>
   );
 }
