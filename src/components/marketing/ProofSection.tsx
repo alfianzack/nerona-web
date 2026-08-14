@@ -46,7 +46,11 @@ export function ProofSection({
   title: string;
   body: string;
 }): JSX.Element | null {
-  if (METADATA_SAMPLES.length === 0) return null;
+  // Disaring per entri, bukan sekadar dicek kosong: teks metadata dan berkas
+  // karyanya datang terpisah, jadi entri boleh terisi lengkap teksnya sambil
+  // menunggu gambarnya. Sebabnya ditulis di lib/marketing-samples.ts.
+  const samples = METADATA_SAMPLES.filter((sample) => sample.imageReady);
+  if (samples.length === 0) return null;
 
   return (
     <Band id={id} tone="sunken">
@@ -54,7 +58,7 @@ export function ProofSection({
       <p className="mt-5 max-w-2xl text-body-lg text-muted">{body}</p>
 
       <div className="mt-12 space-y-6">
-        {METADATA_SAMPLES.map((sample) => (
+        {samples.map((sample) => (
           <SampleCard key={sample.src} sample={sample} />
         ))}
       </div>
@@ -92,10 +96,27 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
           {/* Judul dan deskripsi berbahasa Inggris apa adanya — lihat sebab
               lengkapnya di docblock lib/marketing-samples.ts. */}
           <h3 className="mt-3 text-title-2 text-ink">{sample.title}</h3>
-          <p className="mt-2.5 text-body text-muted">{sample.description}</p>
+          {sample.description && (
+            <p className="mt-2.5 text-body text-muted">{sample.description}</p>
+          )}
 
+          {/* Saat generate menyentuh plafon marketplace-nya, angkanya ditulis
+              sebagai pecahan. "20 dari 20 maksimum Canva" membuktikan sesuatu
+              yang jumlah telanjang tidak bisa: alatnya tahu batas tujuannya,
+              bukan memuntahkan daftar yang sama ke semua marketplace. */}
           <p className="mt-7 font-mono text-label uppercase text-muted">
-            <span className="tabular-nums">{sample.keywordTotal}</span> kata kunci
+            {sample.keywordCap === sample.keywordTotal && sample.keywordCap ? (
+              <>
+                <span className="tabular-nums text-ink">
+                  {sample.keywordTotal} dari {sample.keywordCap}
+                </span>{" "}
+                kata kunci &mdash; maksimum {sample.marketplace}
+              </>
+            ) : (
+              <>
+                <span className="tabular-nums text-ink">{sample.keywordTotal}</span> kata kunci
+              </>
+            )}
           </p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {shown.map((keyword) => (
@@ -114,8 +135,16 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
           </ul>
 
           <p className="mt-7 border-t border-divider pt-4 font-mono text-caption text-muted">
-            {sample.marketplace} &middot;{" "}
-            <span className="tabular-nums">{formatDetik(sample.seconds)}</span> detik
+            {sample.marketplace}
+            {/* Detiknya cuma ditulis kalau benar-benar diukur. Tidak ada yang
+                mencatatnya — bukan basis data, bukan panel ekstensi — jadi
+                mengisinya dengan perkiraan berarti mengarang pengukuran. */}
+            {sample.seconds !== undefined && (
+              <>
+                {" "}
+                &middot; <span className="tabular-nums">{formatDetik(sample.seconds)}</span> detik
+              </>
+            )}
           </p>
         </div>
       </div>

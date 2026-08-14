@@ -78,29 +78,145 @@
  */
 
 export interface MetadataSample {
-  /** Path di /public, mis. "/contoh/sawah-terasering.jpg". */
+  /** Path di /public, mis. "/contoh/forklift-oranye.png". */
   src: string;
-  /** Bahasa Indonesia — menggambarkan foto, untuk pembaca layar. */
+  /**
+   * Gerbang per-entri: entri baru dirender setelah berkas gambarnya
+   * benar-benar ada di public/.
+   *
+   * Ada karena metadata dan gambarnya datang terpisah — teksnya bisa disalin
+   * dari panel ekstensi seketika, sedangkan berkas karyanya menyusul. Tanpa
+   * gerbang ini, entri yang sudah terisi teksnya akan menggambar ikon gambar
+   * rusak di bagian yang justru tugasnya membuat halaman terlihat mapan.
+   * Gambar yang berkasnya tidak ada tidak pernah gagal dengan rapi.
+   */
+  imageReady: boolean;
+  /** Bahasa Indonesia — menggambarkan karyanya, untuk pembaca layar. */
   alt: string;
   /** Nama marketplace tujuan, mis. "Adobe Stock". */
   marketplace: string;
-  /** Lama generate dalam detik; pecahannya jangan dibulatkan. */
-  seconds: number;
   /** BAHASA INGGRIS — judul yang benar-benar dihasilkan. */
   title: string;
-  /** BAHASA INGGRIS — deskripsi yang benar-benar dihasilkan. */
-  description: string;
   /**
-   * BAHASA INGGRIS, urutan asli dari AI. Dua belas pertama yang ditampilkan;
-   * sisanya boleh ikut ditulis, tapi tidak wajib.
+   * BAHASA INGGRIS — deskripsi yang benar-benar dihasilkan, kalau ada.
+   *
+   * Opsional, karena panel ekstensi tidak selalu menampilkannya: pada alur
+   * Canva dan Adobe Stock yang terlihat di layar, panelnya mencetak judul dan
+   * kata kunci saja. Memaksakan kolom ini berarti mengarang kalimat yang tidak
+   * pernah dihasilkan.
    */
+  description?: string;
+  /**
+   * Lama generate dalam detik, kalau sempat diukur.
+   *
+   * Opsional karena tidak ada yang mencatatnya — bukan di basis data, bukan di
+   * panel. Menuliskannya berarti mengukur sendiri dengan jam; menebaknya
+   * berarti mengarang.
+   */
+  seconds?: number;
+  /** BAHASA INGGRIS, urutan asli dari AI. Dua belas pertama yang ditampilkan. */
   keywords: string[];
   /** Jumlah kata kunci sebenarnya — tidak boleh lebih kecil dari keywords.length. */
   keywordTotal: number;
+  /**
+   * Plafon kata kunci marketplace tujuan, kalau generate ini menyentuhnya.
+   *
+   * Ini bukti terkuat yang bisa diberikan dua contoh sekaligus, dan tidak bisa
+   * diberikan satu contoh saja: Canva menerima maksimum 20 kata kunci dan
+   * generate-nya berhenti tepat di 20, sementara Adobe Stock yang berplafon
+   * jauh lebih tinggi mendapat 33 — sebanyak yang gambarnya memang pantas
+   * dapat. Dua angka berbeda dari satu alat memperlihatkan alatnya tahu tujuan
+   * unggahnya, bukan memuntahkan daftar yang sama ke mana-mana.
+   *
+   * Isi HANYA kalau keywordTotal benar-benar menyentuh plafonnya. Kalau
+   * angkanya di bawah plafon, mencantumkannya justru terbaca seperti kekurangan.
+   */
+  keywordCap?: number;
 }
 
 /**
- * Sengaja kosong sampai owner mengisinya dengan foto dan keluaran sungguhan.
- * Kosong berarti bagiannya tidak muncul; itu keadaan yang benar, bukan cacat.
+ * Contoh sungguhan dari generate yang benar-benar dijalankan owner.
+ *
+ * Teksnya disalin apa adanya dari panel ekstensi — judul, kata kunci, dan
+ * urutannya tidak diubah sama sekali. Perhatikan "rehal" di contoh kedua:
+ * istilah penyangga kitab yang hanya muncul kalau AI-nya benar-benar melihat
+ * gambarnya. Kata kunci karangan tidak pernah punya istilah senarrow itu, dan
+ * itulah kenapa bagian ini bekerja.
+ *
+ * Keduanya masih `imageReady: false` karena berkas karyanya belum ada di
+ * public/contoh/. Selama itu, ProofSection tidak merender apa pun.
  */
-export const METADATA_SAMPLES: MetadataSample[] = [];
+export const METADATA_SAMPLES: MetadataSample[] = [
+  {
+    src: "/contoh/forklift-oranye.png",
+    imageReady: false,
+    alt: "Ilustrasi vektor forklift oranye bergaya datar, tampak samping",
+    marketplace: "Canva",
+    title: "Orange Forklift Industrial Vehicle Vector Illustration",
+    keywords: [
+      "forklift",
+      "industrial vehicle",
+      "logistics",
+      "construction equipment",
+      "vector illustration",
+      "supply chain",
+      "orange",
+      "flat design",
+      "industrial machinery",
+      "business icon",
+      "forklift icon",
+      "graphic design element",
+      "industrial truck",
+      "logistics icon",
+      "flat vector",
+      "simple graphic",
+      "yellow forklift",
+      "forklift truck",
+    ],
+    keywordTotal: 20,
+    keywordCap: 20,
+  },
+  {
+    src: "/contoh/anak-muslim-belajar.png",
+    imageReady: false,
+    alt: "Ilustrasi sekelompok anak muslim duduk belajar dan menulis bersama",
+    marketplace: "Adobe Stock",
+    title: "Group of Muslim Children Studying and Writing Together",
+    keywords: [
+      "muslim children",
+      "kids studying",
+      "islamic education",
+      "reading books",
+      "ramadan kids",
+      "student group",
+      "learning together",
+      "writing in notebook",
+      "rehal",
+      "quran study",
+      "islamic school",
+      "diverse children",
+      "cute illustration",
+      "vector art",
+      "religious education",
+      "glowing lanterns",
+      "children character",
+      "islamic culture",
+      "study group",
+      "education concept",
+      "back to school",
+      "ramadan kareem",
+      "muslim lifestyle",
+      "traditional decor",
+      "cartoon children",
+      "islamic studies",
+      "youth group",
+      "sitting on floor",
+      "colorful illustration",
+      "book stand",
+      "child development",
+      "primary school",
+      "vector graphics",
+    ],
+    keywordTotal: 33,
+  },
+];
