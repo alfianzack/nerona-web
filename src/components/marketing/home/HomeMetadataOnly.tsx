@@ -1,6 +1,9 @@
 import { Hero } from "@/components/marketing/Hero";
+import { TrustBar } from "@/components/marketing/TrustBar";
 import { ContributorPainSection } from "@/components/marketing/ContributorPainSection";
 import { FeatureSection } from "@/components/marketing/FeatureSection";
+import { ProofSection } from "@/components/marketing/ProofSection";
+import { ComparisonSection } from "@/components/marketing/ComparisonSection";
 import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
 import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
@@ -13,61 +16,60 @@ import { RejectAnalysisMockup } from "@/components/marketing/mockups/RejectAnaly
 import { metadataTiers } from "@/lib/pricing-tiers";
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
+import { METADATA_FAQ } from "@/lib/marketing-faq";
 
 const MARKETPLACE_NAMES = CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ");
-
-/**
- * Angka poin Free diambil dari default kode. Owner bisa menimpanya di
- * Pengaturan; kalau itu terjadi, kalimat di bawah harus ikut diperbarui.
- * Alternatifnya satu query DB di halaman yang selain ini tidak butuh apa pun.
- */
-const FREE_METADATA_POINTS = DEFAULT_PLAN_POINTS.metadata.free;
 
 /** Batas satu batch di ekstensi (BATCH_MAX_ITEMS di nerona_medata). */
 const BATCH_MAX_ITEMS = 50;
 
-const METADATA_FAQ = [
-  {
-    question: "Apakah saya perlu kartu kredit untuk mulai?",
-    answer:
-      "Tidak. Paket Free aktif seketika setelah daftar, tanpa data pembayaran apa pun. Free adalah poin percobaan sekali per akun, bukan kuota bulanan.",
-  },
-  {
-    question: "Marketplace apa saja yang didukung?",
-    answer: `${MARKETPLACE_NAMES}.`,
-  },
-  {
-    question: "Apa itu poin, dan bagaimana kalau habis?",
-    answer:
-      "Poin terpakai setiap kali AI bekerja — besarnya tergantung gambar dan panjang teks yang diproses. Alat berhenti sementara kalau poin habis; mengaktifkan atau memperpanjang paket menambahkan poin baru. Poin yang belum terpakai tidak hangus.",
-  },
-  {
-    question: "Bagaimana cara memasang ekstensinya?",
-    answer:
-      "Unduh folder ekstensi dari halaman Profile Anda, lalu muat lewat Chrome dengan Load unpacked. Belum melalui Chrome Web Store, jadi pembaruan kami beritahukan dari dalam aplikasi.",
-  },
-  {
-    question: "Bagaimana cara pembayarannya?",
-    answer:
-      "Lewat transfer bank. Pilih paket, kirim order, transfer sesuai nominal, lalu unggah bukti transfer — tim kami memverifikasi dan mengaktifkan akun Anda, biasanya di hari yang sama.",
-  },
-];
-
 /**
  * Beranda satu produk: halaman jualan Nerona Metadata.
  *
- * Isinya menyerap halaman /metadata yang lama (yang sekarang mengalihkan ke
- * sini) plus dua bagian baru: keluhan kontributor dan reject analyzer. Band
- * navy pada reject analyzer menggantikan satu-satunya bagian gelap di
- * beranda, yang dulu milik Agent — tanpa itu, sebelas bagian terang
- * berturut-turut.
+ * Susunannya ditulis ulang setelah audit menemukan halaman ini memakai DUA
+ * bentuk bagian saja — empat pita dua-kolom bolak-balik, lalu lima tumpukan
+ * rata tengah. Mata belajar polanya di bagian ketiga lalu berhenti melihat.
+ * Itu penyakit yang sama dengan monokultur komponen yang sudah dibereskan,
+ * hanya satu tingkat lebih tinggi.
+ *
+ * Empat bentuk baru menyisip di antara yang lama, masing-masing dengan
+ * siluetnya sendiri:
+ *
+ * - TrustBar: strip tipis, bukan pita. Angkanya nyata dari basis data, dan
+ *   seluruh barisnya tidak dirender kalau belum cukup besar.
+ * - ProofSection: foto sungguhan bersanding dengan metadata yang benar-benar
+ *   dihasilkan untuknya. Ini bagian terpenting di halaman — pembaca menilai
+ *   mutu AI langsung dari kata kuncinya, bukan dari kalimat kita. Belum
+ *   dirender sampai owner mengisi contohnya; sampai saat itu ia mengembalikan
+ *   kosong, bukan bingkai gambar yang menganga.
+ * - ComparisonSection: dua kolom berdampingan, memecah deretan empat
+ *   FeatureSection jadi dua-dua.
+ * - FaqSection: judul di samping, daftar di kanan.
+ *
+ * Latarnya juga berselang-seling sampai bawah sekarang. Sebelumnya pergantian
+ * berhenti setelah bagian keenam dan menyisakan empat pita putih berturut-turut.
  */
 export async function HomeMetadataOnly() {
   const tiers = await metadataTiers();
 
+  /**
+   * Poin Free yang BENAR-BENAR berlaku, bukan default kode.
+   *
+   * metadataTiers() sudah menyelesaikannya lewat rantai DB → env → default di
+   * request yang sama, jadi membacanya dari sini berbiaya nol query tambahan.
+   * Sebelumnya hero dan banner penutup sama-sama membaca konstanta kode, dan
+   * keduanya diam-diam salah begitu owner menimpa nilainya di Pengaturan.
+   */
+  const freePoints =
+    tiers.find((tier) => tier.name === "Free")?.poinAwal ?? DEFAULT_PLAN_POINTS.metadata.free;
+
   return (
     <main>
-      <Hero />
+      <Hero freePoints={freePoints} />
+
+      {/* Mengembalikan kosong sampai angkanya melewati ambang — lihat sebabnya
+          di lib/marketing-stats.ts. Menaruhnya di sini aman sejak hari pertama. */}
+      <TrustBar />
 
       <ContributorPainSection />
 
@@ -79,13 +81,25 @@ export async function HomeMetadataOnly() {
         theme="dark"
         imageSide="left"
       />
+
+      {/* Ditaruh tepat setelah klaim pertama, bukan di dasar halaman: klaim
+          "metadata otomatis" paling murah dibuktikan persis setelah diucapkan. */}
+      <ProofSection
+        id="contoh"
+        title="Ini hasilnya, apa adanya."
+        body="Foto sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya. Nilai sendiri kata kuncinya sebelum Anda mendaftar."
+      />
+
       <FeatureSection
         title="Kata kunci yang konsisten."
         body="Puluhan kata kunci hasil AI — sebanyak yang marketplace tujuan izinkan — plus ruang untuk kata kunci Anda sendiri di setiap unggahan."
         mockup={<KeywordChipsMockup />}
-        theme="light"
+        theme="dark"
         imageSide="right"
       />
+
+      <ComparisonSection id="banding" />
+
       <FeatureSection
         title="Dibuat untuk unggahan massal."
         body="Pilih banyak gambar sekaligus, pantau progres per gambar, dan terapkan ke semua tab marketplace yang terbuka."
@@ -98,6 +112,7 @@ export async function HomeMetadataOnly() {
         theme="dark"
         imageSide="left"
       />
+
       <FeatureSection
         title="Ditolak? Cari tahu kenapa."
         body="Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang sebenarnya perlu diperbaiki — supaya unggahan berikutnya tidak mengulang kesalahan yang sama."
@@ -114,6 +129,7 @@ export async function HomeMetadataOnly() {
       <MarketplaceRow />
 
       <StepsSection
+        tone="sunken"
         title="Mulai dalam tiga langkah"
         subtitle="Tanpa kartu kredit."
         steps={[
@@ -139,13 +155,14 @@ export async function HomeMetadataOnly() {
         tiers={tiers}
       />
 
-      {/* Nada pitanya diserahkan ke FaqSection sendiri — nilai yang dulu
-          dioper di sini persis sama dengan default komponennya. */}
+      {/* Daftarnya pindah ke lib/marketing-faq.ts: isinya tumbuh dari lima jadi
+          sepuluh, dan tiap jawaban baru diturunkan dari kode yang benar-benar
+          berjalan — sumbernya dicatat per pertanyaan di berkas itu. */}
       <FaqSection id="faq" items={METADATA_FAQ} />
 
       <CtaBanner
         title="Coba gratis hari ini"
-        body={`Paket Free memberi ${FREE_METADATA_POINTS} poin Metadata, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk menilai hasilnya sebelum Anda memutuskan.`}
+        body={`Paket Free memberi ${freePoints} poin Metadata, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk menilai hasilnya sebelum Anda memutuskan.`}
         ctaLabel="Buat akun gratis"
         ctaHref="/register"
       />
