@@ -50,8 +50,11 @@ export default function RegisterPage() {
   }
 
   if (submitted) {
+    // Lebarnya harus sama dengan formulir yang baru saja diisi: tanpa ini
+    // kartunya menyempit satu langkah persis pada detik orang menekan
+    // "Buat akun", dan halaman terlihat tersentak tanpa sebab.
     return (
-      <AuthShell title="Cek email Anda">
+      <AuthShell size="md" title="Cek email Anda">
         <div className="text-center">
           <Icon name="check-circle" className="mx-auto h-10 w-10 text-success" />
           <p className="mt-4 text-body text-muted">
