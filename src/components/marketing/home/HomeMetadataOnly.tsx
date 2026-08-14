@@ -167,7 +167,12 @@ export async function HomeMetadataOnly() {
       {/* Daftarnya pindah ke lib/marketing-faq.ts: isinya tumbuh dari lima jadi
           sepuluh, dan tiap jawaban baru diturunkan dari kode yang benar-benar
           berjalan — sumbernya dicatat per pertanyaan di berkas itu. */}
-      <FaqSection id="faq" items={METADATA_FAQ} />
+      {/* Cekung, supaya pergantian latar benar-benar sampai ke bawah.
+          Sebelumnya bagian harga dan bagian ini sama-sama putih — dua pita
+          putih berturut-turut tepat sebelum banner penutup, persis cacat yang
+          docblock di atas mengaku sudah dibereskan. Terhitung dari peramban,
+          bukan dari membaca kode: keduanya rgb(255,255,255). */}
+      <FaqSection id="faq" tone="sunken" items={METADATA_FAQ} />
 
       <CtaBanner
         title="Coba gratis hari ini"

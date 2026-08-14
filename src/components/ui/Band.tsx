@@ -1,6 +1,6 @@
 import { cn } from "./cn";
 
-type BandTone = "plain" | "sunken" | "navy";
+type BandTone = "plain" | "sunken" | "navy" | "navy-gradient";
 type BandAlign = "left" | "center";
 
 /**
@@ -11,13 +11,21 @@ type BandAlign = "left" | "center";
  * naik dari max-w-5xl ke 980px karena itu ukuran isi apple.com, dan pada
  * ukuran judul yang baru, wadah lama membuat baris pecah terlalu cepat.
  *
- * Pita `navy` adalah satu-satunya permukaan gelap yang tersisa. Isinya harus
- * membalik warnanya sendiri — token ink/muted di dalamnya tetap warna terang.
+ * Pita gelap ada dua nada, dan keduanya menuntut isinya membalik warnanya
+ * sendiri — token ink/muted di dalamnya tetap warna terang.
+ *
+ * `navy-gradient` berdiri sebagai nada tersendiri, bukan sebagai nada rata yang
+ * ditimpa gradien dari luar lewat className. Sebabnya sama dengan sebab varian
+ * kartu accent ada: begitu dua utilitas menyetel properti yang sama pada satu
+ * elemen, pemenangnya adalah yang jatuh belakangan di CSS keluaran menurut
+ * abjad, bukan yang ditulis belakangan. Menyediakan nadanya membuat kasus itu
+ * mustahil ditulis salah.
  */
 const TONES: Record<BandTone, string> = {
   plain: "bg-canvas",
   sunken: "bg-surface-sunken",
   navy: "bg-navy-900 text-white",
+  "navy-gradient": "bg-gradient-to-br from-navy-900 to-navy-700 text-white",
 };
 
 export function Band({

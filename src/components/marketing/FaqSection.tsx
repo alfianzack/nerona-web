@@ -43,11 +43,18 @@ export function FaqSection({
   items,
   title = "Pertanyaan umum",
   className = "",
+  tone,
   id,
 }: {
   items: FaqItem[];
   title?: string;
   className?: string;
+  /**
+   * Dioper ke pita, bukan ditimpa lewat className: latar pita adalah properti
+   * yang sama dengan latar yang akan ditumpangkan, dan pemenangnya ditentukan
+   * urutan abjad di CSS keluaran.
+   */
+  tone?: "plain" | "sunken";
   /** Anchor target, so the top nav can link to this section. */
   id?: string;
 }) {
@@ -56,7 +63,7 @@ export function FaqSection({
   const group = id ? `faq-${id}` : "faq";
 
   return (
-    <Band id={id} className={className}>
+    <Band id={id} tone={tone} className={className}>
       <div className="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:gap-x-16">
         {/* Menempel saat digulir, dengan jarak aman dari bilah atas setinggi
             56px yang juga menempel. */}
