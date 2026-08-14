@@ -78,15 +78,22 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
       <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         {/* Pembungkus yang menentukan tinggi, bukan gambarnya: di layar sempit
             lewat rasio 4:3, di layar lebar lewat tinggi barisnya di kisi —
-            sehingga foto selalu setinggi kolom metadata di sebelahnya. */}
-        <div className="relative aspect-[4/3] bg-surface-sunken md:aspect-auto md:min-h-[20rem]">
+            sehingga karyanya selalu setinggi kolom metadata di sebelahnya.
+
+            Dimuat penuh ke dalam bingkai, bukan diisikan sampai terpotong.
+            Kontributor stock mengunggah ilustrasi dan vektor, bukan cuma foto,
+            dan pada karya vektor pemotongan tepi memenggal bagian yang justru
+            dinamai kata kuncinya — garpu sebuah forklift, misalnya. Karya yang
+            terpotong di bagian bukti melemahkan persis hal yang sedang
+            dibuktikan. */}
+        <div className="relative aspect-[4/3] bg-surface-sunken p-6 md:aspect-auto md:min-h-[20rem]">
           <Image
             src={sample.src}
             alt={sample.alt}
-            width={1200}
-            height={900}
+            width={1400}
+            height={1050}
             sizes="(min-width: 768px) 45vw, 100vw"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full p-6 object-contain"
           />
         </div>
 

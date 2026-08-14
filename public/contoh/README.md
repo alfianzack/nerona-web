@@ -31,10 +31,14 @@ lokal tapi salah di produksi.
 
 - Karya milik sendiri. Berkas ini terbit di domain Nerona, jadi lisensinya
   harus benar-benar milik Anda.
-- Lanskap, sekitar 1200–1600px sisi panjang. Lebih besar hanya memperberat
-  repo; halaman tidak pernah menampilkannya sebesar itu.
+- **Sekitar 1200–1600px sisi panjang.** Ini batas dua arah, dan dua-duanya
+  pernah kena. Ekspor vektor resolusi penuh bisa 11.000px dan 1MB lebih —
+  memperberat repo tanpa menambah apa pun, karena halaman tidak pernah
+  menampilkannya sebesar itu. Sebaliknya berkas 220px akan pecah: kartunya
+  merender gambar sekitar 600px, dan bukti yang pecah melemahkan persis hal
+  yang sedang dibuktikan.
 - Di bawah ~300KB per berkas. PNG boleh kalau karyanya vektor datar dengan
   warna sedikit; kalau ada gradien atau foto, JPEG jauh lebih kecil.
-- Subjek pentingnya jangan menempel di tepi bingkai. Di layar sempit
-  gambarnya dipotong 4:3, dan di layar lebar diisikan penuh ke kolomnya
-  dengan bagian berlebih terpotong.
+- Latar transparan boleh — karyanya dimuat penuh ke dalam bingkai, tidak
+  diisikan sampai terpotong, jadi tidak ada tepi yang terpenggal dan bagian
+  kosongnya menampilkan permukaan kartu.

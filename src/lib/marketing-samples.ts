@@ -149,7 +149,7 @@ export interface MetadataSample {
 export const METADATA_SAMPLES: MetadataSample[] = [
   {
     src: "/contoh/forklift-oranye.png",
-    imageReady: false,
+    imageReady: true,
     alt: "Ilustrasi vektor forklift oranye bergaya datar, tampak samping",
     marketplace: "Canva",
     title: "Orange Forklift Industrial Vehicle Vector Illustration",
@@ -177,7 +177,18 @@ export const METADATA_SAMPLES: MetadataSample[] = [
     keywordCap: 20,
   },
   {
-    src: "/contoh/anak-muslim-belajar.png",
+    src: "/contoh/anak-muslim-belajar.jpg",
+    /**
+     * Masih ditahan: berkas yang ada baru 220x111 piksel.
+     *
+     * Karyanya benar dan metadatanya sungguhan, tapi kartu ini merender
+     * gambarnya sekitar 600 piksel — pada ukuran itu berkas sekecil ini pecah.
+     * Bukti yang pecah melemahkan persis hal yang sedang dibuktikan, jadi satu
+     * contoh yang tajam lebih baik daripada dua yang salah satunya buram.
+     *
+     * Ganti berkasnya dengan ekspor yang lebih besar (sekitar 1400 piksel sisi
+     * panjang), lalu ubah baris di bawah jadi true.
+     */
     imageReady: false,
     alt: "Ilustrasi sekelompok anak muslim duduk belajar dan menulis bersama",
     marketplace: "Adobe Stock",
