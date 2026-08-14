@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AuthShell, AuthError } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
-import { TextLink } from "@/components/ui/TextLink";
+import { InlineLink } from "@/components/ui/InlineLink";
+import { Icon } from "@/components/ui/icons";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -14,15 +15,19 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [mismatch, setMismatch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setMismatch("");
 
     if (password !== confirmPassword) {
-      setError("Kata sandi tidak sama.");
+      // Galat yang memang milik satu isian tetap menempel di isian itu —
+      // di sinilah kotak "Ulangi kata sandi" benar-benar yang keliru.
+      setMismatch("Kata sandi tidak sama.");
       return;
     }
 
@@ -44,93 +49,111 @@ export default function RegisterPage() {
     setSubmitting(false);
   }
 
-  return (
-    <main className="flex flex-1 items-center justify-center bg-canvas px-4 py-16">
-      <Card padding="lg" className="w-full max-w-sm">
-        <h1 className="text-center text-title-1 text-ink">Buat akun</h1>
-        <p className="mt-2 text-center text-body text-muted">
-          Mulai kelola lisensi Nerona Anda.
-        </p>
-        <div className="mt-8">
-          {submitted ? (
-            <p className="text-center text-body text-muted">
-              Periksa kotak masuk Anda — kami mengirim tautan verifikasi untuk menyelesaikan pendaftaran.
-            </p>
-          ) : (
-            <>
-              <form onSubmit={handleSubmit}>
-                <Field
-                  id="name"
-                  name="name"
-                  label="Nama"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                  required
-                  className="mb-4"
-                />
-                <Field
-                  id="phone"
-                  name="phone"
-                  label="Nomor HP"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  autoComplete="tel"
-                  placeholder="08xxxxxxxxxx"
-                  required
-                  className="mb-4"
-                />
-                <Field
-                  id="email"
-                  name="email"
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                  className="mb-4"
-                />
-                <Field
-                  id="password"
-                  name="password"
-                  label="Kata sandi"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  className="mb-4"
-                />
-                <Field
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  label="Ulangi kata sandi"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  error={error}
-                  autoComplete="new-password"
-                  className="mb-4"
-                />
-                <Button type="submit" variant="primary" size="md" full disabled={submitting}>
-                  {submitting ? "Membuat akun..." : "Buat akun"}
-                </Button>
-              </form>
-              <div className="my-6 flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-caption text-muted">atau</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-              <GoogleButton />
-              <p className="mt-6 text-center text-body text-muted">
-                Sudah punya akun? <TextLink href="/login">Masuk</TextLink>
-              </p>
-            </>
-          )}
+  if (submitted) {
+    return (
+      <AuthShell title="Cek email Anda">
+        <div className="text-center">
+          <Icon name="check-circle" className="mx-auto h-10 w-10 text-success" />
+          <p className="mt-4 text-body text-muted">
+            Kami mengirim tautan verifikasi ke{" "}
+            <span className="font-medium text-ink">{email}</span>. Buka tautannya untuk
+            menyelesaikan pendaftaran.
+          </p>
         </div>
-      </Card>
-    </main>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell
+      size="md"
+      title="Buat akun"
+      subtitle="Paket Free aktif seketika, tanpa kartu kredit."
+      footer={
+        <>
+          Sudah punya akun? <InlineLink href="/login">Masuk</InlineLink>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {/* Galat dari server — "Email sudah terdaftar" dan sejenisnya — berdiri
+            di atas formulir. Sebelumnya ia ditempelkan ke isian TERAKHIR, jadi
+            pesan tentang email muncul di bawah "Ulangi kata sandi" dan
+            pengguna mengoreksi hal yang salah. */}
+        <AuthError message={error} />
+
+        {/* Nama dan nomor HP berdampingan di layar yang cukup lebar: formulir
+            lima isian yang menumpuk lurus terbaca lebih panjang daripada
+            sebenarnya, dan panjang formulir adalah alasan orang berhenti
+            mendaftar. */}
+        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+          <Field
+            id="name"
+            name="name"
+            label="Nama"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            required
+          />
+          <Field
+            id="phone"
+            name="phone"
+            label="Nomor HP"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoComplete="tel"
+            placeholder="08xxxxxxxxxx"
+            required
+          />
+        </div>
+        <Field
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+          className="mb-4"
+        />
+        <Field
+          id="password"
+          name="password"
+          label="Kata sandi"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+          className="mb-4"
+        />
+        <Field
+          id="confirmPassword"
+          name="confirmPassword"
+          label="Ulangi kata sandi"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          error={mismatch}
+          autoComplete="new-password"
+          required
+          className="mb-5"
+        />
+        <Button type="submit" variant="primary" size="md" full disabled={submitting}>
+          {submitting ? "Membuat akun..." : "Buat akun gratis"}
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-caption text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <GoogleButton />
+    </AuthShell>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { AuthShell, AuthError } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 
 export default function ConfirmResetPage({ params }: { params: { token: string } }) {
@@ -11,14 +11,17 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [mismatch, setMismatch] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setMismatch("");
 
     if (password !== confirmPassword) {
-      setError("Kata sandi tidak sama.");
+      // Milik isian ini sungguhan, jadi ditempelkan di isian ini.
+      setMismatch("Kata sandi tidak sama.");
       return;
     }
 
@@ -31,6 +34,10 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
     const data = await res.json();
 
     if (!res.ok) {
+      // Galat dari server di sini biasanya soal TAUTANNYA — kedaluwarsa atau
+      // sudah dipakai — bukan soal kata sandi yang baru diketik. Menempelkannya
+      // ke kotak kata sandi membuat orang mengetik ulang sesuatu yang tidak
+      // pernah salah.
       setError(data.message || "Terjadi kesalahan.");
       setSubmitting(false);
       return;
@@ -40,38 +47,36 @@ export default function ConfirmResetPage({ params }: { params: { token: string }
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-canvas px-4 py-16">
-      <Card padding="lg" className="w-full max-w-sm">
-        <h1 className="text-center text-title-1 text-ink">Kata sandi baru</h1>
-        <div className="mt-8">
-          <form onSubmit={handleSubmit}>
-            <Field
-              id="password"
-              name="password"
-              label="Kata sandi baru"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              className="mb-4"
-            />
-            <Field
-              id="confirmPassword"
-              name="confirmPassword"
-              label="Ulangi kata sandi baru"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              error={error}
-              autoComplete="new-password"
-              className="mb-4"
-            />
-            <Button type="submit" variant="primary" size="md" full disabled={submitting}>
-              {submitting ? "Menyimpan..." : "Simpan kata sandi"}
-            </Button>
-          </form>
-        </div>
-      </Card>
-    </main>
+    <AuthShell title="Kata sandi baru" subtitle="Pilih kata sandi untuk akun Anda.">
+      <form onSubmit={handleSubmit}>
+        <AuthError message={error} />
+        <Field
+          id="password"
+          name="password"
+          label="Kata sandi baru"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+          className="mb-4"
+        />
+        <Field
+          id="confirmPassword"
+          name="confirmPassword"
+          label="Ulangi kata sandi baru"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          error={mismatch}
+          autoComplete="new-password"
+          required
+          className="mb-5"
+        />
+        <Button type="submit" variant="primary" size="md" full disabled={submitting}>
+          {submitting ? "Menyimpan..." : "Simpan kata sandi"}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

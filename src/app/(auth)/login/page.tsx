@@ -4,10 +4,10 @@ import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AuthShell, AuthError } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
-import { TextLink } from "@/components/ui/TextLink";
+import { InlineLink } from "@/components/ui/InlineLink";
 
 function LoginForm() {
   const router = useRouter();
@@ -41,54 +41,57 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-canvas px-4 py-16">
-      <Card padding="lg" className="w-full max-w-sm">
-        <h1 className="text-center text-title-1 text-ink">Masuk</h1>
-        <p className="mt-2 text-center text-body text-muted">Kelola lisensi Nerona Anda.</p>
-        <div className="mt-8">
-          <form onSubmit={handleSubmit}>
-            <Field
-              id="email"
-              name="email"
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              className="mb-4"
-            />
-            <Field
-              id="password"
-              name="password"
-              label="Kata sandi"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={error}
-              autoComplete="current-password"
-              className="mb-4"
-            />
-            {/* Tautan sekunder memakai TextLink, bukan garis bawah abu-abu: satu-satunya
-                aksi yang boleh terlihat sebagai tombol di kartu ini adalah "Masuk". */}
-            <div className="mb-4 text-right text-caption">
-              <TextLink href="/reset-password">Lupa kata sandi?</TextLink>
-            </div>
-            <Button type="submit" variant="primary" size="md" full disabled={submitting}>
-              {submitting ? "Sedang masuk..." : "Masuk"}
-            </Button>
-          </form>
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-caption text-muted">atau</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <GoogleButton callbackUrl={searchParams.get("callbackUrl")} />
-          <p className="mt-6 text-center text-body text-muted">
-            Belum punya akun? <TextLink href="/register">Daftar sekarang</TextLink>
-          </p>
+    <AuthShell
+      title="Masuk"
+      subtitle="Kelola lisensi Nerona Anda."
+      footer={
+        <>
+          Belum punya akun? <InlineLink href="/register">Daftar gratis</InlineLink>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {/* Galatnya menyangkut kombinasi email DAN kata sandi, jadi ia berdiri
+            di atas formulir — bukan menempel di salah satu isian, yang akan
+            menuduh isian yang belum tentu keliru. */}
+        <AuthError message={error} />
+        <Field
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+          className="mb-4"
+        />
+        <Field
+          id="password"
+          name="password"
+          label="Kata sandi"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+          className="mb-3"
+        />
+        <div className="mb-5 text-right text-caption">
+          <InlineLink href="/reset-password">Lupa kata sandi?</InlineLink>
         </div>
-      </Card>
-    </main>
+        <Button type="submit" variant="primary" size="md" full disabled={submitting}>
+          {submitting ? "Sedang masuk..." : "Masuk"}
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-caption text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <GoogleButton callbackUrl={searchParams.get("callbackUrl")} />
+    </AuthShell>
   );
 }
 
