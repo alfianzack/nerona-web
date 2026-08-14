@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
 
 /**
  * Kerangka bersama kelima layar auth.
@@ -35,22 +34,44 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-canvas px-4 py-16">
+    <main className="flex flex-1 flex-col items-center justify-center bg-canvas px-4 py-16 lg:px-8">
       {/* Logo mengarah ke beranda, bukan sekadar gambar: inilah satu-satunya
-          jalan keluar dari layar ini selain mengisi formulirnya. */}
+          jalan keluar dari layar ini selain mengisi formulirnya.
+
+          Ia menyingkir begitu panel merek muncul di sebelah kiri, karena panel
+          itu membawa logonya sendiri — dua tanda merek di satu layar terbaca
+          sebagai kelalaian. Hasilnya tetap satu logo di setiap lebar layar. */}
       <Link
         href="/"
-        className="flex items-center gap-2 text-body-lg font-semibold tracking-tight text-ink transition hover:opacity-80"
+        className="flex items-center gap-2 text-body-lg font-semibold tracking-tight text-ink transition hover:opacity-80 lg:hidden"
       >
         <img src="/logo-nerona.svg" alt="" className="h-6 w-6" />
         Nerona
       </Link>
 
-      <Card padding="lg" className={`mt-8 w-full ${size === "md" ? "max-w-md" : "max-w-sm"}`}>
+      {/*
+       * Kartunya ditulis tangan di sini alih-alih memakai komponen kartu, dan
+       * itu satu-satunya alasannya: kartu ini harus BERHENTI jadi kartu di atas
+       * 1024px. Di sana panel navy di kiri yang menyusun halaman, dan formulir
+       * yang masih dikurung garis rambut di tengah kolom putih hanya
+       * mengulanginya dengan lebih lemah.
+       *
+       * Tiap sifat kartu — sudut, latar, bantalan, cincin — dilingkupi varian
+       * lebar-maksimum, bukan ditimpa di lebar besar. Bedanya bukan gaya: dua
+       * utilitas yang menyetel properti sama pada satu elemen dimenangkan oleh
+       * yang jatuh belakangan di CSS keluaran, bukan yang ditulis belakangan di
+       * className, dan urutan itu menurut abjad. Dengan melingkupi semuanya,
+       * tidak ada satu pun pasangan yang bersaing.
+       */}
+      <div
+        className={`w-full max-lg:mt-8 max-lg:rounded-card max-lg:bg-surface max-lg:p-7 max-lg:ring-1 max-lg:ring-border ${
+          size === "md" ? "max-w-md" : "max-w-sm"
+        }`}
+      >
         <h1 className="text-center text-title-1 text-ink">{title}</h1>
         {subtitle && <p className="mt-2 text-center text-body text-muted">{subtitle}</p>}
         <div className="mt-8">{children}</div>
-      </Card>
+      </div>
 
       {footer && <div className="mt-6 text-center text-body text-muted">{footer}</div>}
     </main>
