@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Band } from "@/components/ui/Band";
 import { PricingSwitcher } from "@/components/marketing/PricingSwitcher";
+import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
 import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
@@ -80,6 +81,12 @@ export default async function PricingPage() {
           <PricingSwitcher products={products} discounts={discounts} />
         </div>
       </Band>
+
+      {/* Tepat di bawah tabel harga, bukan di dasar halaman.
+          Setiap kartu paket menyebut cakupan marketplace-nya sebagai kalimat;
+          deretan lambang di bawahnya menunjukkan platform mana yang dimaksud,
+          persis saat pembaca sedang menimbang paket mana yang diambil. */}
+      <MarketplaceRow />
 
       <TopupSection packages={topupPackages} />
 

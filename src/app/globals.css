@@ -87,11 +87,31 @@
     --accent: 46 82 192;
     --action: 46 82 192;
 
-    --radius-card: 14px;
-    --radius-control: 10px;
-    /* Pil hanya milik pemasaran. Isian tidak pernah memakainya. */
+    /**
+     * Siku, bukan membulat.
+     *
+     * Diterapkan ke seluruh permukaan publik sekaligus, bukan hanya kartu
+     * harga: kartu harga siku sementara kartu bukti dan kartu keluhan tetap
+     * membulat membuat satu halaman berbicara dua bahasa bentuk, dan mata
+     * membaca itu sebagai kelalaian, bukan sebagai pilihan.
+     *
+     * Aplikasi TIDAK ikut. Nilai di :root tetap 12px dan 8px — di sana sudut
+     * membulat memisahkan panel yang bertumpuk rapat, sedangkan halaman publik
+     * punya ruang kosong berlimpah untuk mengerjakan pemisahan itu sendiri.
+     */
+    --radius-card: 0px;
+    --radius-control: 0px;
+    --radius-chip: 0px;
+    /**
+     * Pil dipertahankan, dan ini satu-satunya bentuk membulat yang tersisa di
+     * halaman publik.
+     *
+     * Sengaja: kartu siku dengan tombol pil di dalamnya adalah pasangan yang
+     * saling menegaskan — yang satu tenang dan bersudut, yang satu jelas bisa
+     * ditekan. Kalau semuanya ikut siku, satu-satunya penanda "ini tombol"
+     * tinggal warnanya. Menjadikannya siku juga cukup satu nilai di sini.
+     */
     --radius-action: 980px;
-    --radius-chip: 6px;
 
     --band: 104px;
   }
