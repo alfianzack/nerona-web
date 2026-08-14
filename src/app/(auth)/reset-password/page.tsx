@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { InlineLink } from "@/components/ui/InlineLink";
+import { Icon } from "@/components/ui/icons";
 
 export default function RequestResetPage() {
   const [email, setEmail] = useState("");
@@ -22,37 +24,48 @@ export default function RequestResetPage() {
     setSubmitting(false);
   }
 
-  return (
-    <main className="flex flex-1 items-center justify-center bg-canvas px-4 py-16">
-      <Card padding="lg" className="w-full max-w-sm">
-        <h1 className="text-center text-title-1 text-ink">Atur ulang kata sandi</h1>
-        <p className="mt-2 text-center text-body text-muted">
-          Kami akan mengirim tautan lewat email.
-        </p>
-        <div className="mt-8">
-          {submitted ? (
-            <p className="text-center text-body text-muted">
-              Jika email itu terdaftar, kami sudah mengirim tautan atur ulang — periksa kotak masuk Anda.
-            </p>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <Field
-                id="email"
-                name="email"
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className="mb-4"
-              />
-              <Button type="submit" variant="primary" size="md" full disabled={submitting}>
-                {submitting ? "Mengirim..." : "Kirim tautan"}
-              </Button>
-            </form>
-          )}
+  if (submitted) {
+    return (
+      <AuthShell title="Tautan terkirim">
+        <div className="text-center">
+          <Icon name="check-circle" className="mx-auto h-10 w-10 text-success" />
+          {/* Kalimatnya sengaja tetap bersyarat. Memastikan "email Anda terdaftar"
+              memberi tahu penebak alamat mana yang punya akun di sini. */}
+          <p className="mt-4 text-body text-muted">
+            Jika email itu terdaftar, kami sudah mengirim tautan atur ulang — periksa kotak
+            masuk Anda.
+          </p>
         </div>
-      </Card>
-    </main>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell
+      title="Atur ulang kata sandi"
+      subtitle="Kami akan mengirim tautan lewat email."
+      footer={
+        <>
+          Ingat kata sandinya? <InlineLink href="/login">Masuk</InlineLink>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <Field
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+          className="mb-5"
+        />
+        <Button type="submit" variant="primary" size="md" full disabled={submitting}>
+          {submitting ? "Mengirim..." : "Kirim tautan"}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }
