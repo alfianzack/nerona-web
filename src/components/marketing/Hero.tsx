@@ -49,6 +49,19 @@ function heroFacts(freePoints: number) {
  * Yang naik: sub-judul dari 18–20px ke skala lead, 18–26px. Inilah sebab hero
  * lama terasa kecil meski judulnya sudah 72px — bukan judulnya yang kurang
  * besar, tapi barisan di bawahnya yang tertinggal.
+ *
+ * Latarnya sekarang navy bergradien, bukan putih.
+ *
+ * Sebabnya sama dengan sebab panel auth dibuat: pita ini 1155px penuh putih di
+ * bawah bilah yang juga putih, dan tidak ada satu pun yang menandai di mana
+ * halaman dimulai. Warna merek tidak muncul sampai layar kedelapan.
+ *
+ * Setiap warna di dalamnya dibalik dengan tangan, karena permukaan gelap belum
+ * punya set tokennya sendiri: token ink, muted, dan accent semuanya dipilih
+ * untuk berdiri di atas putih, dan ketiganya nyaris hilang di atas navy —
+ * accent paling parah, sekitar 1,5:1. Kartu contoh justru tidak disentuh: ia
+ * berdiri di atas permukaan putihnya sendiri, jadi di atas navy ia terbaca
+ * sebagai kartu terang yang melayang, sama seperti di panel auth.
  */
 export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freePoints?: number }) {
   // Default-nya tetap konstanta kode supaya pemanggil yang belum mengoper nilai
@@ -56,14 +69,14 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
   const facts = heroFacts(freePoints);
 
   return (
-    <Band align="center">
-      <p className="text-body-lg font-semibold text-accent">Nerona Metadata</p>
+    <Band align="center" tone="navy-gradient">
+      <p className="text-body-lg font-semibold text-brand-sky">Nerona Metadata</p>
 
-      <h1 className="mx-auto mt-3 max-w-[15ch] text-balance text-display-1 text-ink">
+      <h1 className="mx-auto mt-3 max-w-[15ch] text-balance text-display-1 text-white">
         Metadata untuk kontributor stock, ditulis otomatis.
       </h1>
 
-      <p className="mx-auto mt-5 max-w-[34ch] text-balance text-lead text-muted">
+      <p className="mx-auto mt-5 max-w-[34ch] text-balance text-lead text-navy-100">
         Judul, deskripsi, dan kata kunci dibuat AI — lalu diisikan langsung ke formulir unggah
         marketplace Anda.
       </p>
@@ -71,19 +84,24 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
       {/* Halaman jualan meminta pendaftaran lebih dulu; harga jadi pilihan
           kedua. Sebelumnya "Lihat Harga" adalah satu-satunya tombol, yang
           menggeser orang ke tabel harga sebelum mereka punya alasan. */}
+      {/* Tombolnya turun dari pil biru ke pil putih, sebab yang sama dengan
+          banner penutup: pil biru membaca token aksi permukaan pemasaran, dan
+          biru itu dipilih untuk berdiri di atas putih. Di atas navy ia kehilangan
+          hampir seluruh kontrasnya. Putih di atas navy adalah kontras tertinggi
+          yang bisa diberikan halaman ini. */}
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
-        <ButtonLink href="/register" size="lg">
+        <ButtonLink href="/register" variant="secondary" size="lg">
           Mulai gratis
         </ButtonLink>
-        <TextLink href="#pricing" className="text-body-lg">
+        <TextLink href="#pricing" tone="on-navy" className="text-body-lg">
           Lihat harga
         </TextLink>
       </div>
 
-      <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-caption text-muted">
+      <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-caption text-navy-100">
         {facts.map((fact) => (
           <li key={fact} className="inline-flex items-center gap-2">
-            <Icon name="check" className="h-3.5 w-3.5 flex-none text-accent" />
+            <Icon name="check" className="h-3.5 w-3.5 flex-none text-brand-sky" />
             {fact}
           </li>
         ))}
