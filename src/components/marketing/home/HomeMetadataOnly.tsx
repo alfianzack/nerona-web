@@ -67,6 +67,12 @@ export async function HomeMetadataOnly() {
     <main>
       <Hero freePoints={freePoints} />
 
+      {/* Langsung menutup hero, bukan di dasar halaman.
+          Nama-nama inilah yang paling cepat dikenali pengunjung, dan sebelumnya
+          mereka baru muncul di layar keenam — jauh setelah orang memutuskan
+          apakah halaman ini layak dibaca terus. */}
+      <MarketplaceRow variant="strip" />
+
       {/* Mengembalikan kosong sampai angkanya melewati ambang — lihat sebabnya
           di lib/marketing-stats.ts. Menaruhnya di sini aman sejak hari pertama. */}
       <TrustBar />
@@ -126,7 +132,10 @@ export async function HomeMetadataOnly() {
         imageSide="right"
       />
 
-      <MarketplaceRow />
+      {/* Deretan marketplace yang dulu berdiri di sini sudah pindah ke bawah
+          hero. Tidak digandakan: tujuh nama yang sama, dua kali di satu
+          halaman, berhenti jadi bukti dan mulai jadi pengulangan — dan
+          halaman ini sudah terlalu panjang. */}
 
       <StepsSection
         tone="sunken"
