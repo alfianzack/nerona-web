@@ -134,3 +134,45 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+@layer components {
+  /**
+   * Latar pita navy hero: gradien dengan satu sumber cahaya.
+   *
+   * Sebelumnya `bg-gradient-to-br from-navy-900 to-navy-700`, dan itu terbaca
+   * rata. Bukan karena dua perhentiannya berdekatan — jaraknya justru jauh,
+   * #16233D ke #10107A — tapi karena pita ini kira-kira 1400×1000px, jadi
+   * gradien dua-perhentian yang direntangkan sepanjang diagonalnya berubah
+   * sekitar satu persen per seratus piksel. Perubahan sebesar itu tidak
+   * terlihat mata; yang terlihat hanya bidang gelap yang luas.
+   *
+   * Yang membuat permukaan gelap punya kedalaman bukan rentang warnanya,
+   * melainkan adanya sumber cahaya: satu titik terang yang meredup ke segala
+   * arah, sehingga sudut-sudutnya tertinggal gelap. Radial di bawah ditaruh di
+   * 76% 20% — persis di belakang kartu contoh di kolom kanan hero, supaya
+   * kartu putih itu terbaca sebagai benda yang disinari, bukan benda yang
+   * ditempelkan.
+   *
+   * Ini cat, bukan elemen. Bedanya penting: blob emas kabur yang dulu berdiri
+   * di sini sudah sengaja dibuang, dan blob itulah satu-satunya sebab bagian
+   * ini pernah butuh `overflow-hidden` beserta `relative` di setiap anaknya.
+   * Sebagai background-image, tidak satu pun dari keduanya kembali.
+   *
+   * Perhentian akhirnya ditulis `rgb(61 68 168 / 0)`, bukan `transparent`.
+   * `transparent` adalah rgba(0,0,0,0) — hitam beralfa nol — jadi peramban
+   * menginterpolasi menuju hitam dan meninggalkan pita keabuan kotor di
+   * tengah luruhnya. Menulis warna yang sama dengan alfa nol membuat luruhnya
+   * benar-benar bersih.
+   *
+   * Ketiga heksanya adalah navy-900, navy-700, dan navy-500 dari
+   * tailwind.config.ts. Deret navy memang belum punya lapisan custom property
+   * seperti token permukaan, jadi nilainya terpaksa ditulis ulang di sini —
+   * kalau deret itu berubah, berkas ini ikut diubah.
+   */
+  .band-navy-glow {
+    background-color: #16233d;
+    background-image:
+      radial-gradient(120% 100% at 76% 20%, rgb(61 68 168 / 0.55), rgb(61 68 168 / 0) 62%),
+      linear-gradient(160deg, #16233d 0%, #10107a 100%);
+  }
+}

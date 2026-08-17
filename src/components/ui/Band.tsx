@@ -20,12 +20,21 @@ type BandAlign = "left" | "center";
  * elemen, pemenangnya adalah yang jatuh belakangan di CSS keluaran menurut
  * abjad, bukan yang ditulis belakangan. Menyediakan nadanya membuat kasus itu
  * mustahil ditulis salah.
+ *
+ * Isinya sekarang satu kelas di globals.css, bukan rangkaian utilitas gradien
+ * Tailwind. Sebabnya ada di docblock kelas itu — singkatnya, gradien dua
+ * perhentian tidak bisa memberi kedalaman pada bidang selebar ini, dan yang
+ * dibutuhkan adalah sumber cahaya berbentuk radial yang tidak punya padanan
+ * utilitas. Menaruhnya di lapisan components juga menutup jebakan di paragraf
+ * sebelumnya dari sisi yang lain: kelas ini jatuh sebelum seluruh lapisan
+ * utilities, jadi `bg-*` apa pun yang dioper lewat className tetap menang —
+ * yang memang perilaku yang benar.
  */
 const TONES: Record<BandTone, string> = {
   plain: "bg-canvas",
   sunken: "bg-surface-sunken",
   navy: "bg-navy-900 text-white",
-  "navy-gradient": "bg-gradient-to-br from-navy-900 to-navy-700 text-white",
+  "navy-gradient": "band-navy-glow text-white",
 };
 
 export function Band({
