@@ -63,8 +63,15 @@
     --radius-chip: 6px;
 
     /* Kartu diam tidak punya bayangan sama sekali; permukaan dipisahkan oleh
-       garis rambut. Bayangan hanya untuk lapisan yang benar-benar melayang. */
-    --shadow-card: none;
+       garis rambut. Bayangan hanya untuk lapisan yang benar-benar melayang.
+       WAJIB `0 0 #0000`, BUKAN `none`. Tailwind menyusun cincin dan bayangan
+       ke dalam SATU properti: `box-shadow: <cincin>, <cincin>, var(--tw-shadow)`.
+       `none` tidak sah di dalam daftar bayangan, jadi seluruh deklarasinya
+       dibuang browser — dan yang ikut hilang bukan bayangannya (memang tidak
+       ada), melainkan cincin di SETIAP kartu: garis rambut kartu biasa dan
+       cincin aksen 2px kartu unggulan sekaligus. Terbukti dengan membaca CSS
+       hasil build dan memotret halamannya, bukan diduga. */
+    --shadow-card: 0 0 #0000;
     --shadow-float: 0 8px 24px -8px rgb(15 23 36 / 0.18);
 
     --band: 72px;

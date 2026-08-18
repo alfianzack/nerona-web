@@ -1,7 +1,6 @@
-import { Badge } from "@/components/ui/Badge";
 import { Band } from "@/components/ui/Band";
 import { Card } from "@/components/ui/Card";
-import { cn } from "@/components/ui/cn";
+import { CardRibbon } from "@/components/marketing/CardRibbon";
 import { TextLink } from "@/components/ui/TextLink";
 import { formatRupiah } from "@/lib/plan-duration";
 import { perPointLabel, topupLabel, type TopupPackage } from "@/lib/topup";
@@ -36,19 +35,22 @@ export function TopupSection({ packages }: { packages: TopupPackage[] }) {
       <div className="mt-12 grid gap-6 sm:grid-cols-3">
         {packages.map((pkg) => {
           const hemat = pkg === termurah && packages.length > 1;
-          // Ditandai cincin aksen, bukan emas. Perlakuannya sengaja sama persis
-          // dengan kartu unggulan di PricingTierGrid.
+          // Ditandai cincin dan pita aksen — perlakuan yang sama persis dengan
+          // kartu unggulan di PricingTierGrid, sampai ke komponen pitanya.
+          //
+          // Pitanya mengambang di tepi atas, bukan duduk di dalam kartu:
+          // sebelumnya lencananya ikut aliran dan mendorong isi kartunya turun,
+          // jadi satu-satunya kartu bertanda justru satu-satunya kartu yang
+          // angkanya tidak sebaris dengan dua tetangganya.
           return (
             <Card
               key={pkg.points}
               variant={hemat ? "accent" : "default"}
               padding="lg"
-              className="text-center"
+              className="relative text-center"
             >
-              {hemat && <Badge tone="info">Paling hemat</Badge>}
-              <p className={cn("text-title-1 tabular-nums text-ink", hemat && "mt-4")}>
-                {topupLabel(pkg.points)}
-              </p>
+              {hemat && <CardRibbon>Paling hemat</CardRibbon>}
+              <p className="text-title-1 tabular-nums text-ink">{topupLabel(pkg.points)}</p>
               <p className="mt-1.5 font-mono text-body-lg font-semibold tabular-nums text-accent">
                 {formatRupiah(pkg.price)}
               </p>

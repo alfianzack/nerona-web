@@ -82,12 +82,18 @@ export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTi
         // TANPA "/bulan". Label itu menjanjikan penagihan bulanan yang tidak
         // pernah terjadi, dan salah paham semacam itu berakhir di permintaan
         // pengembalian uang.
+        //
+        // "sekali bayar" pindah ke priceNote, bukan hilang: disatukan dengan
+        // angkanya ia mengalir ke baris kedua di ukuran judul, dan kartu yang
+        // harganya dua baris menggeser seluruh isinya turun sendirian.
         priceLabel:
           plan.priceMonthly === null
             ? "Hubungi kami"
             : plan.priceMonthly === 0
               ? "Gratis"
-              : `${formatRupiah(plan.priceMonthly)} sekali bayar`,
+              : formatRupiah(plan.priceMonthly),
+        priceNote:
+          plan.priceMonthly === null ? null : plan.priceMonthly === 0 ? "selamanya" : "sekali bayar",
         savingsLabel: null,
         // Poin yang ikut di pembelian pertama, ditampilkan di ringkasan
         // checkout. Jatah SATU bulan — yang dibeli adalah aksesnya.

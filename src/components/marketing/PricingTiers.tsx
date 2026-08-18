@@ -1,6 +1,7 @@
 import { Band } from "@/components/ui/Band";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
+import { CardRibbon } from "@/components/marketing/CardRibbon";
 import { cn } from "@/components/ui/cn";
 import { Icon } from "@/components/ui/icons";
 
@@ -12,7 +13,16 @@ export interface PricingTierFeature {
 export interface PricingTier {
   name: string;
   tagline: string;
+  /** Angkanya saja — "Rp 89.000", "Gratis". Keterangannya di `priceNote`. */
   priceLabel: string;
+  /**
+   * Baris kecil di bawah angka: "sekali bayar", "selamanya".
+   *
+   * Terpisah dari angkanya karena disatukan ia mengalir ke baris kedua di
+   * ukuran judul — dan begitu satu kartu setinggi dua baris sementara yang lain
+   * satu baris, seluruh isi ketiga kartu berhenti sebaris.
+   */
+  priceNote?: string | null;
   /**
    * Sisa dari alur berdurasi. Sejak pembelian jadi sekali bayar tidak ada lagi
    * penghematan durasi untuk ditampilkan, jadi nilainya selalu kosong — kolomnya
@@ -25,6 +35,15 @@ export interface PricingTier {
   cta: string;
   href: string;
   featured?: boolean;
+}
+
+/**
+ * Harga utuh dalam satu baris, untuk tempat yang bukan kartu harga: ringkasan
+ * checkout dan halaman order. Di sana tidak ada tiga kartu yang perlu sebaris,
+ * jadi angka dan keterangannya justru harus menyatu.
+ */
+export function fullPriceLabel(tier: Pick<PricingTier, "priceLabel" | "priceNote">): string {
+  return tier.priceNote ? `${tier.priceLabel} ${tier.priceNote}` : tier.priceLabel;
 }
 
 /**
@@ -45,9 +64,23 @@ function FeatureIcon({ included }: { included: boolean }) {
   );
 }
 
+/**
+ * Tiga kartu yang benar-benar sebaris.
+ *
+ * Empat hal menjaganya, dan ketiganya pernah bocor sekaligus:
+ *
+ * 1. Kartunya setinggi kartu tertinggi (`items-stretch`, bukan `items-start`).
+ *    Dengan `items-start` setiap kartu setinggi isinya sendiri, jadi tombol
+ *    "Mulai Gratis" berhenti 34px di atas dua tombol tetangganya.
+ * 2. Angka harga dan keterangannya dua baris terpisah — lihat `priceNote`.
+ * 3. Tagline memesan tinggi dua baris, jadi harga di ketiga kartu mulai di garis
+ *    yang sama walau satu tagline mengalir dan yang lain tidak.
+ * 4. Daftar fitur yang memanjang (`flex-1`) mendorong tombol ke dasar kartu,
+ *    jadi jumlah fitur yang berbeda tidak lagi menggeser tombolnya.
+ */
 export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
       {tiers.map((tier) => {
         // Varian accent, bukan default plus cincin dari luar: menimpa cincin
         // lewat className gagal secara diam-diam. Sebabnya ditulis di Card.tsx.
@@ -56,20 +89,22 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
             key={tier.name}
             variant={tier.featured ? "accent" : "default"}
             padding="lg"
-            className="relative flex flex-col"
+            className="relative flex h-full flex-col"
           >
             {/* Aksen, bukan emas: halaman publik hanya punya satu warna aksen,
                 dan emas disimpan untuk aksi yang menggerakkan uang di dalam
                 aplikasi. */}
-            {tier.featured && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-chip bg-accent px-3 py-1 font-mono text-label font-semibold uppercase text-white">
-                PALING POPULER
-              </span>
-            )}
+            {tier.featured && <CardRibbon>Paling populer</CardRibbon>}
 
             <h3 className="text-title-2 text-ink">{tier.name}</h3>
-            <p className="mt-1 text-caption text-muted">{tier.tagline}</p>
-            <p className="mt-5 text-title-1 tabular-nums text-ink">{tier.priceLabel}</p>
+            {/* Dua baris dipesan di sini, bukan disamakan belakangan: caption
+                12px × line-height 1.5 = 18px per baris. */}
+            <p className="mt-1 min-h-[2.25rem] text-caption text-muted">{tier.tagline}</p>
+
+            <p className="mt-4 text-title-1 tabular-nums text-ink">{tier.priceLabel}</p>
+            {/* Barisnya tetap ada walau kosong — kalau tidak, kartu "Hubungi
+                kami" naik 18px sendirian. */}
+            <p className="mt-1.5 text-caption text-muted">{tier.priceNote || " "}</p>
             {tier.savingsLabel && (
               <p className="mt-1.5 text-caption text-success">{tier.savingsLabel}</p>
             )}

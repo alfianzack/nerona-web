@@ -8,6 +8,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { metadataTiers } from "@/lib/pricing-tiers";
+import { fullPriceLabel } from "@/components/marketing/PricingTiers";
 import { prisma } from "@/lib/prisma";
 
 beforeEach(() => {
@@ -28,9 +29,13 @@ describe("metadataTiers — alur sekali bayar", () => {
     ]);
 
     const pro = (await metadataTiers()).find((t) => t.name === "Pro")!;
-    expect(pro.priceLabel).not.toContain("/bulan");
-    expect(pro.priceLabel).toContain("sekali bayar");
-    expect(pro.priceLabel).toContain("79.000");
+    // Yang diperiksa adalah kalimat yang DIBACA pembeli. Angka dan
+    // keterangannya kini dua kolom terpisah supaya kartu harga bisa sebaris,
+    // jadi yang disatukan di sini persis yang disatukan di ringkasan checkout.
+    const dibaca = fullPriceLabel(pro);
+    expect(dibaca).not.toContain("/bulan");
+    expect(dibaca).toContain("sekali bayar");
+    expect(dibaca).toContain("79.000");
     expect(pro.savingsLabel).toBeNull();
   });
 

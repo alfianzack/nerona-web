@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { TextLink } from "@/components/ui/TextLink";
 import { Icon } from "@/components/ui/icons";
 import { CheckoutView } from "@/components/order/CheckoutView";
+import { fullPriceLabel } from "@/components/marketing/PricingTiers";
 import { FreeActivateCard } from "@/components/order/FreeActivateCard";
 
 export default async function OrderPage({
@@ -77,7 +78,7 @@ export default async function OrderPage({
           <CheckoutView
             product={product}
             planName={tier.name}
-            priceLabel={tier.priceLabel}
+            priceLabel={fullPriceLabel(tier)}
             poinAwal={tier.poinAwal ?? null}
             features={tier.features}
             // Dua syarat, dan keduanya diperiksa DI SINI supaya pilihan yang

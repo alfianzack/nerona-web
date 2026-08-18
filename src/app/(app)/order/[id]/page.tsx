@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session-guards";
 import { getUserOrder } from "@/lib/orders";
+import { fullPriceLabel } from "@/components/marketing/PricingTiers";
 import { agentTiers, metadataTiers } from "@/lib/pricing-tiers";
 import { getPaymentSettings, isPaymentConfigured } from "@/lib/payment-settings";
 import { formatRupiah } from "@/lib/money";
@@ -73,7 +74,8 @@ async function priceFor(order: {
     order.product === "metadata"
       ? await metadataTiers(order.durationMonths)
       : await agentTiers(order.durationMonths);
-  return tiers.find((t) => t.name === order.planName)?.priceLabel ?? "Hubungi admin";
+  const tier = tiers.find((t) => t.name === order.planName);
+  return tier ? fullPriceLabel(tier) : "Hubungi admin";
 }
 
 function orderTitle(product: string, planName: string): string {
