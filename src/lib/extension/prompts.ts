@@ -1,9 +1,18 @@
 /**
- * Server-side AI prompt builders — ported VERBATIM from the Nerona browser extension
- * (`nerona_medata/content.js`). Do not reword, reformat, or "improve" any of the prompt
- * text below: whitespace, newlines, and punctuation must match the extension exactly.
- * See docs/superpowers/specs/2026-07-24-server-side-prompts-design.md ("prompts are
- * moved byte-for-byte unchanged").
+ * Server-side AI prompt builders. Ini SATU-SATUNYA tempat prompt metadata hidup:
+ * extension sudah tidak memegang salinannya lagi — `grep "Microstock Metadata
+ * Generator" nerona_medata/content.js` tidak menemukan apa pun.
+ *
+ * Kepala berkas ini dulu berbunyi "ported VERBATIM … must match the extension
+ * exactly", peninggalan waktu prompt-nya dipindahkan byte-for-byte
+ * (docs/superpowers/specs/2026-07-24-server-side-prompts-design.md). Sudah tidak
+ * ada lagi yang perlu dicocokkan, dan dibiarkan, aturan itu hanya menghentikan
+ * orang yang memang perlu menyunting prompt di sini.
+ *
+ * Yang MASIH berlaku: prompt-nya bekerja. Jangan diubah sebagai efek samping
+ * dari beres-beres atau refactor. Ubah kalau keluarannya yang memang mau diubah,
+ * dengan sadar — seperti
+ * docs/superpowers/specs/2026-08-21-saran-keyword-marketplace-design.md.
  */
 
 // ---------------------------------------------------------------------------
@@ -13,6 +22,7 @@
 /** Prompt ringkas — hemat token, JSON minimal. */
 const METADATA_GENERATOR_PROMPT_QUICK = `You are an AI Microstock Metadata Generator.
 Analyze the image. Generate optimized stock metadata from VISIBLE content only. English.
+First identify what is HAPPENING in it (the action, interaction, or process shown) and what the asset is FOR (its use case and the occasion it suits), then how it looks.
 Target style: Adobe Stock, Shutterstock, Magnific, Canva, Etsy.
 
 Return JSON only (no markdown):
@@ -20,7 +30,7 @@ Return JSON only (no markdown):
 
 title: clear, commercial, SEO-friendly, natural; max 180 chars.
 description: short commercial copy (subject, activity, style, use); max 300 chars.
-keywords: exactly 50 strings, most important first; image-relevant only—subject, activity, industry, emotion, style, color, composition, business/niche; mix primary, long-tail, semantic.
+keywords: exactly 50 strings, most important first; image-relevant only—verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, subject, industry, emotion, style, color, composition, business/niche; mix primary, long-tail, semantic.
 Prioritize commercial intent and buyer search. No spam, duplicates, unrelated or misleading tags.
 Do NOT invent locations, brands, events, identities, statistics, or copyrighted terms.
 Keywords must be readable English only—no random hashes, placeholder tags, URLs, JSON artifacts, or offensive language.`;
@@ -34,12 +44,13 @@ Target marketplaces: Adobe Stock, Shutterstock, Magnific, Canva, Etsy.
 Return JSON only (no markdown):
 {"title":"","description":"","keywords":[],"visualBrief":"","categories":[]}
 
-Before writing metadata, internally identify: primary subject, secondary elements, setting, activity, mood, color palette, lighting, composition type, medium/style (photo, vector, 3D, illustration), industry/niche, target buyers, seasonal/trend signals (only if visible).
+Before writing metadata, internally identify, IN THIS ORDER: (1) what is HAPPENING — the action, interaction, or process shown, stated as a verb; (2) what the asset is FOR — its use case, the occasion or campaign it suits, the document or product type it works as; (3) then primary subject, secondary elements, setting, mood, color palette, lighting, composition type, medium/style (photo, vector, 3D, illustration), industry/niche, target buyers, seasonal/trend signals (only if visible).
+If the image is a design template rather than a photograph, (1) and (2) matter most: describe what a buyer would use it to make, not the shapes and gradients it is made of.
 
 title: commercial, SEO-friendly, specific to this image; max 180 chars; avoid generic filler.
-description: persuasive commercial copy—subject, context, style, ideal use cases; max 300 chars.
-keywords: exactly 50 strings, ordered by buyer search intent + image specificity. Include core subject, synonyms, activities, emotions, industries, demographics (only if visible), colors, composition, technique, season/holiday only if evident, and long-tail phrases (2–4 words). Mix head terms and long-tail. No duplicates, spam, misleading tags, copyrighted brands, celebrity names, or invented facts.
-visualBrief: 2–3 sentences describing only what is visible (for grounding).
+description: persuasive commercial copy—what is happening, what it is for, subject, context, style; max 300 chars.
+keywords: exactly 50 strings, ordered by buyer search intent + image specificity. Include verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, core subject, synonyms, activities, emotions, industries, demographics (only if visible), colors, composition, technique, season/holiday only if evident, and long-tail phrases (2–4 words). Mix head terms and long-tail. No duplicates, spam, misleading tags, copyrighted brands, celebrity names, or invented facts.
+visualBrief: 2–3 sentences on what is happening and what is visible (for grounding).
 categories: 3–8 broad stock categories that match the image.
 
 Prioritize commercial intent and buyer search behavior.

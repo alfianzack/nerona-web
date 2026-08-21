@@ -81,11 +81,17 @@ export const METADATA_FAQ: MarketingFaqItem[] = [
    * chip ke-21 ditolak diam-diam), Miricanvas 25, sisanya 50. Pembuangan
    * duplikat, kata sambung yang berdiri sendiri, dan tag placeholder ada di
    * isBlockedMarketplaceKeyword + KEYWORD_STANDALONE_STOPWORDS.
+   *
+   * Sejak 2026-08-21 tidak semua kata kunci datang dari AI: kalau halaman
+   * marketplace menawarkan saran sendiri, saran itu dipakai lebih dulu dan sisa
+   * slot diisi keluaran AI (marketplaces/suggestion-merge.js di extension).
+   * Plafonnya tidak berubah — yang berubah asalnya, jadi pertanyaannya tidak
+   * lagi bisa dijawab dengan "semuanya dari AI".
    */
   {
     question: "Berapa kata kunci yang dihasilkan per gambar?",
     answer:
-      "Sampai 50, dan jumlahnya mengikuti batas marketplace tujuan: Canva 20, Miricanvas 25, sisanya 50. Duplikat, kata sambung yang berdiri sendiri seperti “for” atau “with”, dan tag sisa format dibuang sebelum kata kuncinya masuk ke formulir.",
+      "Sampai 50, dan jumlahnya mengikuti batas marketplace tujuan: Canva 20, Miricanvas 25, sisanya 50. Kalau halaman unggahnya sendiri sudah menawarkan kata kunci, saran itu dipakai lebih dulu dan sisanya diisi keluaran AI. Duplikat, kata sambung yang berdiri sendiri seperti “for” atau “with”, dan tag sisa format dibuang sebelum kata kuncinya masuk ke formulir.",
   },
 
   /**
