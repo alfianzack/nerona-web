@@ -4,6 +4,8 @@ import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminPlanPointsPanel } from "@/components/admin/AdminPlanPointsPanel";
 import { AdminDownloadSettingsPanel } from "@/components/admin/AdminDownloadSettingsPanel";
 import { AdminPaymentGatewayPanel } from "@/components/admin/AdminPaymentGatewayPanel";
+import { AdminPromptPanel } from "@/components/admin/AdminPromptPanel";
+import { requireAdmin } from "@/lib/session-guards";
 
 /**
  * Kolom CSS, bukan grid.
@@ -24,7 +26,11 @@ function Sel({ children }: { children: React.ReactNode }) {
   return <div className="mb-6 break-inside-avoid">{children}</div>;
 }
 
-export default function AdminSettingsPage() {
+export default async function AdminSettingsPage() {
+  // Panel prompt hanya untuk owner. Ini penjagaan tampilan; yang berwenang
+  // tetap /api/admin/prompts, yang menolak `support` dengan 403.
+  const session = await requireAdmin();
+
   return (
     <div className="columns-1 gap-6 lg:columns-2">
       <Sel>
@@ -45,6 +51,11 @@ export default function AdminSettingsPage() {
       <Sel>
         <AdminAiSettingsPanel />
       </Sel>
+      {session.user.role === "owner_admin" && (
+        <Sel>
+          <AdminPromptPanel />
+        </Sel>
+      )}
     </div>
   );
 }

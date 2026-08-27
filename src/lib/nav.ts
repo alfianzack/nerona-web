@@ -64,6 +64,7 @@ export function tenantNav(agentEnabled: boolean): NavSection[] {
     // "Unduh & Pasang" ada di sini, bukan di "Akun & Tagihan": isinya kedua
     // alat metadata (extension + Hub), bukan hubungan tagihan dengan Nerona.
     items: [
+      { href: "/prompt", label: "Prompt", icon: "settings" },
       { href: "/riwayat-metadata", label: "Riwayat", icon: "clock" },
       { href: "/unduh", label: "Unduh & Pasang", icon: "download" },
     ],
