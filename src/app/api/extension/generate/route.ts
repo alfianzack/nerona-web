@@ -7,8 +7,8 @@ import { costForUsage } from "@/lib/agent/pricing";
 import { spendPoints } from "@/lib/points";
 import { hit } from "@/lib/rate-limit";
 import { tolakKalauBasi } from "@/lib/extension-version";
+import { resolveMetadataPrompt } from "@/lib/extension/prompt-resolver";
 import {
-  buildMetadataPrompt,
   buildScoringPrompt,
   buildCommercialIntentPrompt,
   buildKeywordPrompt,
@@ -23,10 +23,13 @@ function bearerToken(request: Request): string | null {
   return m ? m[1].trim() : null;
 }
 
+/**
+ * Empat fitur ini memakai prompt Nerona apa adanya. Hanya metadata yang boleh
+ * memakai prompt kustom tenant, dan jalurnya lewat resolveMetadataPrompt di
+ * bawah — ia butuh userId, yang tidak dimiliki fungsi murni ini.
+ */
 function buildPromptFor(feature: string, b: any): { prompt: string; maxTokens: number } | null {
   switch (feature) {
-    case "metadata":
-      return buildMetadataPrompt({ marketplace: b.marketplace, promptMode: b.promptMode, batchIndex: b.batchIndex });
     case "scoring":
       return buildScoringPrompt({ marketplace: b.marketplace });
     case "commercial_intent":
@@ -81,7 +84,16 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const feature = body?.feature;
-  const built = body ? buildPromptFor(feature, body) : null;
+  const built = body
+    ? feature === "metadata"
+      ? await resolveMetadataPrompt({
+          userId: resolved.userId,
+          marketplace: body.marketplace,
+          promptMode: body.promptMode,
+          batchIndex: body.batchIndex,
+        })
+      : buildPromptFor(feature, body)
+    : null;
   if (!built) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }

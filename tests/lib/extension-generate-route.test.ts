@@ -9,6 +9,9 @@ vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
 vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
 vi.mock("@/lib/extension-version", () => ({ tolakKalauBasi: vi.fn() }));
+vi.mock("@/lib/extension/prompt-resolver", () => ({
+  resolveMetadataPrompt: vi.fn(async () => ({ prompt: "P", maxTokens: 1234 })),
+}));
 vi.mock("@/lib/extension/prompts", () => ({
   buildMetadataPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
   buildScoringPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
@@ -29,6 +32,7 @@ import {
   buildMetadataPrompt,
   buildKeywordPrompt,
 } from "@/lib/extension/prompts";
+import { resolveMetadataPrompt } from "@/lib/extension/prompt-resolver";
 
 function req(body: unknown, auth: string | null = "Bearer nrx_ok") {
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -143,9 +147,17 @@ describe("POST /api/extension/generate", () => {
       pointsBalance: 95,
     });
 
-    expect(buildMetadataPrompt).toHaveBeenCalledWith(
-      expect.objectContaining({ marketplace: "adobe_stock", promptMode: "advanced", batchIndex: 0 })
+    // Lewat resolver, bukan builder telanjang: preset tenant hanya bisa
+    // ditemukan kalau userId dari token ikut dibawa.
+    expect(resolveMetadataPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "u1",
+        marketplace: "adobe_stock",
+        promptMode: "advanced",
+        batchIndex: 0,
+      })
     );
+    expect(buildMetadataPrompt).not.toHaveBeenCalled();
 
     expect(chatCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -165,6 +177,12 @@ describe("POST /api/extension/generate", () => {
 
     // 1200/1e6*0.10 + 150/1e6*0.40 = 0.00018 USD × 100000 = 18 poin
     expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", cost: 18 }));
+  });
+
+  it("leaves the four other features on the Nerona prompts", async () => {
+    await POST(req(keywordBody));
+    expect(resolveMetadataPrompt).not.toHaveBeenCalled();
+    expect(buildKeywordPrompt).toHaveBeenCalled();
   });
 
   it("charges at the rates configured in admin settings", async () => {

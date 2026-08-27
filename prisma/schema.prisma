@@ -82,6 +82,7 @@ model User {
   extensionTokens           ExtensionToken[]
   metadataLogs              MetadataLog[]
   devicePairings            DevicePairing[]
+  promptPresets             PromptPreset[]
 
   @@map("users")
 }
@@ -626,4 +627,27 @@ model DevicePairing {
 
   @@index([expiresAt])
   @@map("device_pairings")
+}
+
+// Prompt metadata milik tenant. Tepat satu boleh aktif per user, dan aturan itu
+// dijaga di lapisan aplikasi (activatePreset) di dalam transaksi — bukan unique
+// index parsial, karena Prisma tidak bisa mendeklarasikannya tanpa SQL mentah
+// dan keadaan "tidak ada yang aktif" juga sah: itulah cara tenant kembali ke
+// prompt Nerona tanpa kehilangan preset yang sudah ditulisnya.
+//
+// Tidak ada kolom `feature`. Hanya metadata yang boleh punya prompt kustom, dan
+// menambah kolom nanti lebih murah daripada memelihara dimensi yang belum
+// dipakai siapa pun.
+model PromptPreset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  body      String   @db.Text
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("prompt_presets")
 }
