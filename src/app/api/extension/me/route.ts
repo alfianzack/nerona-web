@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { infoPembaruanExtension } from "@/lib/extension-version";
 import { MARKETPLACES } from "@/lib/marketplaces";
 
@@ -17,21 +17,22 @@ export async function GET(request: Request) {
   if (!resolved) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
-  // Model dikirim terpisah dari `account`: itu setelan global (Setting `ai_model`),
-  // bukan atribut lisensi. Hanya nama modelnya — apiKey tidak pernah keluar dari server.
+  // Model dikirim terpisah dari `account`: ia setelan AI, bukan atribut lisensi.
+  // Sejak registri model ada, yang dikirim adalah model yang berlaku bagi tenant
+  // INI — pilihannya sendiri, atau default owner kalau ia belum memilih. Hanya nama modelnya — apiKey tidak pernah keluar dari server.
   //
   // `update` ikut di sini alih-alih di endpoint sendiri: extension sudah
   // memanggil rute ini secara berkala, jadi badge versi baru tidak menambah
   // satu pun permintaan jaringan.
   const [state, ai, update] = await Promise.all([
     getExtensionAccountState(resolved.userId),
-    getAiSettings(),
+    resolveAiForUser(resolved.userId),
     infoPembaruanExtension(),
   ]);
   return NextResponse.json({
     ok: true,
     account: { ...state, validUntil: state.validUntil ? state.validUntil.toISOString() : null },
-    ai: { model: ai.model },
+    ai: { model: ai.modelId },
     update,
     // Daftar marketplace yang BERWENANG, dikirim ke setiap klien di setiap
     // panggilan yang memang sudah terjadi.

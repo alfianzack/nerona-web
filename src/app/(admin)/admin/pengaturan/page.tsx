@@ -5,6 +5,7 @@ import { AdminPlanPointsPanel } from "@/components/admin/AdminPlanPointsPanel";
 import { AdminDownloadSettingsPanel } from "@/components/admin/AdminDownloadSettingsPanel";
 import { AdminPaymentGatewayPanel } from "@/components/admin/AdminPaymentGatewayPanel";
 import { AdminPromptPanel } from "@/components/admin/AdminPromptPanel";
+import { AdminAiModelsPanel } from "@/components/admin/AdminAiModelsPanel";
 import { requireAdmin } from "@/lib/session-guards";
 
 /**
@@ -50,6 +51,9 @@ export default async function AdminSettingsPage() {
       </Sel>
       <Sel>
         <AdminAiSettingsPanel />
+      </Sel>
+      <Sel>
+        <AdminAiModelsPanel />
       </Sel>
       {session.user.role === "owner_admin" && (
         <Sel>

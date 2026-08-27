@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/ai-models", () => ({ resolveAiForUser: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
   SHOP_TOOLS: [{ type: "function", function: { name: "record_sale" } }],
   executeTool: vi.fn(),
 }));
 
 import { runToolLoop } from "@/lib/agent/tool-loop";
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { executeTool } from "@/lib/agent/tools";
 
 const PRICING = { inPerMTok: 0.075, outPerMTok: 0.3, pointsPerUsd: 100_000 };
@@ -60,8 +60,8 @@ const params = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (getAiSettings as any).mockResolvedValue({
-    model: "gemini-2.0-flash-lite",
+  (resolveAiForUser as any).mockResolvedValue({
+    modelId: "gemini-2.0-flash-lite",
     apiKey: "test-key",
     pricing: PRICING,
   });

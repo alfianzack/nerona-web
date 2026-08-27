@@ -1,4 +1,4 @@
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { chatCompletion } from "./claude-client";
 import { SHOP_TOOLS, executeTool } from "./tools";
 import type { AiPricing, TokenUsage } from "./pricing";
@@ -11,7 +11,9 @@ import type { AiPricing, TokenUsage } from "./pricing";
  * putaran, dilakukan satu panggilan tanpa `tools` supaya pemilik SELALU dapat
  * balasan, bukan diam.
  *
- * Setelan AI (model, key, tarif) dibaca SEKALI di awal, bukan tiap putaran.
+ * Setelan AI (model, key, tarif) dibaca SEKALI di awal, bukan tiap putaran —
+ * dan tarifnya milik model yang berlaku bagi pemilik toko ini, sehingga seluruh
+ * putaran ditagih pada tarif yang sama dengan tarif saat ia digenerate.
  */
 
 const MAX_TOOL_ROUNDS = 5;
@@ -37,7 +39,7 @@ export async function runToolLoop(params: {
   userId: string;
   timezone: string;
 }): Promise<ToolLoopResult> {
-  const { model, apiKey, pricing } = await getAiSettings();
+  const { modelId: model, apiKey, baseUrl, pricing } = await resolveAiForUser(params.userId);
   const ctx = { userId: params.userId, timezone: params.timezone };
 
   const messages: ChatMessage[] = [
@@ -51,7 +53,7 @@ export async function runToolLoop(params: {
   let rounds = 0;
 
   const call = (tools?: unknown[]) =>
-    chatCompletion({ messages, model, apiKey, tools }).then((result) => {
+    chatCompletion({ messages, model, apiKey, baseUrl, tools }).then((result) => {
       rounds += 1;
       if (result.usage) {
         sawUsage = true;

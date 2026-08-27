@@ -23,8 +23,14 @@ export async function chatCompletion(params: {
   maxTokens?: number;
   /** Kalau kosong, kunci `tools` tidak dikirim sama sekali. */
   tools?: unknown[];
+  /**
+   * Gateway khusus untuk model ini. Kosong = gateway bersama (SumoPod). Ada
+   * untuk baris AiModel yang harus diambil langsung dari providernya.
+   */
+  baseUrl?: string;
 }): Promise<ChatCompletionResult> {
-  const response = await fetch(`${BASE_URL}/chat/completions`, {
+  const endpoint = (params.baseUrl || "").trim() || BASE_URL;
+  const response = await fetch(`${endpoint}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${params.apiKey}`,
