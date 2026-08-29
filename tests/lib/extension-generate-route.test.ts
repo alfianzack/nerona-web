@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
-vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/ai-models", () => ({ resolveAiForUser: vi.fn() }));
 vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
 // `pricing` is left REAL (it is pure) so the charge asserted below is the one the
 // configured rates actually produce.
@@ -23,7 +23,7 @@ vi.mock("@/lib/extension/prompts", () => ({
 import { POST } from "@/app/api/extension/generate/route";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { chatCompletion } from "@/lib/agent/claude-client";
 import { spendPoints } from "@/lib/points";
 import { hit } from "@/lib/rate-limit";
@@ -65,8 +65,8 @@ beforeEach(() => {
   (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
   (hit as any).mockReturnValue({ ok: true, remaining: 89, retryAfterSeconds: 0 });
   (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
-  (getAiSettings as any).mockResolvedValue({
-    model: "gemini-2.0-flash",
+  (resolveAiForUser as any).mockResolvedValue({
+    modelId: "gemini-2.0-flash",
     apiKey: "adminkey",
     pricing: { inPerMTok: 0.1, outPerMTok: 0.4, pointsPerUsd: 100_000 },
   });
@@ -185,17 +185,53 @@ describe("POST /api/extension/generate", () => {
     expect(buildKeywordPrompt).toHaveBeenCalled();
   });
 
-  it("charges at the rates configured in admin settings", async () => {
-    (getAiSettings as any).mockResolvedValue({
-      model: "gemini-2.0-flash",
+  it("charges at the rates of the model this tenant resolved to", async () => {
+    (resolveAiForUser as any).mockResolvedValue({
+      modelId: "claude-opus-5",
       apiKey: "adminkey",
       pricing: { inPerMTok: 3, outPerMTok: 15, pointsPerUsd: 100_000 },
     });
 
     await POST(req(metadataBody));
 
+    expect(resolveAiForUser).toHaveBeenCalledWith("u1");
     // 1200/1e6*3 + 150/1e6*15 = 0.00585 USD × 100000 = 585 poin
     expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ cost: 585 }));
+  });
+
+  it("bills on the rates it resolved, not on the model id the provider echoes back", async () => {
+    (resolveAiForUser as any).mockResolvedValue({
+      modelId: "claude-opus-5",
+      apiKey: "adminkey",
+      pricing: { inPerMTok: 3, outPerMTok: 15, pointsPerUsd: 100_000 },
+    });
+    // Provider menjawab dengan id yang berbeda — dulu ini yang membuat
+    // MODEL_PRICES meleset dan menagih kurang.
+    (chatCompletion as any).mockResolvedValue({
+      text: "meta",
+      model: "claude-opus-5-20260101",
+      usage: { promptTokens: 1200, completionTokens: 150 },
+      toolCalls: [],
+    });
+
+    await POST(req(metadataBody));
+
+    expect(spendPoints).toHaveBeenCalledWith(expect.objectContaining({ cost: 585 }));
+  });
+
+  it("passes a per-model gateway through to the client", async () => {
+    (resolveAiForUser as any).mockResolvedValue({
+      modelId: "claude-opus-5",
+      apiKey: "row-key",
+      baseUrl: "https://api.anthropic.example/v1",
+      pricing: { inPerMTok: 3, outPerMTok: 15, pointsPerUsd: 100_000 },
+    });
+
+    await POST(req(metadataBody));
+
+    expect(chatCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://api.anthropic.example/v1", apiKey: "row-key" })
+    );
   });
 
   it("200 keyword path: text-only messages, no image_url", async () => {

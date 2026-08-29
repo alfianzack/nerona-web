@@ -27,6 +27,33 @@ describe("chatCompletion", () => {
     expect(body).toEqual(expect.objectContaining({ model: "gemini-2.0-flash", max_tokens: 512, messages: msgs }));
   });
 
+  it("calls the row's own gateway when one is given", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ choices: [{ message: { content: "" } }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await chatCompletion({
+      messages: [{ role: "user", content: "x" }],
+      model: "claude-opus-5",
+      apiKey: "row-key",
+      baseUrl: "https://api.anthropic.example/v1",
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.anthropic.example/v1/chat/completions");
+  });
+
+  it("falls back to the shared gateway when no baseUrl is given", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ choices: [{ message: { content: "" } }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await chatCompletion({ messages: [{ role: "user", content: "x" }], model: "m", apiKey: "k" });
+
+    expect(fetchMock.mock.calls[0][0]).toContain("sumopod");
+  });
+
   it("throws on a non-ok response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => "boom" }));
     await expect(

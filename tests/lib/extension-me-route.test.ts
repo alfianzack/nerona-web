@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
-vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/ai-models", () => ({ resolveAiForUser: vi.fn() }));
 vi.mock("@/lib/extension-version", () => ({ infoPembaruanExtension: vi.fn() }));
 
 import { GET } from "@/app/api/extension/me/route";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { infoPembaruanExtension } from "@/lib/extension-version";
 
 function req(auth?: string) {
@@ -31,8 +31,8 @@ describe("GET /api/extension/me", () => {
       validUntil: new Date("2026-08-01T00:00:00Z"), marketplaces: "*",
       rejectAnalyzer: false, pointsBalance: 1250, active: true,
     });
-    (getAiSettings as any).mockResolvedValue({
-      model: "gemini-2.5-flash", apiKey: "sk-secret", pricing: {},
+    (resolveAiForUser as any).mockResolvedValue({
+      modelId: "gemini-2.5-flash", apiKey: "sk-secret", pricing: {},
     });
     (infoPembaruanExtension as any).mockResolvedValue({
       latest: "1.2.0", min: "1.1.0", url: "https://nerona-web.vercel.app/unduh",
@@ -54,7 +54,7 @@ describe("GET /api/extension/me", () => {
       validUntil: null, marketplaces: "*",
       rejectAnalyzer: false, pointsBalance: 10, active: true,
     });
-    (getAiSettings as any).mockResolvedValue({ model: "m", apiKey: "k", pricing: {} });
+    (resolveAiForUser as any).mockResolvedValue({ modelId: "m", apiKey: "k", pricing: {} });
     (infoPembaruanExtension as any).mockResolvedValue({
       latest: "1.2.0", min: "", url: "https://nerona-web.vercel.app/unduh",
     });
@@ -73,7 +73,7 @@ describe("GET /api/extension/me", () => {
       validUntil: null, marketplaces: "*",
       rejectAnalyzer: false, pointsBalance: 10, active: true,
     });
-    (getAiSettings as any).mockResolvedValue({ model: "m", apiKey: "k", pricing: {} });
+    (resolveAiForUser as any).mockResolvedValue({ modelId: "m", apiKey: "k", pricing: {} });
     (infoPembaruanExtension as any).mockResolvedValue({ latest: "", min: "", url: "" });
 
     const body = await (await GET(req("Bearer nrx_ok"))).json();

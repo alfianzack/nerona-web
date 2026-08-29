@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
-import { getAiSettings } from "@/lib/ai-settings";
+import { resolveAiForUser } from "@/lib/ai-models";
 import { chatCompletion } from "@/lib/agent/claude-client";
 import { costForUsage } from "@/lib/agent/pricing";
 import { spendPoints } from "@/lib/points";
@@ -116,14 +116,23 @@ export async function POST(request: Request) {
   }
   const messages = [{ role: "user", content: content_ }];
 
-  const { model, apiKey, pricing } = await getAiSettings();
+  // Tarif ikut model yang dipilih tenant ini, dan diputuskan SEBELUM panggilan.
+  // Setelah panggilan, id model yang dikembalikan provider tidak pernah dipakai
+  // untuk mencari tarif — itu jalan yang dulu menagih kurang tanpa suara.
+  const { modelId, apiKey, baseUrl, pricing } = await resolveAiForUser(resolved.userId);
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "ai_not_configured" }, { status: 503 });
   }
 
   let result;
   try {
-    result = await chatCompletion({ messages, model, apiKey, maxTokens: built.maxTokens });
+    result = await chatCompletion({
+      messages,
+      model: modelId,
+      apiKey,
+      baseUrl,
+      maxTokens: built.maxTokens,
+    });
   } catch (err) {
     console.error("[extension/generate] upstream error", err);
     return NextResponse.json({ ok: false, error: "ai_error" }, { status: 502 });

@@ -65,6 +65,7 @@ export function tenantNav(agentEnabled: boolean): NavSection[] {
     // alat metadata (extension + Hub), bukan hubungan tagihan dengan Nerona.
     items: [
       { href: "/prompt", label: "Prompt", icon: "settings" },
+      { href: "/model", label: "Model AI", icon: "chart" },
       { href: "/riwayat-metadata", label: "Riwayat", icon: "clock" },
       { href: "/unduh", label: "Unduh & Pasang", icon: "download" },
     ],

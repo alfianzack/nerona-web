@@ -83,7 +83,10 @@ model User {
   metadataLogs              MetadataLog[]
   devicePairings            DevicePairing[]
   promptPresets             PromptPreset[]
+  aiModelId                 String?
+  aiModel                   AiModel?         @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
 
+  @@index([aiModelId])
   @@map("users")
 }
 
@@ -650,4 +653,39 @@ model PromptPreset {
 
   @@index([userId])
   @@map("prompt_presets")
+}
+
+// Model AI yang disediakan owner, beserta TARIFNYA SENDIRI.
+//
+// Tarif hidup di baris ini, dan panggilan ditagih dengan tarif baris yang
+// DIPILIH sebelum panggilan — tidak pernah dengan hasil pencarian atas id model
+// yang dikembalikan provider. Itu persis cara `MODEL_PRICES` dulu menagih
+// kurang tanpa suara: id yang dikembalikan (`gemini-2.0-flash-001`) tidak wajib
+// sama dengan id yang diketik owner, dan yang meleset jatuh ke baris termurah.
+//
+// `baseUrl`/`apiKey` kosong berarti gateway global (SumoPod). Keduanya ada untuk
+// model yang harus diambil langsung dari providernya, tanpa mengubah yang lain.
+model AiModel {
+  id         String   @id @default(cuid())
+  label      String
+  modelId    String
+  note       String?
+  inPerMTok  Float
+  outPerMTok Float
+  /// Punya penglihatan. Empat dari lima fitur mengirim gambar, jadi model tanpa
+  /// ini tidak pernah ditawarkan ke tenant.
+  vision     Boolean  @default(true)
+  /// Butuh paket berbayar. Knob per baris, bukan daftar nama paket di kode.
+  paidOnly   Boolean  @default(false)
+  isDefault  Boolean  @default(false)
+  active     Boolean  @default(true)
+  baseUrl    String?
+  apiKey     String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users User[]
+
+  @@map("ai_models")
 }
