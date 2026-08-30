@@ -1,6 +1,8 @@
 // Transport HTTP ke Sumopod. Orkestrasi tool + resolusi setelan AI ada di
 // `tool-loop.ts`; file ini sengaja tidak tahu apa-apa soal keduanya.
-const BASE_URL = process.env.SUMOPOD_BASE_URL || "https://ai.sumopod.com/v1";
+/** Satu-satunya tempat alamat ini ditulis. */
+export const FALLBACK_BASE_URL = "https://ai.sumopod.com/v1";
+const BASE_URL = process.env.SUMOPOD_BASE_URL || FALLBACK_BASE_URL;
 
 export interface ToolCall {
   id: string;
