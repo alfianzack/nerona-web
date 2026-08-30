@@ -32,11 +32,13 @@ const PROVIDER_MESSAGES: Record<AiProviderErrorCode, string> = {
   label_required: "Nama provider wajib diisi.",
   base_url_required: "Alamat gateway wajib diisi.",
   in_use: "Provider itu masih dipakai model. Pindahkan modelnya dulu, baru hapus providernya.",
+  is_default: "Provider bawaan tidak bisa dihapus. Jadikan provider lain bawaan dulu, baru hapus yang ini.",
 };
 
 const PROVIDER_STATUS: Partial<Record<AiProviderErrorCode, number>> = {
   not_found: 404,
   in_use: 409,
+  is_default: 409,
 };
 
 export function aiErrorResponse(err: unknown) {

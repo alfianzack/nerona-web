@@ -8,11 +8,13 @@ const deleteMock = vi.fn();
 const setDefaultMock = vi.fn();
 const getByIdMock = vi.fn();
 const testConnectionMock = vi.fn();
+const hitMock = vi.fn();
 
 vi.mock("next-auth", () => ({
   getServerSession: (...args: unknown[]) => getServerSessionMock(...args),
 }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
+vi.mock("@/lib/rate-limit", () => ({ hit: (...a: unknown[]) => hitMock(...(a as [])) }));
 vi.mock("@/lib/ai-providers", async () => {
   const actual = await vi.importActual<typeof import("@/lib/ai-providers")>("@/lib/ai-providers");
   return {
@@ -53,6 +55,7 @@ beforeEach(() => {
   updateMock.mockResolvedValue({ id: "p1" });
   getByIdMock.mockResolvedValue({ id: "p1", baseUrl: "https://a.example/v1", apiKey: "kunci" });
   testConnectionMock.mockResolvedValue({ ok: true });
+  hitMock.mockReturnValue({ ok: true, remaining: 5, retryAfterSeconds: 0 });
 });
 
 describe("gerbang owner", () => {
@@ -105,6 +108,13 @@ describe("DELETE", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).message).toContain("masih dipakai");
   });
+
+  it("menerjemahkan penolakan 'provider bawaan' jadi 409 dengan pesan yang bisa ditindaklanjuti", async () => {
+    deleteMock.mockRejectedValue(new AiProviderError("is_default"));
+    const res = await DELETE(req({}, "DELETE"), ctx);
+    expect(res.status).toBe(409);
+    expect((await res.json()).message).toContain("bawaan");
+  });
 });
 
 describe("POST test", () => {
@@ -121,5 +131,19 @@ describe("POST test", () => {
     const res = await TEST(req({ model: "" }), ctx);
     expect(res.status).toBe(400);
     expect(testConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it("membatasi laju — tiap pengecekan menghabiskan dua panggilan sungguhan atas kunci owner", async () => {
+    hitMock.mockReturnValue({ ok: false, remaining: 0, retryAfterSeconds: 30 });
+    const res = await TEST(req({ model: "claude-opus-5" }), ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("30");
+    expect(testConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it("mengembalikan 502, bukan melempar, saat probe gagal total", async () => {
+    testConnectionMock.mockRejectedValue(new Error("upstream down"));
+    const res = await TEST(req({ model: "claude-opus-5" }), ctx);
+    expect(res.status).toBe(502);
   });
 });

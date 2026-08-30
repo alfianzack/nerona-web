@@ -47,6 +47,8 @@ export function AdminAiProvidersPanel() {
   const [rows, setRows] = useState<ProviderRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(KOSONG);
+  /** Label & baseUrl baris yang dimuat dari server, untuk mendeteksi draft yang belum disimpan. */
+  const [stored, setStored] = useState({ label: "", baseUrl: "" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -107,10 +109,21 @@ export function AdminAiProvidersPanel() {
       // sini berarti "biarkan yang tersimpan", bukan "hapus".
       apiKey: "",
     });
+    setStored({ label: row.label, baseUrl: row.baseUrl });
     setTestModel("");
     setTestResult(null);
     setError("");
   }
+
+  /**
+   * "Cek" menguji konfigurasi yang TERSIMPAN di server, bukan draft di layar —
+   * ia tidak mengirim label/baseUrl/apiKey, server yang membaca baris
+   * providernya. Owner yang menempel kunci baru lalu langsung klik Cek akan
+   * mendapat vonis tentang kunci LAMA sementara formulir menampilkan yang
+   * baru. Blokir dulu selama drafnya belum disimpan.
+   */
+  const hasUnsavedConnectionEdits =
+    draft.label !== stored.label || draft.baseUrl !== stored.baseUrl || draft.apiKey !== "";
 
   async function simpan() {
     const payload = {
@@ -212,7 +225,10 @@ export function AdminAiProvidersPanel() {
             label="Nama"
             placeholder="SumoPod"
             value={draft.label}
-            onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+            onChange={(e) => {
+              setTestResult(null);
+              setDraft({ ...draft, label: e.target.value });
+            }}
           />
           <Field
             id="provider-base-url"
@@ -220,7 +236,10 @@ export function AdminAiProvidersPanel() {
             placeholder="https://api.provider.com/v1"
             className={ISIAN_MONO}
             value={draft.baseUrl}
-            onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })}
+            onChange={(e) => {
+              setTestResult(null);
+              setDraft({ ...draft, baseUrl: e.target.value });
+            }}
           />
           <Field
             id="provider-api-key"
@@ -228,7 +247,10 @@ export function AdminAiProvidersPanel() {
             type="password"
             className={ISIAN_MONO}
             value={draft.apiKey}
-            onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
+            onChange={(e) => {
+              setTestResult(null);
+              setDraft({ ...draft, apiKey: e.target.value });
+            }}
             hint="Kosongkan untuk tetap memakai kunci yang tersimpan"
           />
 
@@ -254,10 +276,24 @@ export function AdminAiProvidersPanel() {
                   value={testModel}
                   onChange={(e) => setTestModel(e.target.value)}
                 />
-                <Button variant="secondary" onClick={handleTest} disabled={testing || !testModel.trim()}>
+                <Button
+                  variant="secondary"
+                  onClick={handleTest}
+                  disabled={testing || !testModel.trim() || hasUnsavedConnectionEdits}
+                  title={
+                    hasUnsavedConnectionEdits
+                      ? "Simpan dulu — pengecekan menguji pengaturan yang tersimpan."
+                      : undefined
+                  }
+                >
                   {testing ? "Mengecek..." : "Cek"}
                 </Button>
               </div>
+              {hasUnsavedConnectionEdits && (
+                <span className="text-caption text-muted">
+                  Simpan dulu — pengecekan menguji pengaturan yang tersimpan.
+                </span>
+              )}
               {testResult && <ConnectionTestReport result={testResult} />}
             </div>
           )}

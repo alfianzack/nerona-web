@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     aiProvider: {
+      count: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
@@ -30,9 +31,14 @@ beforeEach(() => {
   process.env.SUMOPOD_API_KEY = "kunci-env";
   process.env.SUMOPOD_BASE_URL = "https://env.example/v1";
   (prisma.aiModel.count as any).mockResolvedValue(0);
+  (prisma.aiProvider.count as any).mockResolvedValue(0);
   (prisma.aiProvider.findFirst as any).mockResolvedValue(null);
   (prisma.aiProvider.deleteMany as any).mockResolvedValue({ count: 1 });
-  (prisma.$transaction as any).mockImplementation((ops: unknown[]) => Promise.resolve(ops));
+  // Mendukung dua bentuk pemanggilan $transaction yang dipakai kode ini:
+  // daftar operasi (setDefaultProvider) dan callback interaktif (createProvider).
+  (prisma.$transaction as any).mockImplementation((arg: unknown) =>
+    typeof arg === "function" ? (arg as (tx: typeof prisma) => unknown)(prisma) : Promise.resolve(arg)
+  );
 });
 
 describe("resolveProviderCredentials", () => {
@@ -101,6 +107,26 @@ describe("createProvider", () => {
     await createProvider({ label: "SumoPod", baseUrl: "https://a" });
     expect((prisma.aiProvider.create as any).mock.calls[0][0].data.apiKey).toBe("");
   });
+
+  it("menjadikan bawaan saat tabel masih kosong — produksi baru migrasi tidak boleh berakhir tanpa satu pun bawaan", async () => {
+    (prisma.aiProvider.count as any).mockResolvedValue(0);
+    (prisma.aiProvider.create as any).mockResolvedValue({ id: "p1" });
+    await createProvider({ label: "SumoPod", baseUrl: "https://a" });
+    expect((prisma.aiProvider.create as any).mock.calls[0][0].data.isDefault).toBe(true);
+  });
+
+  it("tidak menjadikan bawaan saat provider lain sudah ada", async () => {
+    (prisma.aiProvider.count as any).mockResolvedValue(1);
+    (prisma.aiProvider.create as any).mockResolvedValue({ id: "p2" });
+    await createProvider({ label: "Provider Lain", baseUrl: "https://b" });
+    expect((prisma.aiProvider.create as any).mock.calls[0][0].data.isDefault).toBe(false);
+  });
+
+  it("menghitung dan membuat dalam satu transaksi — bukan dua panggilan terpisah yang bisa diselingi pembuatan lain", async () => {
+    (prisma.aiProvider.create as any).mockResolvedValue({ id: "p1" });
+    await createProvider({ label: "SumoPod", baseUrl: "https://a" });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function));
+  });
 });
 
 describe("updateProvider", () => {
@@ -121,6 +147,7 @@ describe("updateProvider", () => {
 
 describe("deleteProvider", () => {
   it("menolak menghapus provider yang masih dipakai model", async () => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue({ id: "p1", isDefault: false });
     (prisma.aiModel.count as any).mockResolvedValue(2);
     await expect(deleteProvider("p1")).rejects.toBeInstanceOf(AiProviderError);
     await expect(deleteProvider("p1")).rejects.toMatchObject({ code: "in_use" });
@@ -128,12 +155,21 @@ describe("deleteProvider", () => {
   });
 
   it("menghapus provider yang tidak dipakai siapa pun", async () => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue({ id: "p1", isDefault: false });
     await deleteProvider("p1");
     expect(prisma.aiProvider.deleteMany).toHaveBeenCalledWith({ where: { id: "p1" } });
   });
 
   it("menolak id yang tidak ada", async () => {
-    (prisma.aiProvider.deleteMany as any).mockResolvedValue({ count: 0 });
+    (prisma.aiProvider.findFirst as any).mockResolvedValue(null);
     await expect(deleteProvider("hantu")).rejects.toMatchObject({ code: "not_found" });
+    expect(prisma.aiProvider.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("menolak menghapus provider bawaan — produksi baru migrasi punya nol AiModel, jadi guard 'in_use' saja tidak pernah menyala untuk melindungi satu-satunya kunci gateway", async () => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue({ id: "p1", isDefault: true });
+    await expect(deleteProvider("p1")).rejects.toMatchObject({ code: "is_default" });
+    expect(prisma.aiModel.count).not.toHaveBeenCalled();
+    expect(prisma.aiProvider.deleteMany).not.toHaveBeenCalled();
   });
 });

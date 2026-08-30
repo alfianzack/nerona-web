@@ -1402,3 +1402,5 @@ git commit -m "feat(ui): panel provider AI, panel model owner-only"
 - [ ] `npx tsc --noEmit` bersih
 - [ ] `npm run build` berhasil
 - [ ] Migrasi belum diterapkan ke produksi — `20260828000000_ai_models` dan `20260830000000_ai_providers` menyusul bersama saat owner siap. Sesudah diterapkan, owner harus membuka panel Provider AI dan memastikan baris SumoPod punya kunci (kalau selama ini kuncinya dari env, kolomnya akan kosong dan itu benar).
+- [ ] Set `SUMOPOD_API_KEY` di environment produksi SEBELUM migrasi dijalankan. Migrasi dan deploy berjalan terpisah (lihat `docs/vercel.md`), jadi urutan mana pun meninggalkan jendela rawan: migrasi dulu berarti kode lama masih mencari baris `Setting` yang baru saja dihapus migrasi, deploy dulu berarti kode baru menanyai tabel yang belum ada. Keduanya gagal aman, tapi kunci sudah ada di env menutup jendelanya sama sekali.
+- [ ] Sesudah diterapkan, periksa juga Base URL baris SumoPod, bukan cuma kuncinya — migrasi menuliskan `https://ai.sumopod.com/v1` apa adanya (SQL tidak bisa membaca env), dan `baseUrl` yang terisi di baris itu sekarang didahulukan daripada `SUMOPOD_BASE_URL`.

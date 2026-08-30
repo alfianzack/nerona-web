@@ -141,8 +141,8 @@ export async function listModelsForTenant(plan: PlanContext): Promise<TenantMode
     orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
   })) as ModelRow[];
 
-  // Hanya kolom yang memang perlu dilihat. `apiKey` dan `baseUrl` tidak pernah
-  // ikut keluar dari server.
+  // Hanya kolom yang memang perlu dilihat. Tarif per baris dan `providerId`
+  // urusan owner, bukan sesuatu yang perlu diketahui tenant.
   return rows.map((row) => ({
     id: row.id,
     label: row.label,

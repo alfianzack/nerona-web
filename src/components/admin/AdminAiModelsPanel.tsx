@@ -49,6 +49,43 @@ type Draft = typeof KOSONG;
 /** Profil token acuan yang sama dengan lib/ai-models.ts. */
 const REFERENCE_USAGE = { promptTokens: 1_200, completionTokens: 150 };
 
+export interface AiModelsPanelData {
+  models: ModelRow[];
+  providers: Array<{ id: string; label: string; isDefault: boolean }>;
+  /** Undefined kalau setelan poin gagal dimuat — bukan alasan menganggap panel gagal. */
+  pointsPerUsd?: number;
+}
+
+/**
+ * Model dan provider dianggap satu paket, keduanya wajib berhasil. Provider
+ * yang gagal dimuat dulu diam-diam menjadi daftar kosong, dan itu terbaca di
+ * layar sebagai kehilangan data padahal cuma satu fetch yang sempat gagal:
+ * setiap baris model menampilkan badge "Provider terhapus" walau providernya
+ * baik-baik saja, dan formulir Sunting menampilkan "— pilih provider —"
+ * untuk baris yang sebetulnya sudah punya provider.
+ *
+ * Setelan poin (untuk estimasi biaya) sengaja tidak ikut jadi syarat: kalau
+ * itu saja yang gagal, panel tetap terpakai dengan angka poin bawaan.
+ */
+export async function loadAiModelsPanelData(): Promise<AiModelsPanelData | null> {
+  const [modelsRes, aiRes, providersRes] = await Promise.all([
+    fetch("/api/admin/ai-models"),
+    fetch("/api/admin/ai-settings"),
+    fetch("/api/admin/ai-providers"),
+  ]);
+  const models = await modelsRes.json().catch(() => null);
+  const ai = await aiRes.json().catch(() => null);
+  const providersData = await providersRes.json().catch(() => null);
+  if (!modelsRes.ok || !models?.ok || !providersRes.ok || !providersData?.ok) {
+    return null;
+  }
+  return {
+    models: models.models,
+    providers: providersData.providers,
+    pointsPerUsd: ai?.ok ? ai.settings.effective.pointsPerUsd : undefined,
+  };
+}
+
 export function AdminAiModelsPanel() {
   const [rows, setRows] = useState<ModelRow[]>([]);
   const [providers, setProviders] = useState<Array<{ id: string; label: string; isDefault: boolean }>>([]);
@@ -61,20 +98,13 @@ export function AdminAiModelsPanel() {
 
   async function muat() {
     setLoading(true);
-    const [modelsRes, aiRes, providersRes] = await Promise.all([
-      fetch("/api/admin/ai-models"),
-      fetch("/api/admin/ai-settings"),
-      fetch("/api/admin/ai-providers"),
-    ]);
-    const models = await modelsRes.json().catch(() => null);
-    const ai = await aiRes.json().catch(() => null);
-    const providersData = await providersRes.json().catch(() => null);
-    if (!modelsRes.ok || !models?.ok) {
+    const data = await loadAiModelsPanelData();
+    if (!data) {
       setError("Gagal memuat daftar model.");
     } else {
-      setRows(models.models);
-      if (ai?.ok) setPointsPerUsd(ai.settings.effective.pointsPerUsd);
-      if (providersData?.ok) setProviders(providersData.providers);
+      setRows(data.models);
+      if (data.pointsPerUsd !== undefined) setPointsPerUsd(data.pointsPerUsd);
+      setProviders(data.providers);
       setError("");
     }
     setLoading(false);

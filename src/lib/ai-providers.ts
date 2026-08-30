@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { FALLBACK_BASE_URL } from "@/lib/agent/claude-client";
 
-export type AiProviderErrorCode = "not_found" | "label_required" | "base_url_required" | "in_use";
+export type AiProviderErrorCode =
+  | "not_found"
+  | "label_required"
+  | "base_url_required"
+  | "in_use"
+  | "is_default";
 
 export class AiProviderError extends Error {
   constructor(readonly code: AiProviderErrorCode) {
@@ -73,9 +78,19 @@ export async function getProviderById(id: string) {
   return prisma.aiProvider.findFirst({ where: { id } });
 }
 
+/**
+ * Baris pertama otomatis jadi bawaan, dalam transaksi yang sama dengan
+ * hitungnya — supaya tabel yang baru migrasi tidak pernah berakhir tanpa satu
+ * pun bawaan, dan dua pembuatan yang diselingi tidak sama-sama mengaku bawaan.
+ */
 export async function createProvider(input: AiProviderInput) {
   const data = cleanInput(input);
-  return prisma.aiProvider.create({ data: { ...data, apiKey: (input.apiKey || "").trim() } });
+  return prisma.$transaction(async (tx) => {
+    const total = await tx.aiProvider.count();
+    return tx.aiProvider.create({
+      data: { ...data, apiKey: (input.apiKey || "").trim(), isDefault: total === 0 },
+    });
+  });
 }
 
 export async function updateProvider(id: string, input: AiProviderInput) {
@@ -93,8 +108,16 @@ export async function updateProvider(id: string, input: AiProviderInput) {
  * Penolakan diperiksa di sini, bukan hanya diserahkan ke FK RESTRICT: pesan
  * "provider ini masih dipakai N model" bisa ditindaklanjuti, galat kendala
  * basis data tidak.
+ *
+ * Bawaan ditolak lebih dulu, sebelum hitungan model: tepat sesudah migrasi
+ * produksi, ai_models masih kosong, jadi guard "in_use" tidak pernah menyala
+ * dan baris SumoPod yang disemai migrasi — satu-satunya kunci gateway saat
+ * itu — bisa hilang dengan satu klik Hapus yang belum sempat dikonfirmasi.
  */
 export async function deleteProvider(id: string) {
+  const provider = await prisma.aiProvider.findFirst({ where: { id } });
+  if (!provider) throw new AiProviderError("not_found");
+  if (provider.isDefault) throw new AiProviderError("is_default");
   const used = await prisma.aiModel.count({ where: { providerId: id } });
   if (used > 0) throw new AiProviderError("in_use");
   const { count } = await prisma.aiProvider.deleteMany({ where: { id } });

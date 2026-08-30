@@ -26,8 +26,10 @@ export async function chatCompletion(params: {
   /** Kalau kosong, kunci `tools` tidak dikirim sama sekali. */
   tools?: unknown[];
   /**
-   * Gateway khusus untuk model ini. Kosong = gateway bersama (SumoPod). Ada
-   * untuk baris AiModel yang harus diambil langsung dari providernya.
+   * Alamat gateway yang sudah diresolusi pemanggil (lihat
+   * `resolveProviderCredentials`) — selalu terisi konkret sebelum sampai di
+   * sini. Parameter ini tetap opsional supaya pemanggil lama tanpa provider
+   * masih jalan lewat `BASE_URL` di bawah.
    */
   baseUrl?: string;
 }): Promise<ChatCompletionResult> {

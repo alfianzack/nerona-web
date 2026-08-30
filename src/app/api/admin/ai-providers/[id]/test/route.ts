@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { getProviderById, resolveProviderCredentials } from "@/lib/ai-providers";
 import { testAiConnection } from "@/lib/ai-connection-test";
 import { requireOwner } from "@/lib/ai-errors";
+import { hit } from "@/lib/rate-limit";
+
+export const maxDuration = 60;
 
 interface Ctx {
   params: { id: string };
@@ -15,6 +20,17 @@ interface Ctx {
 export async function POST(request: Request, { params }: Ctx) {
   const denied = await requireOwner();
   if (denied) return denied;
+
+  const session = await getServerSession(authOptions);
+
+  // Setiap pengecekan menghabiskan dua panggilan sungguhan atas kunci owner.
+  const rl = hit(`aitest:${session?.user?.id}`, 6, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, message: "Terlalu sering. Tunggu sebentar sebelum cek lagi." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
 
   const body = await request.json().catch(() => null);
   const model = typeof body?.model === "string" ? body.model.trim() : "";
@@ -41,6 +57,12 @@ export async function POST(request: Request, { params }: Ctx) {
     });
   }
 
-  const result = await testAiConnection({ apiKey, baseUrl, model });
+  let result;
+  try {
+    result = await testAiConnection({ apiKey, baseUrl, model });
+  } catch (err) {
+    console.error("[ai-providers/test] probe gagal", err);
+    return NextResponse.json({ ok: false, message: "Pengecekan koneksi gagal." }, { status: 502 });
+  }
   return NextResponse.json({ ok: true, result });
 }
