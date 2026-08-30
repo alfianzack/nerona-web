@@ -695,8 +695,16 @@ model AiModel {
   /// Punya penglihatan. Empat dari lima fitur mengirim gambar, jadi model tanpa
   /// ini tidak pernah ditawarkan ke tenant.
   vision     Boolean  @default(true)
-  /// Butuh paket berbayar. Knob per baris, bukan daftar nama paket di kode.
-  paidOnly   Boolean  @default(false)
+  /// Paket yang boleh melihat dan memakai model ini — satu kolom per paket,
+  /// menggantikan `paidOnly`. Dicentang berarti terlihat. Semua default true
+  /// supaya menambah kolom tidak pernah diam-diam menyembunyikan model.
+  ///
+  /// Kolom bernama paket berarti paket keempat menuntut migrasi. Sampai itu
+  /// terjadi, paket berbayar bernama lain diperlakukan sebagai Pro — lihat
+  /// planTierFromState di lib/ai-models.ts.
+  planFree     Boolean @default(true)
+  planPro      Boolean @default(true)
+  planBusiness Boolean @default(true)
   isDefault  Boolean  @default(false)
   active     Boolean  @default(true)
   /// Wajib. Kolom opsional akan berarti "kosong = pakai gateway global", dan

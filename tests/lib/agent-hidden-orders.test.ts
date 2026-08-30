@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // vi.mock is hoisted above the file's declarations, so a factory that closes
 // over a const throws "Cannot access before initialization". This matches how
 // tests/lib/renewals.test.ts and the rest of the suite do it.
+vi.mock("@/lib/ai-usage", () => ({ recordAiUsage: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     orderRequest: {

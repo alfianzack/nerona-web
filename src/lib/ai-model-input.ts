@@ -21,7 +21,11 @@ export function parseModelInput(body: any): AiModelInput {
     inPerMTok: rate(body?.inPerMTok),
     outPerMTok: rate(body?.outPerMTok),
     vision: body?.vision !== false,
-    paidOnly: body?.paidOnly === true,
+    // Absen berarti terlihat: kolom paket baru tidak boleh diam-diam
+    // menyembunyikan model dari siapa pun.
+    planFree: body?.planFree !== false,
+    planPro: body?.planPro !== false,
+    planBusiness: body?.planBusiness !== false,
     active: body?.active !== false,
     providerId: typeof body?.providerId === "string" ? body.providerId : "",
     sortOrder: Number.isFinite(Number(body?.sortOrder)) ? Number(body.sortOrder) : 0,

@@ -54,7 +54,9 @@ const VALID_MODEL = {
   inPerMTok: 5,
   outPerMTok: 25,
   vision: true,
-  paidOnly: true,
+  planFree: false,
+  planPro: true,
+  planBusiness: true,
   active: true,
   providerId: "p1",
 };
@@ -74,21 +76,27 @@ describe("GET /api/model", () => {
     expect(listForTenantMock).not.toHaveBeenCalled();
   });
 
-  it("treats an active Pro licence as a paid plan", async () => {
+  it("meneruskan tingkat paket, bukan sekadar berbayar atau tidak", async () => {
     await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ paidPlan: true });
+    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "pro" });
   });
 
-  it("treats Free as not paid, so paid-only models stay hidden", async () => {
+  it("memperlakukan Free sebagai tingkat free", async () => {
     accountStateMock.mockResolvedValue({ plan: "Free", active: true });
     await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ paidPlan: false });
+    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "free" });
   });
 
-  it("treats an expired licence as not paid", async () => {
+  it("membedakan Business dari Pro — itu gunanya kolom terpisah", async () => {
+    accountStateMock.mockResolvedValue({ plan: "Business", active: true });
+    await tenantGet();
+    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "business" });
+  });
+
+  it("menurunkan lisensi kedaluwarsa ke free, betapa pun mahal paketnya", async () => {
     accountStateMock.mockResolvedValue({ plan: "Business", active: false });
     await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ paidPlan: false });
+    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "free" });
   });
 });
 
@@ -96,16 +104,16 @@ describe("PATCH /api/model", () => {
   it("stores the tenant's choice with their own plan context", async () => {
     const res = await tenantPatch(body({ modelId: "m1" }));
     expect(res.status).toBe(200);
-    expect(setTenantModelMock).toHaveBeenCalledWith("user-1", "m1", { paidPlan: true });
+    expect(setTenantModelMock).toHaveBeenCalledWith("user-1", "m1", { tier: "pro" });
   });
 
   it("accepts null as 'back to the owner default'", async () => {
     await tenantPatch(body({ modelId: null }));
-    expect(setTenantModelMock).toHaveBeenCalledWith("user-1", null, { paidPlan: true });
+    expect(setTenantModelMock).toHaveBeenCalledWith("user-1", null, { tier: "pro" });
   });
 
   it("turns a refused paid-only pick into a 403 the page can explain", async () => {
-    setTenantModelMock.mockRejectedValue(new AiModelError("paid_only"));
+    setTenantModelMock.mockRejectedValue(new AiModelError("plan_not_allowed"));
     const res = await tenantPatch(body({ modelId: "m1" }));
     expect(res.status).toBe(403);
     expect((await res.json()).message).toMatch(/paket/i);

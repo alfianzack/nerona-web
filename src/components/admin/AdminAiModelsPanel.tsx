@@ -26,7 +26,9 @@ interface ModelRow {
   inPerMTok: number;
   outPerMTok: number;
   vision: boolean;
-  paidOnly: boolean;
+  planFree: boolean;
+  planPro: boolean;
+  planBusiness: boolean;
   isDefault: boolean;
   active: boolean;
   providerId: string;
@@ -42,7 +44,9 @@ const KOSONG = {
   outPerMTok: "",
   providerId: "",
   vision: true,
-  paidOnly: false,
+  planFree: true,
+  planPro: true,
+  planBusiness: true,
   active: true,
 };
 
@@ -177,7 +181,9 @@ export function AdminAiModelsPanel() {
       outPerMTok: String(row.outPerMTok),
       providerId: row.providerId,
       vision: row.vision,
-      paidOnly: row.paidOnly,
+      planFree: row.planFree,
+      planPro: row.planPro,
+      planBusiness: row.planBusiness,
       active: row.active,
     });
     setFormError("");
@@ -192,7 +198,9 @@ export function AdminAiModelsPanel() {
       outPerMTok: draft.outPerMTok,
       providerId: draft.providerId,
       vision: draft.vision,
-      paidOnly: draft.paidOnly,
+      planFree: draft.planFree,
+      planPro: draft.planPro,
+      planBusiness: draft.planBusiness,
       active: draft.active,
     };
     setFormError("");
@@ -242,7 +250,20 @@ export function AdminAiModelsPanel() {
                     {row.isDefault && <Badge tone="info">Bawaan</Badge>}
                     {!row.active && <Badge tone="neutral">Nonaktif</Badge>}
                     {!row.vision && <Badge tone="warning">Tanpa gambar</Badge>}
-                    {row.paidOnly && <Badge tone="emphasis">Paket berbayar</Badge>}
+                    {/* Hanya disebut kalau ADA yang dibatasi. Baris yang
+                        terlihat oleh semua paket tidak perlu lencana — itu
+                        keadaan biasa, dan melabelinya cuma menambah keramaian. */}
+                    {!(row.planFree && row.planPro && row.planBusiness) && (
+                      <Badge tone="emphasis">
+                        {[
+                          row.planFree && "Free",
+                          row.planPro && "Pro",
+                          row.planBusiness && "Business",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Tidak ada paket"}
+                      </Badge>
+                    )}
                     <Badge tone="neutral">
                       {providers.find((p) => p.id === row.providerId)?.label ?? "Provider terhapus"}
                     </Badge>
@@ -356,10 +377,36 @@ export function AdminAiModelsPanel() {
           </label>
 
           <div className="grid gap-2">
+            <span className="text-label text-ink">Terlihat oleh paket</span>
+            {(
+              [
+                ["planFree", "Free"],
+                ["planPro", "Pro"],
+                ["planBusiness", "Business"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2 text-body text-ink">
+                <input
+                  type="checkbox"
+                  checked={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.checked })}
+                />
+                {label}
+              </label>
+            ))}
+            {/* Tidak dilarang: owner boleh menyiapkan model lalu membukanya
+                nanti. Tapi ia harus tahu bahwa saat ini tidak ada yang melihatnya. */}
+            {!draft.planFree && !draft.planPro && !draft.planBusiness && (
+              <span className="text-caption text-muted">
+                Tidak ada paket yang dicentang — model ini tidak akan muncul untuk tenant mana pun.
+              </span>
+            )}
+          </div>
+
+          <div className="grid gap-2">
             {(
               [
                 ["vision", "Bisa membaca gambar (tanpa ini, tidak ditawarkan ke tenant)"],
-                ["paidOnly", "Hanya untuk paket berbayar"],
                 ["active", "Aktif"],
               ] as const
             ).map(([key, label]) => (

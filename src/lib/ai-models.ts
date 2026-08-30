@@ -3,12 +3,13 @@ import { getAiSettings } from "@/lib/ai-settings";
 import { resolveProviderCredentials } from "@/lib/ai-providers";
 import { REFERENCE_IMAGE_USAGE, costForUsage, type AiPricing, type TokenUsage } from "@/lib/agent/pricing";
 import { averageImageUsageByModel } from "@/lib/ai-usage";
+import { getExtensionAccountState } from "@/lib/extension-sync";
 
 export type AiModelErrorCode =
   | "not_found"
   | "inactive"
   | "no_vision"
-  | "paid_only"
+  | "plan_not_allowed"
   | "label_required"
   | "model_id_required"
   | "rate_invalid"
@@ -39,7 +40,9 @@ interface ModelRow {
   inPerMTok: number;
   outPerMTok: number;
   vision: boolean;
-  paidOnly: boolean;
+  planFree: boolean;
+  planPro: boolean;
+  planBusiness: boolean;
   isDefault: boolean;
   active: boolean;
   providerId: string;
@@ -79,15 +82,23 @@ function pricingFor(row: ModelRow, pointsPerUsd: number): AiPricing {
  * pun berubah sebelum owner mengisi tabelnya.
  */
 export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
-  const [user, global] = await Promise.all([
+  const [user, global, state] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { aiModelId: true, aiModel: { include: { provider: true } } },
     }),
     getAiSettings(),
+    getExtensionAccountState(userId),
   ]);
 
-  const picked = user?.aiModel && user.aiModel.active ? (user.aiModel as ModelRow) : null;
+  // Paket diperiksa ulang DI SINI, bukan hanya saat memilih. Pilihan yang
+  // tersimpan tidak pernah dibersihkan saat lisensi berubah, jadi tanpa ini
+  // tenant yang paketnya habis tetap memakai — dan ditagih dengan tarif — model
+  // yang sudah tidak berhak ia pakai. Jatuhnya ke baris bawaan, bukan galat:
+  // paket yang berubah tidak boleh membuat panggilannya gagal.
+  const tier = planTierFromState(state);
+  const chosen = user?.aiModel as ModelRow | null | undefined;
+  const picked = chosen && chosen.active && allowsPlan(chosen, tier) ? chosen : null;
   // Jatuhnya ke baris DEFAULT, bukan ke termurah. Bedanya adalah selisih antara
   // "tagihan yang owner tetapkan" dan "tagihan yang kebetulan paling murah".
   const row =
@@ -123,8 +134,44 @@ export interface TenantModelView {
   isDefault: boolean;
 }
 
+export type PlanTier = "free" | "pro" | "business";
+
+/**
+ * Menerjemahkan keadaan lisensi jadi tingkat paket.
+ *
+ * Lisensi kedaluwarsa turun ke free: kalau tidak, tenant yang paketnya habis
+ * tetap memegang model mahal yang tidak lagi ia bayar.
+ *
+ * Paket berbayar yang belum punya kolomnya sendiri diperlakukan sebagai pro,
+ * bukan free — menurunkan pelanggan yang membayar ke tingkat gratis adalah
+ * kegagalan yang jauh lebih terasa daripada memberinya satu model ekstra.
+ */
+export function planTierFromState(state: { active: boolean; plan: string | null }): PlanTier {
+  if (!state.active) return "free";
+  const nama = (state.plan || "").trim().toLowerCase();
+  if (!nama || nama === "free") return "free";
+  if (nama === "business") return "business";
+  return "pro";
+}
+
+const KOLOM_PAKET = {
+  free: "planFree",
+  pro: "planPro",
+  business: "planBusiness",
+} as const;
+
+/** Saringan basis data untuk satu tingkat paket. */
+function planWhere(tier: PlanTier) {
+  return { [KOLOM_PAKET[tier]]: true };
+}
+
+/** Apakah satu baris boleh dipakai tingkat paket ini. */
+function allowsPlan(row: Pick<ModelRow, "planFree" | "planPro" | "planBusiness">, tier: PlanTier) {
+  return row[KOLOM_PAKET[tier]];
+}
+
 export interface PlanContext {
-  paidPlan: boolean;
+  tier: PlanTier;
 }
 
 /**
@@ -140,7 +187,7 @@ export async function listModelsForTenant(plan: PlanContext): Promise<TenantMode
     where: {
       active: true,
       vision: true,
-      ...(plan.paidPlan ? {} : { paidOnly: false }),
+      ...planWhere(plan.tier),
     },
     orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
   })) as ModelRow[];
@@ -179,7 +226,7 @@ export async function setTenantModel(
   if (!row) throw new AiModelError("not_found");
   if (!row.active) throw new AiModelError("inactive");
   if (!row.vision) throw new AiModelError("no_vision");
-  if (row.paidOnly && !plan.paidPlan) throw new AiModelError("paid_only");
+  if (!allowsPlan(row, plan.tier)) throw new AiModelError("plan_not_allowed");
 
   await prisma.user.update({ where: { id: userId }, data: { aiModelId: row.id } });
 }
@@ -195,7 +242,9 @@ export interface AiModelInput {
   inPerMTok: number;
   outPerMTok: number;
   vision: boolean;
-  paidOnly: boolean;
+  planFree: boolean;
+  planPro: boolean;
+  planBusiness: boolean;
   active: boolean;
   providerId: string;
   sortOrder?: number;
@@ -218,7 +267,9 @@ function cleanInput(input: AiModelInput) {
     inPerMTok: input.inPerMTok,
     outPerMTok: input.outPerMTok,
     vision: input.vision,
-    paidOnly: input.paidOnly,
+    planFree: input.planFree,
+    planPro: input.planPro,
+    planBusiness: input.planBusiness,
     active: input.active,
     providerId,
     sortOrder: input.sortOrder ?? 0,

@@ -3,18 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getExtensionAccountState } from "@/lib/extension-sync";
-import { listModelsForTenant, setTenantModel, type PlanContext } from "@/lib/ai-models";
+import {
+  listModelsForTenant,
+  planTierFromState,
+  setTenantModel,
+  type PlanContext,
+} from "@/lib/ai-models";
 import { aiErrorResponse } from "@/lib/ai-errors";
 
-/**
- * Berbayar berarti lisensinya aktif DAN paketnya bukan Free. Lisensi kedaluwarsa
- * tidak boleh lolos: kalau tidak, tenant yang paketnya habis tetap memegang model
- * mahal yang tidak lagi ia bayar.
- */
+/** Aturan pemetaannya tinggal di planTierFromState, satu tempat untuk semua pemanggil. */
 async function planContext(userId: string): Promise<PlanContext> {
-  const state = await getExtensionAccountState(userId);
-  const plan = (state.plan || "").trim().toLowerCase();
-  return { paidPlan: Boolean(state.active) && plan !== "" && plan !== "free" };
+  return { tier: planTierFromState(await getExtensionAccountState(userId)) };
 }
 
 export async function GET() {
@@ -33,7 +32,7 @@ export async function GET() {
     ok: true,
     models,
     selectedId: user?.aiModelId ?? null,
-    paidPlan: plan.paidPlan,
+    tier: plan.tier,
   });
 }
 

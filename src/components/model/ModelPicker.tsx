@@ -16,7 +16,7 @@ interface ModelOption {
 export function ModelPicker() {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [paidPlan, setPaidPlan] = useState(true);
+  const [tier, setTier] = useState<"free" | "pro" | "business">("business");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +30,7 @@ export function ModelPicker() {
     } else {
       setModels(data.models);
       setSelectedId(data.selectedId);
-      setPaidPlan(Boolean(data.paidPlan));
+      setTier(data.tier === "free" || data.tier === "pro" ? data.tier : "business");
       setError("");
     }
     setLoading(false);
@@ -133,9 +133,11 @@ export function ModelPicker() {
           </div>
         )}
 
-        {!paidPlan && (
+        {/* Ditampilkan untuk Pro juga, bukan hanya Free: sejak gerbangnya per
+            paket, Pro pun bisa punya model yang tidak terlihat olehnya. */}
+        {tier !== "business" && (
           <p className="mt-4 max-w-prose text-caption text-muted">
-            Sebagian model hanya untuk paket berbayar dan tidak ditampilkan di sini.
+            Sebagian model hanya untuk paket yang lebih tinggi dan tidak ditampilkan di sini.
           </p>
         )}
 

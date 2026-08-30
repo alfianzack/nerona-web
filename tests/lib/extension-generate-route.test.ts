@@ -7,6 +7,7 @@ vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
 // `pricing` is left REAL (it is pure) so the charge asserted below is the one the
 // configured rates actually produce.
 vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
+vi.mock("@/lib/ai-usage", () => ({ recordAiUsage: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
 vi.mock("@/lib/extension-version", () => ({ tolakKalauBasi: vi.fn() }));
 vi.mock("@/lib/extension/prompt-resolver", () => ({
@@ -26,6 +27,7 @@ import { getExtensionAccountState } from "@/lib/extension-sync";
 import { resolveAiForUser } from "@/lib/ai-models";
 import { chatCompletion } from "@/lib/agent/claude-client";
 import { spendPoints } from "@/lib/points";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { hit } from "@/lib/rate-limit";
 import { tolakKalauBasi } from "@/lib/extension-version";
 import {
@@ -66,6 +68,7 @@ beforeEach(() => {
   (hit as any).mockReturnValue({ ok: true, remaining: 89, retryAfterSeconds: 0 });
   (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
   (resolveAiForUser as any).mockResolvedValue({
+    aiModelId: "m1",
     modelId: "gemini-2.0-flash",
     apiKey: "adminkey",
     pricing: { inPerMTok: 0.1, outPerMTok: 0.4, pointsPerUsd: 100_000 },
@@ -262,5 +265,36 @@ describe("POST /api/extension/generate", () => {
     const res = await POST(req(metadataBody));
     expect(res.status).toBe(502);
     expect(spendPoints).not.toHaveBeenCalled();
+  });
+});
+
+describe("pencatatan pemakaian", () => {
+  it("mencatat panggilan metadata sebagai BER-GAMBAR, dengan model dan ongkos yang sama dengan yang ditagih", async () => {
+    await POST(req(metadataBody));
+    const dicatat = (recordAiUsage as any).mock.calls[0][0];
+    const ditagih = (spendPoints as any).mock.calls[0][0];
+    expect(dicatat).toMatchObject({
+      userId: "u1",
+      aiModelId: "m1",
+      feature: "metadata",
+      withImage: true,
+      usage: { promptTokens: 1200, completionTokens: 150 },
+    });
+    // Ongkos yang dicatat HARUS sama dengan yang dipotong; dua angka berbeda
+    // membuat kalibrasi berikutnya mengukur sesuatu yang tidak pernah ditagih.
+    expect(dicatat.points).toBe(ditagih.cost);
+  });
+
+  /**
+   * Saran keyword tidak mengirim gambar. Kalau ia ikut tercatat sebagai
+   * ber-gambar, rata-rata "poin per gambar" tertarik turun oleh panggilan yang
+   * jauh lebih kecil — persis kesalahan yang membuat estimasinya meleset separuh.
+   */
+  it("mencatat panggilan keyword sebagai TANPA gambar", async () => {
+    await POST(req(keywordBody));
+    expect((recordAiUsage as any).mock.calls[0][0]).toMatchObject({
+      feature: "keyword",
+      withImage: false,
+    });
   });
 });
