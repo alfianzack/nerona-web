@@ -28,8 +28,7 @@ interface ModelRow {
   paidOnly: boolean;
   isDefault: boolean;
   active: boolean;
-  baseUrl: string | null;
-  apiKeySet: boolean;
+  providerId: string;
   sortOrder: number;
 }
 
@@ -39,8 +38,7 @@ const KOSONG = {
   note: "",
   inPerMTok: "",
   outPerMTok: "",
-  baseUrl: "",
-  apiKey: "",
+  providerId: "",
   vision: true,
   paidOnly: false,
   active: true,
@@ -53,6 +51,7 @@ const REFERENCE_USAGE = { promptTokens: 1_200, completionTokens: 150 };
 
 export function AdminAiModelsPanel() {
   const [rows, setRows] = useState<ModelRow[]>([]);
+  const [providers, setProviders] = useState<Array<{ id: string; label: string; isDefault: boolean }>>([]);
   const [pointsPerUsd, setPointsPerUsd] = useState(1_000);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(KOSONG);
@@ -62,17 +61,20 @@ export function AdminAiModelsPanel() {
 
   async function muat() {
     setLoading(true);
-    const [modelsRes, aiRes] = await Promise.all([
+    const [modelsRes, aiRes, providersRes] = await Promise.all([
       fetch("/api/admin/ai-models"),
       fetch("/api/admin/ai-settings"),
+      fetch("/api/admin/ai-providers"),
     ]);
     const models = await modelsRes.json().catch(() => null);
     const ai = await aiRes.json().catch(() => null);
+    const providersData = await providersRes.json().catch(() => null);
     if (!modelsRes.ok || !models?.ok) {
       setError("Gagal memuat daftar model.");
     } else {
       setRows(models.models);
       if (ai?.ok) setPointsPerUsd(ai.settings.effective.pointsPerUsd);
+      if (providersData?.ok) setProviders(providersData.providers);
       setError("");
     }
     setLoading(false);
@@ -102,7 +104,9 @@ export function AdminAiModelsPanel() {
 
   function bukaBaru() {
     setEditingId("");
-    setDraft(KOSONG);
+    // Pilihan awal yang masuk akal — provider bawaan kalau ada, kalau tidak
+    // provider pertama — bukan kolom kosong yang pasti ditolak server.
+    setDraft({ ...KOSONG, providerId: providers.find((p) => p.isDefault)?.id ?? providers[0]?.id ?? "" });
     setError("");
   }
 
@@ -114,10 +118,7 @@ export function AdminAiModelsPanel() {
       note: row.note || "",
       inPerMTok: String(row.inPerMTok),
       outPerMTok: String(row.outPerMTok),
-      baseUrl: row.baseUrl || "",
-      // Sengaja kosong: kunci tidak pernah dikirim balik utuh, jadi kosong di
-      // sini berarti "biarkan yang tersimpan", bukan "hapus".
-      apiKey: "",
+      providerId: row.providerId,
       vision: row.vision,
       paidOnly: row.paidOnly,
       active: row.active,
@@ -132,11 +133,10 @@ export function AdminAiModelsPanel() {
       note: draft.note,
       inPerMTok: draft.inPerMTok,
       outPerMTok: draft.outPerMTok,
-      baseUrl: draft.baseUrl,
+      providerId: draft.providerId,
       vision: draft.vision,
       paidOnly: draft.paidOnly,
       active: draft.active,
-      ...(draft.apiKey.trim() ? { apiKey: draft.apiKey } : {}),
     };
     const ok =
       editingId === ""
@@ -184,7 +184,9 @@ export function AdminAiModelsPanel() {
                     {!row.active && <Badge tone="neutral">Nonaktif</Badge>}
                     {!row.vision && <Badge tone="warning">Tanpa gambar</Badge>}
                     {row.paidOnly && <Badge tone="emphasis">Paket berbayar</Badge>}
-                    {row.apiKeySet && <Badge tone="neutral">Gateway sendiri</Badge>}
+                    <Badge tone="neutral">
+                      {providers.find((p) => p.id === row.providerId)?.label ?? "Provider terhapus"}
+                    </Badge>
                   </div>
                   <p className="mt-0.5 font-mono text-caption text-muted">{row.modelId}</p>
                   <p className="mt-0.5 text-caption text-muted">
@@ -272,22 +274,24 @@ export function AdminAiModelsPanel() {
             poin.
           </p>
 
-          <Field
-            id="model-base-url"
-            label="Gateway sendiri (opsional — kosong = gateway global)"
-            placeholder="https://api.provider.com/v1"
-            className={ISIAN_MONO}
-            value={draft.baseUrl}
-            onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })}
-          />
-          <Field
-            id="model-api-key"
-            label="Kunci gateway sendiri (kosong = biarkan yang tersimpan)"
-            type="password"
-            className={ISIAN_MONO}
-            value={draft.apiKey}
-            onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
-          />
+          <label className="grid gap-1.5">
+            <span className="text-label text-ink">Provider</span>
+            <select
+              className="rounded-control px-3 py-2 text-body text-ink ring-1 ring-border"
+              value={draft.providerId}
+              onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}
+            >
+              <option value="">— pilih provider —</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-caption text-muted">
+              Kunci dan alamat gateway diambil dari provider ini, tidak diisi lagi di sini.
+            </span>
+          </label>
 
           <div className="grid gap-2">
             {(

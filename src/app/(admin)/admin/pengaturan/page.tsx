@@ -6,6 +6,7 @@ import { AdminDownloadSettingsPanel } from "@/components/admin/AdminDownloadSett
 import { AdminPaymentGatewayPanel } from "@/components/admin/AdminPaymentGatewayPanel";
 import { AdminPromptPanel } from "@/components/admin/AdminPromptPanel";
 import { AdminAiModelsPanel } from "@/components/admin/AdminAiModelsPanel";
+import { AdminAiProvidersPanel } from "@/components/admin/AdminAiProvidersPanel";
 import { requireAdmin } from "@/lib/session-guards";
 
 /**
@@ -28,8 +29,9 @@ function Sel({ children }: { children: React.ReactNode }) {
 }
 
 export default async function AdminSettingsPage() {
-  // Panel prompt hanya untuk owner. Ini penjagaan tampilan; yang berwenang
-  // tetap /api/admin/prompts, yang menolak `support` dengan 403.
+  // Panel provider, Model AI, dan prompt hanya untuk owner. Ini penjagaan
+  // tampilan; yang berwenang tetap rute API masing-masing, yang menolak
+  // `support` dengan 403.
   const session = await requireAdmin();
 
   return (
@@ -52,13 +54,18 @@ export default async function AdminSettingsPage() {
       <Sel>
         <AdminAiSettingsPanel />
       </Sel>
-      <Sel>
-        <AdminAiModelsPanel />
-      </Sel>
       {session.user.role === "owner_admin" && (
-        <Sel>
-          <AdminPromptPanel />
-        </Sel>
+        <>
+          <Sel>
+            <AdminAiProvidersPanel />
+          </Sel>
+          <Sel>
+            <AdminAiModelsPanel />
+          </Sel>
+          <Sel>
+            <AdminPromptPanel />
+          </Sel>
+        </>
       )}
     </div>
   );

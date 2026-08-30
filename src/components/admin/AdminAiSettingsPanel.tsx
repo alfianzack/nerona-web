@@ -11,38 +11,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
-import { Icon, type IconName } from "@/components/ui/icons";
+import { Icon } from "@/components/ui/icons";
 
 /**
  * Field meneruskan `className` ke pembungkusnya, bukan ke isian di dalamnya,
  * jadi mono harus diarahkan langsung ke elemen isiannya. Kalau ditempel di
  * pembungkus, labelnya ikut berubah jadi mono padahal yang perlu hanya isinya:
- * id model, kunci API, dan tarif. Kolom bertipe angka sudah mendapat angka
- * berbaris dari lapisan token, jadi di sini cukup jenis hurufnya.
+ * id model dan tarif. Kolom bertipe angka sudah mendapat angka berbaris dari
+ * lapisan token, jadi di sini cukup jenis hurufnya.
  */
 const ISIAN_MONO = "[&_input]:font-mono";
 
-interface Probe {
-  ok: boolean;
-  error?: string;
-  skipped?: boolean;
-}
-
-interface ConnectionTestResult {
-  ok: boolean;
-  configured: boolean;
-  model: string;
-  text: Probe;
-  vision: Probe;
-}
-
 export function AdminAiSettingsPanel() {
   const [model, setModel] = useState("");
-  /** Last value loaded from the server, so unsaved edits are detectable. */
-  const [storedModel, setStoredModel] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiKeyMasked, setApiKeyMasked] = useState("");
-  const [apiKeySet, setApiKeySet] = useState(false);
   const [priceIn, setPriceIn] = useState("");
   const [priceOut, setPriceOut] = useState("");
   const [pointsPerUsd, setPointsPerUsd] = useState("");
@@ -50,8 +31,6 @@ export function AdminAiSettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
 
   async function load() {
     const res = await fetch("/api/admin/ai-settings");
@@ -61,9 +40,6 @@ export function AdminAiSettingsPanel() {
       return;
     }
     setModel(data.settings.model ?? "");
-    setStoredModel(data.settings.model ?? "");
-    setApiKeyMasked(data.settings.apiKeyMasked ?? "");
-    setApiKeySet(Boolean(data.settings.apiKeySet));
     setPriceIn(data.settings.priceIn ?? "");
     setPriceOut(data.settings.priceOut ?? "");
     setPointsPerUsd(data.settings.pointsPerUsd ?? "");
@@ -74,29 +50,14 @@ export function AdminAiSettingsPanel() {
     load();
   }, []);
 
-  /**
-   * A connection verdict only describes the model and key it ran against, so it
-   * has to die the moment either of those changes. Without this a green
-   * "berfungsi (gpt-5-nano)" panel survives a switch to another model and reads
-   * as if the new one had been verified.
-   *
-   * Point rates do not affect the probe, so they deliberately do not clear it.
-   */
-  function invalidateTestResult() {
-    setTestResult(null);
-  }
-
   async function handleSave() {
     setError("");
     setSaved(false);
-    // The stored config is about to change; whatever is on screen described the
-    // previous one.
-    invalidateTestResult();
     setSaving(true);
     const res = await fetch("/api/admin/ai-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, apiKey, priceIn, priceOut, pointsPerUsd }),
+      body: JSON.stringify({ model, priceIn, priceOut, pointsPerUsd }),
     });
     const data = await res.json().catch(() => null);
     setSaving(false);
@@ -105,40 +66,8 @@ export function AdminAiSettingsPanel() {
       return;
     }
     setSaved(true);
-    setApiKey("");
     load();
   }
-
-  async function handleTest() {
-    setError("");
-    setTestResult(null);
-    setTesting(true);
-    const res = await fetch("/api/admin/ai-settings/test", { method: "POST" });
-    const data = await res.json().catch(() => null);
-    setTesting(false);
-
-    if (res.status === 429) {
-      setError("Terlalu sering. Tunggu sebentar sebelum cek lagi.");
-      return;
-    }
-    if (!res.ok || !data?.ok) {
-      setError("Gagal menjalankan pengecekan koneksi.");
-      return;
-    }
-    setTestResult(data.result);
-  }
-
-  /**
-   * "Cek koneksi" probes the SAVED settings — it posts no body, so the server
-   * reads the Setting rows. Running it against unsaved edits produces a verdict
-   * about the old model while the form shows a new one, which is exactly the
-   * confusion this panel used to cause. Block it instead.
-   */
-  const hasUnsavedConnectionEdits = model !== storedModel || apiKey !== "";
-
-  const keyPlaceholder = apiKeySet
-    ? `Tersimpan (${apiKeyMasked}) — biarkan kosong untuk tetap`
-    : "Tempel API key Sumopod";
 
   // Preview at the values being typed, falling back to what is in force right now.
   const previewPricing = pricingFromInput({ priceIn, priceOut, pointsPerUsd }, effective);
@@ -168,9 +97,9 @@ export function AdminAiSettingsPanel() {
           </svg>
         </span>
         <div>
-          <h2 className="text-title-2 text-ink">Koneksi AI (Sumopod)</h2>
+          <h2 className="text-title-2 text-ink">Bawaan &amp; tarif poin</h2>
           <p className="text-caption text-muted">
-            Model, API key & tarif poin untuk agen dan extension
+            Model bawaan dan kurs poin untuk agen dan extension
           </p>
         </div>
       </div>
@@ -185,24 +114,10 @@ export function AdminAiSettingsPanel() {
           value={model}
           onChange={(e) => {
             setSaved(false);
-            invalidateTestResult();
             setModel(e.target.value);
           }}
           placeholder="gemini-2.0-flash-lite"
-          hint="Id model persis seperti di Sumopod. Kosongkan untuk pakai default."
-          className={ISIAN_MONO}
-        />
-        <Field
-          id="ai-key"
-          label="API key"
-          type="password"
-          value={apiKey}
-          onChange={(e) => {
-            setSaved(false);
-            invalidateTestResult();
-            setApiKey(e.target.value);
-          }}
-          placeholder={keyPlaceholder}
+          hint="Id model yang dipakai saat daftar Model AI masih kosong. Kuncinya dari provider bawaan."
           className={ISIAN_MONO}
         />
 
@@ -259,21 +174,7 @@ export function AdminAiSettingsPanel() {
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Menyimpan..." : "Simpan koneksi AI"}
-        </Button>
-        {/* Mengecek koneksi tidak mengubah apa pun, jadi ia aksi kedua di baris
-            ini — bukan tombol yang sama menonjolnya dengan Simpan. */}
-        <Button
-          variant="secondary"
-          onClick={handleTest}
-          disabled={testing || hasUnsavedConnectionEdits}
-          title={
-            hasUnsavedConnectionEdits
-              ? "Simpan dulu — pengecekan menguji pengaturan yang tersimpan."
-              : undefined
-          }
-        >
-          {testing ? "Mengecek..." : "Cek koneksi"}
+          {saving ? "Menyimpan..." : "Simpan"}
         </Button>
         {saved && (
           <Badge tone="success">
@@ -281,14 +182,7 @@ export function AdminAiSettingsPanel() {
             Tersimpan
           </Badge>
         )}
-        {hasUnsavedConnectionEdits && (
-          <span className="text-caption text-muted">
-            Simpan dulu untuk bisa cek koneksi — pengecekan memakai pengaturan yang tersimpan.
-          </span>
-        )}
       </div>
-
-      {testResult && <ConnectionTestReport result={testResult} />}
     </Card>
   );
 }
@@ -322,64 +216,5 @@ function RateField({
       placeholder={placeholder}
       className={ISIAN_MONO}
     />
-  );
-}
-
-function ProbeRow({ label, probe, hint }: { label: string; probe: Probe; hint: string }) {
-  /**
-   * Penanda hasil dulu glyph teks. Glyph teks tidak bisa disetel ukurannya,
-   * tingginya berbeda antar huruf, dan ✓ serta ✗ tidak sama beratnya — jadi dua
-   * baris yang sejajar terlihat tidak sejajar.
-   *
-   * "Tidak dijalankan" belum punya glyph netral di daftar Icon; jam dipakai
-   * karena artinya memang "belum jalan", bukan gagal.
-   */
-  const icon: IconName = probe.ok ? "check-circle" : probe.skipped ? "clock" : "close";
-  const tone = probe.ok ? "text-success" : probe.skipped ? "text-muted" : "text-danger";
-  return (
-    <li className="flex gap-2">
-      <Icon name={icon} className={`mt-0.5 h-4 w-4 flex-none ${tone}`} />
-      <span className="min-w-0">
-        <span className="font-medium text-ink">{label}</span>{" "}
-        <span className="text-muted">— {probe.ok ? hint : probe.skipped ? "tidak dijalankan" : probe.error}</span>
-      </span>
-    </li>
-  );
-}
-
-function ConnectionTestReport({ result }: { result: ConnectionTestResult }) {
-  if (!result.configured) {
-    return (
-      <p className="mt-4 rounded-card bg-warning-bg px-3 py-2 text-body text-warning ring-1 ring-warning/25">
-        API key belum diisi — simpan key dulu, lalu cek lagi.
-      </p>
-    );
-  }
-
-  return (
-    <div
-      className={`mt-4 rounded-card px-3 py-3 text-body ring-1 ${
-        result.ok ? "bg-success-bg ring-success/25" : "bg-danger-bg ring-danger/25"
-      }`}
-    >
-      <p className={`font-semibold ${result.ok ? "text-success" : "text-danger"}`}>
-        {result.ok ? "Koneksi AI berfungsi" : "Koneksi AI bermasalah"}
-        {/* Nama model mono: ia disalin bulat-bulat dari dashboard Sumopod, dan
-            satu huruf meleset berarti kesimpulan di atasnya tentang model lain. */}
-        <span className="ml-1 font-mono text-caption font-normal text-muted">
-          ({result.model || "model default"})
-        </span>
-      </p>
-      <ul className="mt-2 space-y-1">
-        <ProbeRow label="Teks" probe={result.text} hint="key valid, model merespons" />
-        <ProbeRow label="Gambar" probe={result.vision} hint="model bisa membaca gambar" />
-      </ul>
-      {result.text.ok && !result.vision.ok && !result.vision.skipped && (
-        <p className="mt-2 text-caption text-ink">
-          Key-nya benar, tapi model ini tidak menerima gambar. Semua fitur metadata di
-          extension butuh model vision — ganti modelnya.
-        </p>
-      )}
-    </div>
   );
 }
