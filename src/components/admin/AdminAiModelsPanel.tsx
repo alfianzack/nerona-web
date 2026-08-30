@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import { costForUsage } from "@/lib/agent/pricing";
 
 /**
@@ -94,7 +95,16 @@ export function AdminAiModelsPanel() {
   const [draft, setDraft] = useState<Draft>(KOSONG);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  /** Galat milik daftar: gagal memuat, gagal menghapus, gagal memindah bawaan. */
   const [error, setError] = useState("");
+  /**
+   * Galat milik formulir, dirender DI DALAM modal.
+   *
+   * Kalau ia ikut ke `error` di kaki kartu, ia muncul di belakang tirai modal —
+   * tidak terlihat sama sekali, dan owner hanya melihat tombol Simpan yang
+   * seolah tidak melakukan apa-apa.
+   */
+  const [formError, setFormError] = useState("");
 
   async function muat() {
     setLoading(true);
@@ -114,9 +124,17 @@ export function AdminAiModelsPanel() {
     void muat();
   }, []);
 
-  async function kirim(url: string, method: string, body?: unknown) {
+  /**
+   * Mengembalikan pesannya, tidak memasangnya sendiri: pemanggilnya yang tahu
+   * galat ini milik daftar atau milik formulir, dan keduanya tampil di tempat
+   * berbeda sejak formulirnya melayang.
+   */
+  async function kirim(
+    url: string,
+    method: string,
+    body?: unknown
+  ): Promise<{ ok: boolean; message: string }> {
     setBusy(true);
-    setError("");
     const res = await fetch(url, {
       method,
       headers: { "content-type": "application/json" },
@@ -125,11 +143,22 @@ export function AdminAiModelsPanel() {
     const data = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok || !data?.ok) {
-      setError(data?.message || "Gagal menyimpan.");
-      return false;
+      return { ok: false, message: data?.message || "Gagal menyimpan." };
     }
     await muat();
-    return true;
+    return { ok: true, message: "" };
+  }
+
+  /** Aksi pada baris daftar — galatnya milik daftar, jadi tampil di kaki kartu. */
+  async function aksiBaris(url: string, method: string, body?: unknown) {
+    setError("");
+    const hasil = await kirim(url, method, body);
+    if (!hasil.ok) setError(hasil.message);
+  }
+
+  function tutup() {
+    setEditingId(null);
+    setFormError("");
   }
 
   function bukaBaru() {
@@ -137,7 +166,7 @@ export function AdminAiModelsPanel() {
     // Pilihan awal yang masuk akal — provider bawaan kalau ada, kalau tidak
     // provider pertama — bukan kolom kosong yang pasti ditolak server.
     setDraft({ ...KOSONG, providerId: providers.find((p) => p.isDefault)?.id ?? providers[0]?.id ?? "" });
-    setError("");
+    setFormError("");
   }
 
   function bukaSunting(row: ModelRow) {
@@ -153,7 +182,7 @@ export function AdminAiModelsPanel() {
       paidOnly: row.paidOnly,
       active: row.active,
     });
-    setError("");
+    setFormError("");
   }
 
   async function simpan() {
@@ -168,11 +197,13 @@ export function AdminAiModelsPanel() {
       paidOnly: draft.paidOnly,
       active: draft.active,
     };
-    const ok =
+    setFormError("");
+    const hasil =
       editingId === ""
         ? await kirim("/api/admin/ai-models", "POST", payload)
         : await kirim(`/api/admin/ai-models/${editingId}`, "PATCH", payload);
-    if (ok) setEditingId(null);
+    if (hasil.ok) tutup();
+    else setFormError(hasil.message);
   }
 
   function perkiraan(inPerMTok: number, outPerMTok: number): number {
@@ -232,7 +263,7 @@ export function AdminAiModelsPanel() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => kirim(`/api/admin/ai-models/${row.id}`, "PATCH", { isDefault: true })}
+                      onClick={() => aksiBaris(`/api/admin/ai-models/${row.id}`, "PATCH", { isDefault: true })}
                       disabled={busy}
                     >
                       Jadikan bawaan
@@ -244,7 +275,7 @@ export function AdminAiModelsPanel() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => kirim(`/api/admin/ai-models/${row.id}`, "DELETE")}
+                    onClick={() => aksiBaris(`/api/admin/ai-models/${row.id}`, "DELETE")}
                     disabled={busy}
                   >
                     Hapus
@@ -256,8 +287,12 @@ export function AdminAiModelsPanel() {
         </ul>
       )}
 
-      {editingId !== null && (
-        <div className="mt-6 grid gap-4 border-t border-border pt-6">
+      <Modal
+        open={editingId !== null}
+        onClose={tutup}
+        title={editingId === "" ? "Tambah model" : "Sunting model"}
+      >
+        <div className="grid gap-4">
           <Field
             id="model-label"
             label="Nama yang dilihat tenant"
@@ -342,16 +377,18 @@ export function AdminAiModelsPanel() {
             ))}
           </div>
 
+          {formError && <p className="text-caption text-danger">{formError}</p>}
+
           <div className="flex items-center gap-2">
             <Button onClick={simpan} disabled={busy}>
               {editingId === "" ? "Simpan model" : "Simpan perubahan"}
             </Button>
-            <Button variant="ghost" onClick={() => setEditingId(null)} disabled={busy}>
+            <Button variant="ghost" onClick={tutup} disabled={busy}>
               Batal
             </Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {error && <p className="mt-4 text-caption text-danger">{error}</p>}
     </Card>

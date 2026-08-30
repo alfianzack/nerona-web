@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import { Icon, type IconName } from "@/components/ui/icons";
 
 /**
@@ -51,7 +52,23 @@ export function AdminAiProvidersPanel() {
   const [stored, setStored] = useState({ label: "", baseUrl: "" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  /** Galat milik daftar: gagal memuat, gagal menghapus, gagal memindah bawaan. */
   const [error, setError] = useState("");
+  /**
+   * Galat milik formulir, dirender DI DALAM modal.
+   *
+   * Kalau ia ikut ke `error` di kaki kartu, ia muncul di belakang tirai modal —
+   * tidak terlihat sama sekali, dan owner hanya melihat tombol Simpan yang
+   * seolah tidak melakukan apa-apa.
+   */
+  const [formError, setFormError] = useState("");
+  /**
+   * Galat pengecekan berdiri sendiri, dan dirender di blok Cek — bukan di atas
+   * tombol Simpan. Galat harus muncul di dekat tombol yang memicunya; "Terlalu
+   * sering, tunggu sebentar" yang muncul di ujung lain formulir terbaca seperti
+   * penyimpanan yang gagal.
+   */
+  const [testError, setTestError] = useState("");
 
   const [testModel, setTestModel] = useState("");
   const [testing, setTesting] = useState(false);
@@ -74,9 +91,17 @@ export function AdminAiProvidersPanel() {
     void muat();
   }, []);
 
-  async function kirim(url: string, method: string, body?: unknown) {
+  /**
+   * Mengembalikan pesannya, tidak memasangnya sendiri: pemanggilnya yang tahu
+   * galat ini milik daftar atau milik formulir, dan keduanya tampil di tempat
+   * berbeda sejak formulirnya melayang.
+   */
+  async function kirim(
+    url: string,
+    method: string,
+    body?: unknown
+  ): Promise<{ ok: boolean; message: string }> {
     setBusy(true);
-    setError("");
     const res = await fetch(url, {
       method,
       headers: { "content-type": "application/json" },
@@ -85,11 +110,23 @@ export function AdminAiProvidersPanel() {
     const data = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok || !data?.ok) {
-      setError(data?.message || "Gagal menyimpan.");
-      return false;
+      return { ok: false, message: data?.message || "Gagal menyimpan." };
     }
     await muat();
-    return true;
+    return { ok: true, message: "" };
+  }
+
+  /** Aksi pada baris daftar — galatnya milik daftar, jadi tampil di kaki kartu. */
+  async function aksiBaris(url: string, method: string, body?: unknown) {
+    setError("");
+    const hasil = await kirim(url, method, body);
+    if (!hasil.ok) setError(hasil.message);
+  }
+
+  function tutup() {
+    setEditingId(null);
+    setFormError("");
+    setTestError("");
   }
 
   function bukaBaru() {
@@ -97,7 +134,8 @@ export function AdminAiProvidersPanel() {
     setDraft(KOSONG);
     setTestModel("");
     setTestResult(null);
-    setError("");
+    setTestError("");
+    setFormError("");
   }
 
   function bukaSunting(row: ProviderRow) {
@@ -112,7 +150,8 @@ export function AdminAiProvidersPanel() {
     setStored({ label: row.label, baseUrl: row.baseUrl });
     setTestModel("");
     setTestResult(null);
-    setError("");
+    setTestError("");
+    setFormError("");
   }
 
   /**
@@ -131,16 +170,18 @@ export function AdminAiProvidersPanel() {
       baseUrl: draft.baseUrl,
       ...(draft.apiKey.trim() ? { apiKey: draft.apiKey } : {}),
     };
-    const ok =
+    setFormError("");
+    const hasil =
       editingId === ""
         ? await kirim("/api/admin/ai-providers", "POST", payload)
         : await kirim(`/api/admin/ai-providers/${editingId}`, "PATCH", payload);
-    if (ok) setEditingId(null);
+    if (hasil.ok) tutup();
+    else setFormError(hasil.message);
   }
 
   async function handleTest() {
     if (!editingId) return;
-    setError("");
+    setTestError("");
     setTestResult(null);
     setTesting(true);
     const res = await fetch(`/api/admin/ai-providers/${editingId}/test`, {
@@ -151,7 +192,7 @@ export function AdminAiProvidersPanel() {
     const data = await res.json().catch(() => null);
     setTesting(false);
     if (!res.ok || !data?.ok) {
-      setError(data?.message || "Gagal menjalankan pengecekan koneksi.");
+      setTestError(data?.message || "Gagal menjalankan pengecekan koneksi.");
       return;
     }
     setTestResult(data.result);
@@ -194,7 +235,7 @@ export function AdminAiProvidersPanel() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => kirim(`/api/admin/ai-providers/${row.id}`, "PATCH", { isDefault: true })}
+                      onClick={() => aksiBaris(`/api/admin/ai-providers/${row.id}`, "PATCH", { isDefault: true })}
                       disabled={busy}
                     >
                       Jadikan bawaan
@@ -206,7 +247,7 @@ export function AdminAiProvidersPanel() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => kirim(`/api/admin/ai-providers/${row.id}`, "DELETE")}
+                    onClick={() => aksiBaris(`/api/admin/ai-providers/${row.id}`, "DELETE")}
                     disabled={busy}
                   >
                     Hapus
@@ -218,8 +259,12 @@ export function AdminAiProvidersPanel() {
         </ul>
       )}
 
-      {editingId !== null && (
-        <div className="mt-6 grid gap-4 border-t border-border pt-6">
+      <Modal
+        open={editingId !== null}
+        onClose={tutup}
+        title={editingId === "" ? "Tambah provider" : "Sunting provider"}
+      >
+        <div className="grid gap-4">
           <Field
             id="provider-label"
             label="Nama"
@@ -254,11 +299,13 @@ export function AdminAiProvidersPanel() {
             hint="Kosongkan untuk tetap memakai kunci yang tersimpan"
           />
 
+          {formError && <p className="text-caption text-danger">{formError}</p>}
+
           <div className="flex items-center gap-2">
             <Button onClick={simpan} disabled={busy}>
               {editingId === "" ? "Simpan provider" : "Simpan perubahan"}
             </Button>
-            <Button variant="ghost" onClick={() => setEditingId(null)} disabled={busy}>
+            <Button variant="ghost" onClick={tutup} disabled={busy}>
               Batal
             </Button>
           </div>
@@ -294,11 +341,12 @@ export function AdminAiProvidersPanel() {
                   Simpan dulu — pengecekan menguji pengaturan yang tersimpan.
                 </span>
               )}
+              {testError && <p className="text-caption text-danger">{testError}</p>}
               {testResult && <ConnectionTestReport result={testResult} />}
             </div>
           )}
         </div>
-      )}
+      </Modal>
 
       {error && <p className="mt-4 text-caption text-danger">{error}</p>}
     </Card>
