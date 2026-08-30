@@ -663,8 +663,27 @@ model PromptPreset {
 // kurang tanpa suara: id yang dikembalikan (`gemini-2.0-flash-001`) tidak wajib
 // sama dengan id yang diketik owner, dan yang meleset jatuh ke baris termurah.
 //
-// `baseUrl`/`apiKey` kosong berarti gateway global (SumoPod). Keduanya ada untuk
-// model yang harus diambil langsung dari providernya, tanpa mengubah yang lain.
+// Gateway (baseUrl/apiKey) tidak lagi menempel di sini — lihat AiProvider.
+/// Gateway tempat panggilan AI dikirim, beserta kuncinya. Didaftarkan sekali,
+/// dipakai banyak baris AiModel — supaya kunci yang sama tidak pernah ditempel
+/// dua kali dan diputar di satu tempat saja.
+model AiProvider {
+  id        String   @id @default(cuid())
+  label     String
+  baseUrl   String
+  /// Kosong = jatuh ke SUMOPOD_API_KEY. Kosong berarti "lanjut ke sumber
+  /// berikutnya", bukan "tidak ada kunci".
+  apiKey    String   @default("")
+  isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models AiModel[]
+
+  @@map("ai_providers")
+}
+
 model AiModel {
   id         String   @id @default(cuid())
   label      String
@@ -679,13 +698,16 @@ model AiModel {
   paidOnly   Boolean  @default(false)
   isDefault  Boolean  @default(false)
   active     Boolean  @default(true)
-  baseUrl    String?
-  apiKey     String?
+  /// Wajib. Kolom opsional akan berarti "kosong = pakai gateway global", dan
+  /// gateway global itulah yang dihapus perubahan ini.
+  providerId String
+  provider   AiProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   users User[]
 
+  @@index([providerId])
   @@map("ai_models")
 }
