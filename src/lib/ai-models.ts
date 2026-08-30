@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getAiSettings } from "@/lib/ai-settings";
 import { resolveProviderCredentials } from "@/lib/ai-providers";
-import { costForUsage, type AiPricing } from "@/lib/agent/pricing";
+import { REFERENCE_IMAGE_USAGE, costForUsage, type AiPricing } from "@/lib/agent/pricing";
 
 export type AiModelErrorCode =
   | "not_found"
@@ -44,20 +44,12 @@ interface ModelRow {
 }
 
 /**
- * Profil token acuan untuk memperkirakan ongkos satu gambar: kira-kira sebesar
- * satu panggilan metadata advanced. Angkanya perkiraan dan memang hanya bisa
- * perkiraan — ongkos sebenarnya lahir dari token yang benar-benar terpakai, dan
- * baru diketahui setelah panggilan selesai.
- */
-const REFERENCE_USAGE = { promptTokens: 1_200, completionTokens: 150 };
-
-/**
  * Memakai costForUsage — fungsi yang sama dengan yang menagih — bukan rumus
  * kedua. Rumus kedua adalah cara paling mudah membuat angka di layar berbeda
  * dari angka yang dipotong dari saldo.
  */
 export function estimatePointsPerImage(pricing: AiPricing): number {
-  return costForUsage({ usage: REFERENCE_USAGE, pricing });
+  return costForUsage({ usage: REFERENCE_IMAGE_USAGE, pricing });
 }
 
 function pricingFor(row: ModelRow, pointsPerUsd: number): AiPricing {

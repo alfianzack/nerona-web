@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { costForUsage } from "@/lib/agent/pricing";
+import { REFERENCE_IMAGE_USAGE, costForUsage } from "@/lib/agent/pricing";
 
 /**
  * Registri model. Selama tabel ini kosong, semua panggilan memakai panel
@@ -46,9 +46,6 @@ const KOSONG = {
 };
 
 type Draft = typeof KOSONG;
-
-/** Profil token acuan yang sama dengan lib/ai-models.ts. */
-const REFERENCE_USAGE = { promptTokens: 1_200, completionTokens: 150 };
 
 export interface AiModelsPanelData {
   models: ModelRow[];
@@ -208,7 +205,7 @@ export function AdminAiModelsPanel() {
 
   function perkiraan(inPerMTok: number, outPerMTok: number): number {
     return costForUsage({
-      usage: REFERENCE_USAGE,
+      usage: REFERENCE_IMAGE_USAGE,
       pricing: { inPerMTok, outPerMTok, pointsPerUsd },
     });
   }

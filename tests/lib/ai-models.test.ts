@@ -25,7 +25,7 @@ import {
   createModel,
   AiModelError,
 } from "@/lib/ai-models";
-import { costForUsage } from "@/lib/agent/pricing";
+import { REFERENCE_IMAGE_USAGE, costForUsage } from "@/lib/agent/pricing";
 import { getAiSettings } from "@/lib/ai-settings";
 import { prisma } from "@/lib/prisma";
 
@@ -253,15 +253,30 @@ describe("estimatePointsPerImage", () => {
   it("uses the same function that actually charges, not a second formula", () => {
     const pricing = { inPerMTok: 5, outPerMTok: 25, pointsPerUsd: 1_000 };
     const estimate = estimatePointsPerImage(pricing);
-    expect(estimate).toBe(
-      costForUsage({ usage: { promptTokens: 1_200, completionTokens: 150 }, pricing })
-    );
+    // Memakai konstanta yang sama, bukan menyalin angkanya: tes yang menyalin
+    // profil acuan berhenti menjaga apa pun begitu profilnya berubah — ia hanya
+    // ikut berubah. Yang dijaga di sini adalah "fungsi penagih yang sama".
+    expect(estimate).toBe(costForUsage({ usage: REFERENCE_IMAGE_USAGE, pricing }));
+  });
+
+  /**
+   * Jangkar kalibrasi, dan satu-satunya tes di berkas ini yang dibandingkan
+   * dengan UANG SUNGGUHAN, bukan dengan rumusnya sendiri.
+   *
+   * Produksi mencatat 862 pemotongan sebesar tepat 2 poin (29 Jul .. 28 Agu),
+   * semuanya dibuat dengan tarif bawaan 0,25 / 1,5 / 1000. Profil acuan yang
+   * jujur harus mereproduksi angka itu. Profil pertama (1.200/150) memberi 1,
+   * separuh kenyataan — dan tidak ada satu tes pun yang menangkapnya karena
+   * semua tes lain membandingkan estimasi dengan rumus yang sama.
+   */
+  it("mereproduksi tagihan nyata: tarif bawaan memotong 2 poin per gambar", () => {
+    expect(estimatePointsPerImage({ inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 })).toBe(2);
   });
 
   it("puts an Opus-class model an order of magnitude above a flash-class one", () => {
     const cheap = estimatePointsPerImage({ inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 });
     const dear = estimatePointsPerImage({ inPerMTok: 5, outPerMTok: 25, pointsPerUsd: 1_000 });
-    expect(cheap).toBe(1);
-    expect(dear).toBe(10);
+    expect(cheap).toBe(2);
+    expect(dear).toBe(23);
   });
 });
