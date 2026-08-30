@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { resolveAiForUser } from "@/lib/ai-models";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { chatCompletion } from "@/lib/agent/claude-client";
 import { costForUsage } from "@/lib/agent/pricing";
 import { spendPoints } from "@/lib/points";
@@ -98,6 +99,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
 
+  // Satu-satunya tempat yang tahu pasti panggilan ini membawa gambar atau
+  // tidak. Estimasi "poin per gambar" dirata-rata dari yang membawa saja.
+  const withImage = feature !== "keyword";
+
   let content_;
   if (feature === "keyword") {
     content_ = built.prompt;
@@ -119,7 +124,7 @@ export async function POST(request: Request) {
   // Tarif ikut model yang dipilih tenant ini, dan diputuskan SEBELUM panggilan.
   // Setelah panggilan, id model yang dikembalikan provider tidak pernah dipakai
   // untuk mencari tarif — itu jalan yang dulu menagih kurang tanpa suara.
-  const { modelId, apiKey, baseUrl, pricing } = await resolveAiForUser(resolved.userId);
+  const { aiModelId, modelId, apiKey, baseUrl, pricing } = await resolveAiForUser(resolved.userId);
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "ai_not_configured" }, { status: 503 });
   }
@@ -145,6 +150,15 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[extension/generate] spend failed", err);
   }
+
+  await recordAiUsage({
+    userId: resolved.userId,
+    aiModelId,
+    feature,
+    withImage,
+    usage: result.usage,
+    points: cost,
+  });
 
   return NextResponse.json({ ok: true, content: result.text, usage: result.usage, pointsBalance });
 }

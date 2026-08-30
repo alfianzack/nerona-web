@@ -5,6 +5,7 @@ import { runToolLoop } from "./tool-loop";
 import { checkAgentGates, type AgentBlockReason } from "./gates";
 import { spendPoints } from "@/lib/points";
 import { costForUsage } from "./pricing";
+import { recordAiUsage } from "@/lib/ai-usage";
 
 export interface AgentTurnProfile {
   id: string;
@@ -60,15 +61,27 @@ export async function runAgentTurn(params: {
 
   // Best-effort: a metering failure must never undo a reply the tenant already has.
   let pointsBalance: number | null = null;
+  const cost = costForUsage({ usage: result.usage, pricing: result.pricing });
   try {
     pointsBalance = await spendPoints({
       userId: profile.userId,
-      cost: costForUsage({ usage: result.usage, pricing: result.pricing }),
+      cost,
       note: `AI reply · ${channel} · ${result.model} · ${result.usage?.promptTokens ?? 0}+${result.usage?.completionTokens ?? 0} tok`,
     });
   } catch (err) {
     console.error("[agent-turn] spendPoints failed", err);
   }
+
+  // withImage false: balasan agen murni teks. Mencampurnya ke rata-rata "poin
+  // per gambar" akan menarik estimasi turun ke angka yang tidak pernah ditagih.
+  await recordAiUsage({
+    userId: profile.userId,
+    aiModelId: result.aiModelId,
+    feature: `agent:${channel}`,
+    withImage: false,
+    usage: result.usage,
+    points: cost,
+  });
 
   return { ok: true, reply: result.text, pointsBalance };
 }

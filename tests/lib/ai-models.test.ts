@@ -16,6 +16,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/ai-settings", () => ({ getAiSettings: vi.fn() }));
+vi.mock("@/lib/ai-usage", () => ({ averageImageUsageByModel: vi.fn() }));
 
 import {
   estimatePointsPerImage,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/ai-models";
 import { REFERENCE_IMAGE_USAGE, costForUsage } from "@/lib/agent/pricing";
 import { getAiSettings } from "@/lib/ai-settings";
+import { averageImageUsageByModel } from "@/lib/ai-usage";
 import { prisma } from "@/lib/prisma";
 
 const GLOBAL = {
@@ -58,6 +60,7 @@ beforeEach(() => {
   process.env.SUMOPOD_API_KEY = "kunci-env";
   delete process.env.SUMOPOD_BASE_URL;
   (getAiSettings as any).mockResolvedValue(GLOBAL);
+  (averageImageUsageByModel as any).mockResolvedValue(new Map());
   (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: null, aiModel: null });
   (prisma.aiModel.findFirst as any).mockResolvedValue(null);
   (prisma.aiModel.findMany as any).mockResolvedValue([]);
@@ -278,5 +281,41 @@ describe("estimatePointsPerImage", () => {
     const dear = estimatePointsPerImage({ inPerMTok: 5, outPerMTok: 25, pointsPerUsd: 1_000 });
     expect(cheap).toBe(2);
     expect(dear).toBe(23);
+  });
+});
+
+describe("estimasi tenant memakai pemakaian nyata begitu datanya cukup", () => {
+  const baris = () => row({ id: "m1", inPerMTok: 0.25, outPerMTok: 1.5 });
+
+  it("memakai konstanta terkalibrasi selama model itu belum punya cukup data", async () => {
+    (prisma.aiModel.findMany as any).mockResolvedValue([baris()]);
+    const daftar = await listModelsForTenant({ paidPlan: true });
+    expect(daftar[0].estimatedPoints).toBe(
+      costForUsage({ usage: REFERENCE_IMAGE_USAGE, pricing: { inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 } })
+    );
+  });
+
+  /**
+   * Inti langkah ini: begitu ada pemakaian sungguhan, angka di layar berhenti
+   * bersandar pada konstanta yang pernah meleset separuh.
+   */
+  it("memakai rata-rata nyata model itu saat datanya sudah cukup", async () => {
+    (prisma.aiModel.findMany as any).mockResolvedValue([baris()]);
+    (averageImageUsageByModel as any).mockResolvedValue(
+      new Map([["m1", { promptTokens: 6_000, completionTokens: 1_000 }]])
+    );
+    const daftar = await listModelsForTenant({ paidPlan: true });
+    expect(daftar[0].estimatedPoints).toBe(
+      costForUsage({
+        usage: { promptTokens: 6_000, completionTokens: 1_000 },
+        pricing: { inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 },
+      })
+    );
+  });
+
+  it("hanya menanyakan model yang benar-benar ditampilkan", async () => {
+    (prisma.aiModel.findMany as any).mockResolvedValue([baris()]);
+    await listModelsForTenant({ paidPlan: true });
+    expect(averageImageUsageByModel).toHaveBeenCalledWith(["m1"]);
   });
 });

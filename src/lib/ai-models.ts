@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getAiSettings } from "@/lib/ai-settings";
 import { resolveProviderCredentials } from "@/lib/ai-providers";
-import { REFERENCE_IMAGE_USAGE, costForUsage, type AiPricing } from "@/lib/agent/pricing";
+import { REFERENCE_IMAGE_USAGE, costForUsage, type AiPricing, type TokenUsage } from "@/lib/agent/pricing";
+import { averageImageUsageByModel } from "@/lib/ai-usage";
 
 export type AiModelErrorCode =
   | "not_found"
@@ -22,6 +23,8 @@ export class AiModelError extends Error {
 }
 
 export interface ResolvedAi {
+  /** Id BARIS registri yang dipakai; null kalau jatuh ke model bawaan Setting. */
+  aiModelId: string | null;
   modelId: string;
   apiKey: string;
   baseUrl: string;
@@ -48,8 +51,16 @@ interface ModelRow {
  * kedua. Rumus kedua adalah cara paling mudah membuat angka di layar berbeda
  * dari angka yang dipotong dari saldo.
  */
-export function estimatePointsPerImage(pricing: AiPricing): number {
-  return costForUsage({ usage: REFERENCE_IMAGE_USAGE, pricing });
+export function estimatePointsPerImage(
+  pricing: AiPricing,
+  /**
+   * Pemakaian nyata model ini kalau sudah ada cukup datanya. Tanpa itu, profil
+   * terkalibrasi — yang tetap perkiraan, tapi perkiraan yang diikat ke tagihan
+   * yang sungguh-sungguh pernah terjadi.
+   */
+  usage: TokenUsage = REFERENCE_IMAGE_USAGE
+): number {
+  return costForUsage({ usage, pricing });
 }
 
 function pricingFor(row: ModelRow, pointsPerUsd: number): AiPricing {
@@ -92,11 +103,12 @@ export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   if (!row) {
     const fallback = await prisma.aiProvider.findFirst({ where: { isDefault: true } });
     const creds = resolveProviderCredentials(fallback);
-    return { modelId: global.model, ...creds, pricing: global.pricing };
+    return { aiModelId: null, modelId: global.model, ...creds, pricing: global.pricing };
   }
 
   const creds = resolveProviderCredentials(row.provider ?? null);
   return {
+    aiModelId: row.id,
     modelId: row.modelId,
     ...creds,
     pricing: pricingFor(row, global.pricing.pointsPerUsd),
@@ -133,13 +145,18 @@ export async function listModelsForTenant(plan: PlanContext): Promise<TenantMode
     orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
   })) as ModelRow[];
 
+  const nyata = await averageImageUsageByModel(rows.map((row) => row.id));
+
   // Hanya kolom yang memang perlu dilihat. Tarif per baris dan `providerId`
   // urusan owner, bukan sesuatu yang perlu diketahui tenant.
   return rows.map((row) => ({
     id: row.id,
     label: row.label,
     note: row.note,
-    estimatedPoints: estimatePointsPerImage(pricingFor(row, pricing.pointsPerUsd)),
+    estimatedPoints: estimatePointsPerImage(
+      pricingFor(row, pricing.pointsPerUsd),
+      nyata.get(row.id)
+    ),
     isDefault: row.isDefault,
   }));
 }
@@ -217,9 +234,28 @@ async function assertProviderExists(providerId: string) {
   if (!found) throw new AiModelError("provider_not_found");
 }
 
-/** Daftar lengkap untuk panel owner. Tidak ada rahasia di tabel ini lagi. */
+/**
+  * Daftar lengkap untuk panel owner. Tidak ada rahasia di tabel ini lagi.
+  *
+  * Estimasinya dihitung DI SINI, bukan di panel: panel adalah komponen klien dan
+  * tidak bisa membaca pemakaian nyata, jadi kalau ia menghitung sendiri, angka
+  * yang dilihat owner akan berbeda dari angka yang dilihat tenant untuk model
+  * yang sama. Satu-satunya angka yang boleh dihitung di panel adalah pratinjau
+  * tarif yang sedang DIKETIK, yang memang belum jadi baris apa pun.
+  */
 export async function listModelsForAdmin() {
-  return prisma.aiModel.findMany({ orderBy: [{ sortOrder: "asc" }, { label: "asc" }] });
+  const [rows, { pricing }] = await Promise.all([
+    prisma.aiModel.findMany({ orderBy: [{ sortOrder: "asc" }, { label: "asc" }] }),
+    getAiSettings(),
+  ]);
+  const nyata = await averageImageUsageByModel(rows.map((row) => row.id));
+  return rows.map((row) => ({
+    ...row,
+    estimatedPoints: estimatePointsPerImage(
+      pricingFor(row as ModelRow, pricing.pointsPerUsd),
+      nyata.get(row.id)
+    ),
+  }));
 }
 
 export async function createModel(input: AiModelInput) {

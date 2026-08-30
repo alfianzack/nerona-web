@@ -85,6 +85,7 @@ model User {
   promptPresets             PromptPreset[]
   aiModelId                 String?
   aiModel                   AiModel?         @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
+  aiUsageLogs               AiUsageLog[]
 
   @@index([aiModelId])
   @@map("users")
@@ -706,8 +707,36 @@ model AiModel {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users User[]
+  users     User[]
+  usageLogs AiUsageLog[]
 
   @@index([providerId])
   @@map("ai_models")
+}
+
+/// Satu baris per panggilan AI yang ditagih, ditulis di titik pemotongan poin.
+///
+/// Ada supaya estimasi "poin per gambar" berhenti jadi tebakan: profil token
+/// acuan di pricing.ts hanya konstanta terkalibrasi, sedangkan ini pemakaian
+/// yang benar-benar terjadi, per model.
+model AiUsageLog {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// NULL kalau panggilan memakai model bawaan dari Setting, bukan baris registri.
+  aiModelId String?
+  aiModel   AiModel? @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
+  feature   String
+  /// Panggilan ini membawa gambar. Estimasi "poin per gambar" hanya boleh
+  /// dirata-rata dari baris ini — panggilan teks (agen, saran keyword) punya
+  /// profil token yang sama sekali berbeda dan akan menariknya turun.
+  withImage        Boolean
+  promptTokens     Int
+  completionTokens Int
+  points           Int
+  createdAt        DateTime @default(now())
+
+  @@index([aiModelId, withImage, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_usage_logs")
 }

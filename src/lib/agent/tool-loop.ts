@@ -27,6 +27,8 @@ interface ChatMessage {
 export interface ToolLoopResult {
   text: string;
   model: string;
+  /** Id baris registri yang dipakai; null kalau model bawaan Setting. */
+  aiModelId: string | null;
   /** Jumlah token SELURUH putaran — dipotong sekali di akhir turn. */
   usage: TokenUsage | null;
   pricing: AiPricing;
@@ -39,7 +41,7 @@ export async function runToolLoop(params: {
   userId: string;
   timezone: string;
 }): Promise<ToolLoopResult> {
-  const { modelId: model, apiKey, baseUrl, pricing } = await resolveAiForUser(params.userId);
+  const { aiModelId, modelId: model, apiKey, baseUrl, pricing } = await resolveAiForUser(params.userId);
   const ctx = { userId: params.userId, timezone: params.timezone };
 
   const messages: ChatMessage[] = [
@@ -66,6 +68,7 @@ export async function runToolLoop(params: {
   const finish = (text: string): ToolLoopResult => ({
     text,
     model,
+    aiModelId,
     usage: sawUsage ? { promptTokens, completionTokens } : null,
     pricing,
     rounds,

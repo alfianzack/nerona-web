@@ -30,6 +30,7 @@ interface ModelRow {
   isDefault: boolean;
   active: boolean;
   providerId: string;
+  estimatedPoints: number;
   sortOrder: number;
 }
 
@@ -250,8 +251,7 @@ export function AdminAiModelsPanel() {
                   <p className="mt-0.5 text-caption text-muted">
                     ${row.inPerMTok} / ${row.outPerMTok} per MTok ·{" "}
                     <span className="tabular-nums">
-                      ± {perkiraan(row.inPerMTok, row.outPerMTok).toLocaleString("id-ID")} poin per
-                      gambar
+                      ± {row.estimatedPoints.toLocaleString("id-ID")} poin per gambar
                     </span>
                   </p>
                 </div>
