@@ -43,13 +43,12 @@ describe("POST /api/admin/ai-settings", () => {
     expect((await POST(req)).status).toBe(400);
   });
 
-  it("updates settings; a blank apiKey is passed through as undefined-ish (not written)", async () => {
+  it("updates settings", async () => {
     (getServerSession as any).mockResolvedValue({ user: { id: "a1", role: "owner_admin" } });
-    const res = await POST(postReq({ model: "gpt-5", apiKey: "" }));
+    const res = await POST(postReq({ model: "gpt-5" }));
     expect(res.status).toBe(200);
     const call = (updateAiSettings as any).mock.calls[0][0];
     expect(call.model).toBe("gpt-5");
-    expect(call.apiKey === "" || call.apiKey === undefined).toBe(true);
   });
 });
 

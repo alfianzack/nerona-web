@@ -56,6 +56,7 @@ const VALID_MODEL = {
   vision: true,
   paidOnly: true,
   active: true,
+  providerId: "p1",
 };
 
 beforeEach(() => {
@@ -180,5 +181,19 @@ describe("/api/admin/ai-models", () => {
     expect(createModelMock).not.toHaveBeenCalled();
     expect(updateModelMock).not.toHaveBeenCalled();
     expect(deleteModelMock).not.toHaveBeenCalled();
+  });
+
+  it("menolak admin support di rute model dengan 403", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: "support" } });
+    expect((await adminGet()).status).toBe(403);
+    expect((await adminPost(body(VALID_MODEL, "POST"))).status).toBe(403);
+    expect((await adminPatch(body(VALID_MODEL), ctx)).status).toBe(403);
+    expect((await adminDelete(body({}, "DELETE"), ctx)).status).toBe(403);
+  });
+
+  it("tidak mengubah rute tenant — tenant biasa tetap boleh memilih model", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: null } });
+    accountStateMock.mockResolvedValue({ active: true, plan: "pro" });
+    expect((await tenantGet()).status).toBe(200);
   });
 });

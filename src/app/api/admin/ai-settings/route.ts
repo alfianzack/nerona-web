@@ -30,7 +30,6 @@ export async function POST(request: Request) {
   }
 
   const model = typeof body.model === "string" ? body.model.trim() : "";
-  const apiKey = typeof body.apiKey === "string" ? body.apiKey : undefined;
 
   const rates: Record<string, string | undefined> = {};
   for (const field of ["priceIn", "priceOut", "pointsPerUsd"] as const) {
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
     rates[field] = trimmed;
   }
 
-  await updateAiSettings({ model, apiKey, ...rates });
+  await updateAiSettings({ model, ...rates });
 
   return NextResponse.json({ ok: true });
 }

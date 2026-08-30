@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { listModelsForTenant, setTenantModel, type PlanContext } from "@/lib/ai-models";
-import { aiModelErrorResponse } from "@/lib/ai-model-errors";
+import { aiErrorResponse } from "@/lib/ai-errors";
 
 /**
  * Berbayar berarti lisensinya aktif DAN paketnya bukan Free. Lisensi kedaluwarsa
@@ -50,6 +50,6 @@ export async function PATCH(request: Request) {
     await setTenantModel(session.user.id, modelId, await planContext(session.user.id));
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return aiModelErrorResponse(err);
+    return aiErrorResponse(err);
   }
 }

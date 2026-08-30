@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { deleteModel, setDefaultModel, updateModel, type AiModelInput } from "@/lib/ai-models";
+import { deleteProvider, setDefaultProvider, updateProvider } from "@/lib/ai-providers";
 import { aiErrorResponse, requireOwner } from "@/lib/ai-errors";
-import { parseModelInput } from "@/lib/ai-model-input";
+import { parseInput } from "@/lib/ai-provider-input";
 
 interface Ctx {
   params: { id: string };
@@ -10,26 +10,16 @@ interface Ctx {
 export async function PATCH(request: Request, { params }: Ctx) {
   const denied = await requireOwner();
   if (denied) return denied;
-
   const body = await request.json().catch(() => null);
-
   try {
-    // Menjadikan default itu aksi tersendiri, bukan kolom di formulir: ia
-    // menyentuh SEMUA baris, dan menyelipkannya ke dalam penyuntingan biasa
-    // membuat satu klik "Simpan" diam-diam memindahkan default.
+    // Menjadikan bawaan menyentuh SEMUA baris, jadi ia aksi tersendiri — bukan
+    // kolom formulir yang diam-diam ikut terbawa satu klik "Simpan".
     if (body?.isDefault === true) {
-      await setDefaultModel(params.id);
+      await setDefaultProvider(params.id);
       return NextResponse.json({ ok: true });
     }
-
-    let input: AiModelInput;
-    try {
-      input = parseModelInput(body);
-    } catch (err) {
-      return aiErrorResponse(err);
-    }
-    const model = await updateModel(params.id, input);
-    return NextResponse.json({ ok: true, id: model.id });
+    const provider = await updateProvider(params.id, parseInput(body));
+    return NextResponse.json({ ok: true, id: provider.id });
   } catch (err) {
     return aiErrorResponse(err);
   }
@@ -39,7 +29,7 @@ export async function DELETE(_request: Request, { params }: Ctx) {
   const denied = await requireOwner();
   if (denied) return denied;
   try {
-    await deleteModel(params.id);
+    await deleteProvider(params.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return aiErrorResponse(err);
