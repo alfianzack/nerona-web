@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getAiSettings } from "@/lib/ai-settings";
+import { resolveProviderCredentials } from "@/lib/ai-providers";
 import { costForUsage, type AiPricing } from "@/lib/agent/pricing";
 
 export type AiModelErrorCode =
@@ -9,7 +10,9 @@ export type AiModelErrorCode =
   | "paid_only"
   | "label_required"
   | "model_id_required"
-  | "rate_invalid";
+  | "rate_invalid"
+  | "provider_required"
+  | "provider_not_found";
 
 export class AiModelError extends Error {
   constructor(readonly code: AiModelErrorCode) {
@@ -21,8 +24,7 @@ export class AiModelError extends Error {
 export interface ResolvedAi {
   modelId: string;
   apiKey: string;
-  /** Kosong = gateway global (SUMOPOD_BASE_URL). */
-  baseUrl?: string;
+  baseUrl: string;
   pricing: AiPricing;
 }
 
@@ -37,8 +39,8 @@ interface ModelRow {
   paidOnly: boolean;
   isDefault: boolean;
   active: boolean;
-  baseUrl: string | null;
-  apiKey: string | null;
+  providerId: string;
+  provider?: { baseUrl: string; apiKey: string } | null;
 }
 
 /**
@@ -75,7 +77,10 @@ function pricingFor(row: ModelRow, pointsPerUsd: number): AiPricing {
  */
 export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   const [user, global] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { aiModelId: true, aiModel: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { aiModelId: true, aiModel: { include: { provider: true } } },
+    }),
     getAiSettings(),
   ]);
 
@@ -83,16 +88,25 @@ export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   // Jatuhnya ke baris DEFAULT, bukan ke termurah. Bedanya adalah selisih antara
   // "tagihan yang owner tetapkan" dan "tagihan yang kebetulan paling murah".
   const row =
-    picked ?? ((await prisma.aiModel.findFirst({ where: { isDefault: true, active: true } })) as ModelRow | null);
+    picked ??
+    ((await prisma.aiModel.findFirst({
+      where: { isDefault: true, active: true },
+      include: { provider: true },
+    })) as ModelRow | null);
 
+  // Tanpa baris model, model & tarif datang dari Koneksi AI dan kuncinya dari
+  // provider bawaan. Tanpa provider bawaan pun, rantainya masih jatuh ke env —
+  // nol baris di kedua tabel berarti perilaku sebelum keduanya ada.
   if (!row) {
-    return { modelId: global.model, apiKey: global.apiKey, pricing: global.pricing };
+    const fallback = await prisma.aiProvider.findFirst({ where: { isDefault: true } });
+    const creds = resolveProviderCredentials(fallback);
+    return { modelId: global.model, ...creds, pricing: global.pricing };
   }
 
+  const creds = resolveProviderCredentials(row.provider ?? null);
   return {
     modelId: row.modelId,
-    apiKey: (row.apiKey || "").trim() || global.apiKey,
-    baseUrl: (row.baseUrl || "").trim() || undefined,
+    ...creds,
     pricing: pricingFor(row, global.pricing.pointsPerUsd),
   };
 }
@@ -174,9 +188,7 @@ export interface AiModelInput {
   vision: boolean;
   paidOnly: boolean;
   active: boolean;
-  baseUrl?: string | null;
-  /** Undefined = biarkan yang tersimpan; "" = kosongkan kembali ke gateway global. */
-  apiKey?: string;
+  providerId: string;
   sortOrder?: number;
 }
 
@@ -188,6 +200,8 @@ function cleanInput(input: AiModelInput) {
   for (const rate of [input.inPerMTok, input.outPerMTok]) {
     if (!Number.isFinite(rate) || rate < 0) throw new AiModelError("rate_invalid");
   }
+  const providerId = (input.providerId || "").trim();
+  if (!providerId) throw new AiModelError("provider_required");
   return {
     label,
     modelId,
@@ -197,36 +211,37 @@ function cleanInput(input: AiModelInput) {
     vision: input.vision,
     paidOnly: input.paidOnly,
     active: input.active,
-    baseUrl: (input.baseUrl || "").trim() || null,
+    providerId,
     sortOrder: input.sortOrder ?? 0,
   };
 }
 
-/** Daftar lengkap untuk panel admin — tanpa kunci API, hanya penanda terisi. */
+/**
+ * Diperiksa di sini, bukan diserahkan ke FK: galat kendala basis data sampai ke
+ * layar owner sebagai teks yang tidak bisa ditindaklanjuti.
+ */
+async function assertProviderExists(providerId: string) {
+  const found = await prisma.aiProvider.findFirst({ where: { id: providerId } });
+  if (!found) throw new AiModelError("provider_not_found");
+}
+
+/** Daftar lengkap untuk panel owner. Tidak ada rahasia di tabel ini lagi. */
 export async function listModelsForAdmin() {
-  const rows = (await prisma.aiModel.findMany({
-    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
-  })) as ModelRow[];
-  return rows.map(({ apiKey, ...rest }) => ({ ...rest, apiKeySet: Boolean((apiKey || "").trim()) }));
+  return prisma.aiModel.findMany({ orderBy: [{ sortOrder: "asc" }, { label: "asc" }] });
 }
 
 export async function createModel(input: AiModelInput) {
   const data = cleanInput(input);
-  const apiKey = (input.apiKey || "").trim() || null;
-  return prisma.aiModel.create({ data: { ...data, apiKey } });
+  await assertProviderExists(data.providerId);
+  return prisma.aiModel.create({ data });
 }
 
 export async function updateModel(id: string, input: AiModelInput) {
   const data = cleanInput(input);
   const existing = await prisma.aiModel.findFirst({ where: { id } });
   if (!existing) throw new AiModelError("not_found");
-  // apiKey absen = biarkan; "" = kosongkan. Sama seperti kunci gateway di
-  // AdminAiSettingsPanel, yang tidak pernah dikirim balik utuh untuk disimpan lagi.
-  const apiKey = input.apiKey === undefined ? undefined : (input.apiKey.trim() || null);
-  return prisma.aiModel.update({
-    where: { id },
-    data: { ...data, ...(apiKey === undefined ? {} : { apiKey }) },
-  });
+  await assertProviderExists(data.providerId);
+  return prisma.aiModel.update({ where: { id }, data });
 }
 
 export async function deleteModel(id: string) {

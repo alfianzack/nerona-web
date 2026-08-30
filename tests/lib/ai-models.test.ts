@@ -11,6 +11,7 @@ vi.mock("@/lib/prisma", () => ({
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    aiProvider: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -21,6 +22,7 @@ import {
   listModelsForTenant,
   resolveAiForUser,
   setTenantModel,
+  createModel,
   AiModelError,
 } from "@/lib/ai-models";
 import { costForUsage } from "@/lib/agent/pricing";
@@ -29,7 +31,6 @@ import { prisma } from "@/lib/prisma";
 
 const GLOBAL = {
   model: "gemini-2.0-flash-lite",
-  apiKey: "gateway-key",
   pricing: { inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 },
 };
 
@@ -45,8 +46,8 @@ function row(over: Record<string, unknown> = {}) {
     paidOnly: false,
     isDefault: false,
     active: true,
-    baseUrl: null,
-    apiKey: null,
+    providerId: "p1",
+    provider: { id: "p1", label: "SumoPod", baseUrl: "https://a.example/v1", apiKey: "kunci-a" },
     sortOrder: 0,
     ...over,
   };
@@ -54,20 +55,86 @@ function row(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.SUMOPOD_API_KEY = "kunci-env";
+  delete process.env.SUMOPOD_BASE_URL;
   (getAiSettings as any).mockResolvedValue(GLOBAL);
   (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: null, aiModel: null });
   (prisma.aiModel.findFirst as any).mockResolvedValue(null);
   (prisma.aiModel.findMany as any).mockResolvedValue([]);
+  (prisma.aiProvider.findFirst as any).mockResolvedValue(null);
   (prisma.$transaction as any).mockImplementation((ops: unknown[]) => Promise.resolve(ops));
 });
 
-describe("resolveAiForUser with an empty registry", () => {
-  it("behaves exactly like today, so no bill changes before the owner fills the table", async () => {
+describe("resolveAiForUser dengan registri kosong", () => {
+  it("memakai model & tarif Koneksi AI, dan kunci dari provider bawaan", async () => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue({
+      id: "p0",
+      baseUrl: "https://bawaan.example/v1",
+      apiKey: "kunci-bawaan",
+    });
     const resolved = await resolveAiForUser("user-1");
     expect(resolved.modelId).toBe("gemini-2.0-flash-lite");
-    expect(resolved.apiKey).toBe("gateway-key");
-    expect(resolved.baseUrl).toBeUndefined();
+    expect(resolved.apiKey).toBe("kunci-bawaan");
+    expect(resolved.baseUrl).toBe("https://bawaan.example/v1");
     expect(resolved.pricing).toEqual(GLOBAL.pricing);
+  });
+
+  it("jatuh ke env saat belum ada provider bawaan sama sekali", async () => {
+    const resolved = await resolveAiForUser("user-1");
+    expect(resolved.apiKey).toBe("kunci-env");
+    expect(resolved.baseUrl).toBe("https://ai.sumopod.com/v1");
+  });
+});
+
+describe("resolveAiForUser memakai provider baris yang dipilih", () => {
+  it("memakai kunci dan alamat provider baris itu, bukan gateway global", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1", aiModel: row() });
+    const resolved = await resolveAiForUser("user-1");
+    expect(resolved.apiKey).toBe("kunci-a");
+    expect(resolved.baseUrl).toBe("https://a.example/v1");
+  });
+
+  it("jatuh ke kunci env saat provider baris itu belum diisi kuncinya", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      aiModelId: "m1",
+      aiModel: row({ provider: { id: "p1", baseUrl: "https://a.example/v1", apiKey: "" } }),
+    });
+    const resolved = await resolveAiForUser("user-1");
+    expect(resolved.apiKey).toBe("kunci-env");
+    expect(resolved.baseUrl).toBe("https://a.example/v1");
+  });
+});
+
+describe("createModel", () => {
+  it("menolak baris tanpa provider — model tanpa gateway tidak bisa dipanggil", async () => {
+    await expect(
+      createModel({
+        label: "X",
+        modelId: "x",
+        inPerMTok: 1,
+        outPerMTok: 1,
+        vision: true,
+        paidOnly: false,
+        active: true,
+        providerId: "  ",
+      })
+    ).rejects.toMatchObject({ code: "provider_required" });
+  });
+
+  it("menolak providerId yang tidak ada", async () => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue(null);
+    await expect(
+      createModel({
+        label: "X",
+        modelId: "x",
+        inPerMTok: 1,
+        outPerMTok: 1,
+        vision: true,
+        paidOnly: false,
+        active: true,
+        providerId: "hantu",
+      })
+    ).rejects.toMatchObject({ code: "provider_not_found" });
   });
 });
 
@@ -108,22 +175,6 @@ describe("resolveAiForUser with a registry", () => {
     expect(resolved.pricing.inPerMTok).toBe(2);
   });
 
-  it("uses the row's own gateway when it has one", async () => {
-    (prisma.user.findUnique as any).mockResolvedValue({
-      aiModelId: "m1",
-      aiModel: row({ baseUrl: "https://api.anthropic.example/v1", apiKey: "row-key" }),
-    });
-    const resolved = await resolveAiForUser("user-1");
-    expect(resolved.baseUrl).toBe("https://api.anthropic.example/v1");
-    expect(resolved.apiKey).toBe("row-key");
-  });
-
-  it("uses the global gateway when the row has none", async () => {
-    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1", aiModel: row() });
-    const resolved = await resolveAiForUser("user-1");
-    expect(resolved.baseUrl).toBeUndefined();
-    expect(resolved.apiKey).toBe("gateway-key");
-  });
 });
 
 describe("listModelsForTenant", () => {

@@ -23,8 +23,7 @@ export function parseModelInput(body: any): AiModelInput {
     vision: body?.vision !== false,
     paidOnly: body?.paidOnly === true,
     active: body?.active !== false,
-    baseUrl: typeof body?.baseUrl === "string" ? body.baseUrl : null,
-    apiKey: typeof body?.apiKey === "string" ? body.apiKey : undefined,
+    providerId: typeof body?.providerId === "string" ? body.providerId : "",
     sortOrder: Number.isFinite(Number(body?.sortOrder)) ? Number(body.sortOrder) : 0,
   };
 }

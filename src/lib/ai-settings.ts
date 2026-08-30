@@ -3,19 +3,22 @@ import { DEFAULT_AI_PRICING, type AiPricing } from "@/lib/agent/pricing";
 
 export type { AiPricing };
 
+/**
+ * Kunci gateway TIDAK ada di sini. Ia tinggal di tabel AiProvider sejak migrasi
+ * 20260830000000_ai_providers — satu tempat, supaya kunci yang sama tidak pernah
+ * ditempel dua kali lalu diputar di satu tempat saja.
+ */
 export interface AiSettings {
   model: string;
-  apiKey: string;
   pricing: AiPricing;
 }
 
 const KEY_MODEL = "ai_model";
-const KEY_API = "ai_api_key";
 const KEY_PRICE_IN = "ai_price_in";
 const KEY_PRICE_OUT = "ai_price_out";
 const KEY_POINTS_PER_USD = "points_per_usd";
 
-const ALL_KEYS = [KEY_MODEL, KEY_API, KEY_PRICE_IN, KEY_PRICE_OUT, KEY_POINTS_PER_USD];
+const ALL_KEYS = [KEY_MODEL, KEY_PRICE_IN, KEY_PRICE_OUT, KEY_POINTS_PER_USD];
 
 function defaultModel(): string {
   return process.env.AGENT_MODEL || "gemini-2.0-flash-lite";
@@ -62,13 +65,11 @@ async function readRows(): Promise<Map<string, string>> {
 export async function getAiSettings(): Promise<AiSettings> {
   const map = await readRows();
   const model = (map.get(KEY_MODEL) || "").trim() || defaultModel();
-  const apiKey = (map.get(KEY_API) || "").trim() || process.env.SUMOPOD_API_KEY || "";
-  return { model, apiKey, pricing: resolvePricing(map) };
+  return { model, pricing: resolvePricing(map) };
 }
 
 export interface UpdateAiSettingsInput {
   model: string;
-  apiKey?: string;
   /** Omit to leave untouched; pass "" to clear back to the env/default fallback. */
   priceIn?: string;
   priceOut?: string;
@@ -81,11 +82,6 @@ export async function updateAiSettings(values: UpdateAiSettingsInput): Promise<v
 
   const modelValue = (values.model ?? "").trim();
   const ops = [upsert(KEY_MODEL, modelValue)];
-
-  const apiKey = (values.apiKey ?? "").trim();
-  if (apiKey) {
-    ops.push(upsert(KEY_API, apiKey));
-  }
 
   // Order matters only for readability; each rate is written when it is present at
   // all, so "" is a deliberate clear rather than a no-op.
@@ -101,16 +97,8 @@ export async function updateAiSettings(values: UpdateAiSettingsInput): Promise<v
   await prisma.$transaction(ops);
 }
 
-function maskKey(key: string): string {
-  if (!key) return "";
-  if (key.length <= 4) return "****";
-  return "****" + key.slice(-4);
-}
-
 export interface AiSettingsView {
   model: string;
-  apiKeyMasked: string;
-  apiKeySet: boolean;
   /** Raw stored values — "" when unset, so the panel can show a placeholder. */
   priceIn: string;
   priceOut: string;
@@ -122,11 +110,8 @@ export interface AiSettingsView {
 export async function getAiSettingsView(): Promise<AiSettingsView> {
   const map = await readRows();
   const model = (map.get(KEY_MODEL) || "").trim(); // raw; "" when unset
-  const effectiveKey = (map.get(KEY_API) || "").trim() || process.env.SUMOPOD_API_KEY || "";
   return {
     model,
-    apiKeyMasked: maskKey(effectiveKey),
-    apiKeySet: Boolean(effectiveKey),
     priceIn: (map.get(KEY_PRICE_IN) || "").trim(),
     priceOut: (map.get(KEY_PRICE_OUT) || "").trim(),
     pointsPerUsd: (map.get(KEY_POINTS_PER_USD) || "").trim(),

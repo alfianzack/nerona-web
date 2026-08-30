@@ -13,10 +13,13 @@ const MESSAGES: Record<AiModelErrorCode, string> = {
   label_required: "Nama model wajib diisi.",
   model_id_required: "Model id wajib diisi.",
   rate_invalid: "Tarif harus angka 0 atau lebih.",
+  provider_required: "Provider wajib dipilih.",
+  provider_not_found: "Provider itu tidak ditemukan.",
 };
 
 const STATUS: Partial<Record<AiModelErrorCode, number>> = {
   not_found: 404,
+  provider_not_found: 404,
   paid_only: 403,
 };
 
