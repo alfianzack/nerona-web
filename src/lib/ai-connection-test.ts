@@ -1,4 +1,3 @@
-import { getAiSettings } from "@/lib/ai-settings";
 import { chatCompletion } from "@/lib/agent/claude-client";
 
 /** 1x1 transparent PNG — the smallest thing that still exercises an image input. */
@@ -33,28 +32,37 @@ function safeMessage(err: unknown, apiKey: string): string {
 async function probe(
   messages: Array<{ role: string; content: unknown }>,
   model: string,
-  apiKey: string
+  apiKey: string,
+  baseUrl: string
 ): Promise<ProbeResult> {
   try {
-    await chatCompletion({ messages, model, apiKey, maxTokens: 16 });
+    await chatCompletion({ messages, model, apiKey, baseUrl, maxTokens: 16 });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: safeMessage(err, apiKey) };
   }
 }
 
-/**
- * Verifies the admin AI settings actually work, in two steps so a failure is
- * diagnosable: a text probe (is the key valid and the model reachable?) and an
- * image probe (can the model read images at all?). The extension sends images
- * for every metadata feature, so a text-only pass is not enough to call the
- * configuration good.
- *
- * Costs two very small completions against the admin key. No tenant points.
- */
-export async function testAiConnection(): Promise<AiConnectionTestResult> {
-  const { model, apiKey } = await getAiSettings();
+export interface AiConnectionTestParams {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
 
+/**
+ * Menguji satu provider terhadap satu model id, dalam dua langkah supaya
+ * kegagalannya bisa didiagnosis: probe teks (kuncinya sah dan modelnya
+ * terjangkau?) dan probe gambar (modelnya bisa membaca gambar sama sekali?).
+ * Extension mengirim gambar untuk setiap fitur metadata, jadi lulus teks saja
+ * belum cukup untuk menyebut sebuah konfigurasi baik.
+ *
+ * Ongkosnya dua penyelesaian sangat kecil dengan kunci owner. Bukan poin tenant.
+ */
+export async function testAiConnection({
+  apiKey,
+  baseUrl,
+  model,
+}: AiConnectionTestParams): Promise<AiConnectionTestResult> {
   if (!apiKey) {
     return {
       ok: false,
@@ -65,7 +73,7 @@ export async function testAiConnection(): Promise<AiConnectionTestResult> {
     };
   }
 
-  const text = await probe([{ role: "user", content: "ping" }], model, apiKey);
+  const text = await probe([{ role: "user", content: "ping" }], model, apiKey, baseUrl);
 
   // A rejected key or unknown model fails both probes for the same reason —
   // don't spend a second call to learn nothing.
@@ -84,7 +92,8 @@ export async function testAiConnection(): Promise<AiConnectionTestResult> {
       },
     ],
     model,
-    apiKey
+    apiKey,
+    baseUrl
   );
 
   return { ok: text.ok && vision.ok, configured: true, model, text, vision };
