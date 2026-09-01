@@ -30,7 +30,8 @@ Return JSON only (no markdown):
 
 title: clear, commercial, SEO-friendly, natural; max 180 chars.
 description: short commercial copy (subject, activity, style, use); max 300 chars.
-keywords: exactly 50 strings, most important first; image-relevant only—verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, subject, industry, emotion, style, color, composition, business/niche; mix primary, long-tail, semantic.
+keywords: exactly 50 strings, most important first; image-relevant only—verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, subject, industry, emotion, style, color only inside a phrase, composition, business/niche; mix primary, long-tail, semantic.
+Never a bare color word ("blue", "teal") or a bare "background", "color", or "background color" as its own tag—pair it with what it belongs to ("teal gradient background", "warm orange lighting").
 Prioritize commercial intent and buyer search. No spam, duplicates, unrelated or misleading tags.
 Do NOT invent locations, brands, events, identities, statistics, or copyrighted terms.
 Keywords must be readable English only—no random hashes, placeholder tags, URLs, JSON artifacts, or offensive language.`;
@@ -49,7 +50,9 @@ If the image is a design template rather than a photograph, (1) and (2) matter m
 
 title: commercial, SEO-friendly, specific to this image; max 180 chars; avoid generic filler.
 description: persuasive commercial copy—what is happening, what it is for, subject, context, style; max 300 chars.
-keywords: exactly 50 strings, ordered by buyer search intent + image specificity. Include verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, core subject, synonyms, activities, emotions, industries, demographics (only if visible), colors, composition, technique, season/holiday only if evident, and long-tail phrases (2–4 words). Mix head terms and long-tail. No duplicates, spam, misleading tags, copyrighted brands, celebrity names, or invented facts.
+keywords: exactly 50 strings, ordered by buyer search intent + image specificity. Include verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, core subject, synonyms, activities, emotions, industries, demographics (only if visible), color only as part of a phrase, composition, technique, season/holiday only if evident, and long-tail phrases (2–4 words). Mix head terms and long-tail.
+Never use a bare color word ("blue", "teal", "navy") or a bare "background", "color", "colour", or "background color" as a tag on its own—always pair it with what it belongs to: "teal gradient background", "warm orange lighting", "navy uniform".
+No duplicates, spam, misleading tags, copyrighted brands, celebrity names, or invented facts.
 visualBrief: 2–3 sentences on what is happening and what is visible (for grounding).
 categories: 3–8 broad stock categories that match the image.
 
