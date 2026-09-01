@@ -12,6 +12,7 @@
     "db:migrate": "dotenv -e .env.local -- prisma migrate deploy",
     "prisma:seed": "dotenv -e .env.local -- prisma db seed",
     "backfill:metadata-points": "dotenv -e .env.local -- tsx scripts/backfill-metadata-plan-points.ts",
+    "banding:prompt": "dotenv -e .env.local -- tsx scripts/banding-prompt-metadata.ts",
     "prisma:studio": "dotenv -e .env.local -- prisma studio"
   },
   "keywords": [],
