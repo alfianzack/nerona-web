@@ -13,10 +13,14 @@ import { MarketplaceTabsMockup } from "@/components/marketing/mockups/Marketplac
 import { KeywordChipsMockup } from "@/components/marketing/mockups/KeywordChipsMockup";
 import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgressMockup";
 import { RejectAnalysisMockup } from "@/components/marketing/mockups/RejectAnalysisMockup";
+import { TopupSection } from "@/components/marketing/TopupSection";
 import { metadataTiers } from "@/lib/pricing-tiers";
+import { getTopupPackages } from "@/lib/topup";
+import { rejectAnalyzerAvailability } from "@/lib/marketing-plans";
+import { defaultModelPointsPerImage, gambarPerPoin } from "@/lib/marketing-points";
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
-import { METADATA_FAQ } from "@/lib/marketing-faq";
+import { metadataFaq } from "@/lib/marketing-faq";
 
 const MARKETPLACE_NAMES = CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ");
 
@@ -50,7 +54,14 @@ const BATCH_MAX_ITEMS = 50;
  * berhenti setelah bagian keenam dan menyisakan empat pita putih berturut-turut.
  */
 export async function HomeMetadataOnly() {
-  const tiers = await metadataTiers();
+  // Satu putaran, bukan lima `await` berturut-turut: bagian-bagian ini tidak
+  // saling bergantung, dan beranda adalah halaman yang paling sering dibuka.
+  const [tiers, topupPackages, reject, poinPerGambar] = await Promise.all([
+    metadataTiers(),
+    getTopupPackages(),
+    rejectAnalyzerAvailability(),
+    defaultModelPointsPerImage(),
+  ]);
 
   /**
    * Poin Free yang BENAR-BENAR berlaku, bukan default kode.
@@ -62,6 +73,35 @@ export async function HomeMetadataOnly() {
    */
   const freePoints =
     tiers.find((tier) => tier.name === "Free")?.poinAwal ?? DEFAULT_PLAN_POINTS.metadata.free;
+
+  /**
+   * Patokan yang membuat setiap angka poin di tabel harga bisa ditimbang.
+   *
+   * Tanpa ini, "10 poin" dan "500 poin" tidak berarti apa-apa bagi orang yang
+   * belum pernah memakai alatnya — ia tidak bisa menilai apakah paketnya murah,
+   * jadi ia tidak bisa memutuskan. Audit halaman menemukan ini sebagai lubang
+   * terbesar di bagian harga.
+   *
+   * Berdiri tepat di bawah ketiga kartu, bukan di dalam salah satunya: satu
+   * kalimat menerangkan ketiga angka sekaligus.
+   *
+   * Hilang seluruhnya kalau tarifnya belum bisa dihitung. Menebaknya berarti
+   * memasang angka yang berbeda dari yang dipotong dari saldo pembeli, dan
+   * selisih semacam itu ditemukan justru setelah ia membayar.
+   */
+  const catatanPoin =
+    poinPerGambar === null
+      ? null
+      : `Dengan model bawaan hari ini, satu gambar memakai sekitar ${poinPerGambar.toLocaleString("id-ID")} poin.`;
+
+  /**
+   * Berapa gambar yang benar-benar tercakup jatah gratis.
+   *
+   * Hanya disebut kalau hasilnya minimal satu gambar: "cukup untuk sekitar 0
+   * gambar" adalah kalimat yang membunuh pendaftaran, dan kalau memang itu
+   * jawabannya, yang perlu diperbaiki adalah jatahnya — bukan kalimatnya.
+   */
+  const gambarGratis = gambarPerPoin(freePoints, poinPerGambar);
 
   return (
     <main>
@@ -90,10 +130,15 @@ export async function HomeMetadataOnly() {
 
       {/* Ditaruh tepat setelah klaim pertama, bukan di dasar halaman: klaim
           "metadata otomatis" paling murah dibuktikan persis setelah diucapkan. */}
+      {/* "Karya", bukan "foto". Contoh yang terpasang hari ini adalah vektor,
+          dan menjanjikan foto tepat di atas sebuah vektor adalah kontradiksi
+          yang terbaca dalam satu tarikan mata — di bagian yang seluruh tugasnya
+          adalah membangun kepercayaan. Kata ini juga tetap benar begitu contoh
+          foto dan render 3D menyusul, jadi ia tidak perlu diubah lagi. */}
       <ProofSection
         id="contoh"
         title="Ini hasilnya, apa adanya."
-        body="Foto sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya. Nilai sendiri kata kuncinya sebelum Anda mendaftar."
+        body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya. Nilai sendiri kata kuncinya sebelum Anda mendaftar."
       />
 
       <FeatureSection
@@ -119,18 +164,24 @@ export async function HomeMetadataOnly() {
         imageSide="left"
       />
 
-      <FeatureSection
-        title="Ditolak? Cari tahu kenapa."
-        body="Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang sebenarnya perlu diperbaiki — supaya unggahan berikutnya tidak mengulang kesalahan yang sama."
-        bullets={[
-          "Menunjuk masalahnya, bukan menebak",
-          "Memberi tahu juga apa yang sudah benar",
-          "Tersedia di paket Business",
-        ]}
-        mockup={<RejectAnalysisMockup />}
-        theme="navy"
-        imageSide="right"
-      />
+      {/* Syarat paketnya DITURUNKAN dari baris Plan, tidak diketik — sebab
+          lengkapnya di lib/marketing-plans.ts. Seluruh bagiannya hilang kalau
+          tidak ada paket yang menawarkannya: satu pita penuh untuk fitur yang
+          tidak bisa dibeli siapa pun lebih buruk daripada tidak ada bagiannya. */}
+      {reject.plans.length > 0 && (
+        <FeatureSection
+          title="Ditolak? Cari tahu kenapa."
+          body="Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang sebenarnya perlu diperbaiki — supaya unggahan berikutnya tidak mengulang kesalahan yang sama."
+          bullets={[
+            "Menunjuk masalahnya, bukan menebak",
+            "Memberi tahu juga apa yang sudah benar",
+            ...(reject.note ? [reject.note] : []),
+          ]}
+          mockup={<RejectAnalysisMockup />}
+          theme="navy"
+          imageSide="right"
+        />
+      )}
 
       {/* Deretan marketplace yang dulu berdiri di sini sudah pindah ke bawah
           hero. Tidak digandakan: tujuh nama yang sama, dua kali di satu
@@ -152,17 +203,28 @@ export async function HomeMetadataOnly() {
           },
           {
             title: "Upgrade saat butuh",
-            body: "Poin habis? Pilih paket, transfer, dan akun aktif setelah verifikasi tim kami.",
+            body: "Poin habis? Pilih paket, transfer sekali, dan akun aktif setelah verifikasi tim kami — tanpa tagihan bulanan.",
           },
         ]}
       />
 
+      {/* Subjudul lamanya berbunyi "Upgrade untuk poin bulanan" sementara tiap
+          kartu di bawahnya menulis "sekali bayar". Yang benar ada di kode:
+          lisensi tanpa tanggal akhir, poin dikreditkan sekali per aktivasi. */}
       <PricingTiers
         id="pricing"
         heading="Harga Nerona Metadata"
-        subheading="Paket Free memberi poin percobaan sekali per akun. Upgrade untuk poin bulanan."
+        subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali — aksesnya berlaku selamanya."
         tiers={tiers}
+        catatanPoin={catatanPoin}
       />
+
+      {/* Sudah ada di /pricing sejak alur sekali bayar, tapi tidak pernah di
+          beranda — padahal beranda punya tabel harganya sendiri, dan justru di
+          sinilah pertanyaan "kalau poin habis, saya bayar apa lagi?" muncul.
+          Bagian ini adalah jawabannya, dan tanpanya seluruh model harga baru
+          hanya terjelaskan setengah. */}
+      <TopupSection packages={topupPackages} />
 
       {/* Daftarnya pindah ke lib/marketing-faq.ts: isinya tumbuh dari lima jadi
           sepuluh, dan tiap jawaban baru diturunkan dari kode yang benar-benar
@@ -172,11 +234,15 @@ export async function HomeMetadataOnly() {
           putih berturut-turut tepat sebelum banner penutup, persis cacat yang
           docblock di atas mengaku sudah dibereskan. Terhitung dari peramban,
           bukan dari membaca kode: keduanya rgb(255,255,255). */}
-      <FaqSection id="faq" tone="sunken" items={METADATA_FAQ} />
+      <FaqSection id="faq" tone="sunken" items={metadataFaq({ poinPerGambar })} />
 
       <CtaBanner
         title="Coba gratis hari ini"
-        body={`Paket Free memberi ${freePoints} poin Metadata, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk menilai hasilnya sebelum Anda memutuskan.`}
+        body={
+          gambarGratis && gambarGratis > 0
+            ? `Paket Free memberi ${freePoints} poin Metadata, sekali per akun — sekitar ${gambarGratis.toLocaleString("id-ID")} gambar. Cukup untuk menilai hasilnya sebelum Anda memutuskan.`
+            : `Paket Free memberi ${freePoints} poin Metadata, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk menilai hasilnya sebelum Anda memutuskan.`
+        }
         ctaLabel="Buat akun gratis"
         ctaHref="/register"
       />

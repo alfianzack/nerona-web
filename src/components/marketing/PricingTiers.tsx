@@ -115,7 +115,23 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
               {tier.features.map((feature) => (
                 <li key={feature.label} className="flex items-start gap-2.5">
                   <FeatureIcon included={feature.included} />
-                  <span className={feature.included ? "" : "text-muted line-through"}>
+                  <span className={feature.included ? "" : "text-muted line-through decoration-1"}>
+                    {/* Satu-satunya penanda "tidak termasuk" di baris ini
+                        dulunya adalah coretan CSS dan sebuah glyph di dalam
+                        <svg> tanpa nama. Keduanya tidak terbaca pembaca layar:
+                        fitur yang TIDAK didapat diumumkan persis sama dengan
+                        yang didapat, jadi pengguna tunanetra mendengar paket
+                        Free menawarkan reject analyzer dan Nerona Hub.
+                        Itu bukan soal gaya — itu tabel harga yang berbohong
+                        kepada sebagian pembacanya.
+
+                        Audit halaman menemukan versi terlihatnya dari cacat
+                        yang sama: keempat baris tampak seragam di ketiga kartu,
+                        dan coretan tipis berwarna abu di antara teks abu
+                        terbaca sebagai daftar centang. */}
+                    <span className="sr-only">
+                      {feature.included ? "Termasuk: " : "Tidak termasuk: "}
+                    </span>
                     {feature.label}
                   </span>
                 </li>
@@ -158,11 +174,21 @@ export function PricingTiers({
   heading,
   subheading,
   tiers,
+  catatanPoin,
 }: {
   id?: string;
   heading: string;
   subheading: string;
   tiers: PricingTier[];
+  /**
+   * Patokan "satu gambar ≈ N poin", dihitung pemanggil dari tarif yang sedang
+   * berlaku (lib/marketing-points.ts). Opsional, dan sengaja BOLEH null:
+   * setiap kartu di atasnya menyebut jatah dalam poin, dan tanpa patokan
+   * angka-angka itu tidak bisa ditimbang pengunjung yang belum pernah memakai
+   * alatnya. Kalau tarifnya belum bisa dihitung, kalimatnya hilang — halaman
+   * ini tidak menebak angka.
+   */
+  catatanPoin?: string | null;
 }) {
   return (
     <Band id={id} align="center">
@@ -175,9 +201,17 @@ export function PricingTiers({
         <PricingTierGrid tiers={tiers} />
       </div>
 
-      <p className="mx-auto mt-10 max-w-[64ch] text-caption text-muted">
-        Pembayaran diatur langsung dengan tim Nerona — pilih paket, kirim order, selesaikan
-        pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
+      {/* Di atas catatan pembayaran, bukan di bawahnya: yang dibaca orang tepat
+          setelah melihat tiga angka poin adalah "berapa gambar itu?", bukan
+          "bagaimana cara transfernya". */}
+      {catatanPoin && (
+        <p className="mx-auto mt-10 max-w-[64ch] text-caption text-muted">{catatanPoin}</p>
+      )}
+
+      <p className={cn("mx-auto max-w-[64ch] text-caption text-muted", catatanPoin ? "mt-3" : "mt-10")}>
+        Paket dibeli sekali dan aksesnya berlaku selamanya — tidak ada tagihan bulanan dan tidak ada
+        perpanjangan. Pembayaran diatur langsung dengan tim Nerona: pilih paket, kirim order,
+        selesaikan pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
       </p>
     </Band>
   );

@@ -64,3 +64,51 @@ describe("metadataTiers — alur sekali bayar", () => {
     expect(tiers.find((t) => t.name === "Business")!.priceLabel).toBe("Hubungi kami");
   });
 });
+
+describe("metadataTiers — baris jatah poin", () => {
+  /**
+   * Kartu yang sama menulis "sekali bayar" di bawah angkanya dan "600 poin per
+   * bulan" tujuh baris di bawahnya. Pembaca tidak bisa menyimpulkan mana yang
+   * benar, dan pertanyaan itu justru yang menentukan apakah ia jadi transfer.
+   *
+   * Yang benar ada di kode: orders.ts memberi poin sekali per aktivasi, dan
+   * lisensinya tanpa tanggal akhir. Jadi barisnya harus menyebut aktivasi,
+   * bukan bulan.
+   */
+  it("paket berbayar tidak pernah menyebut per bulan", async () => {
+    (prisma.plan.findMany as any).mockResolvedValue([
+      { name: "Pro", priceMonthly: 79000, marketplaces: "*", rejectAnalyzer: false, hub: true },
+    ]);
+
+    const pro = (await metadataTiers()).find((t) => t.name === "Pro")!;
+    const jatah = pro.features.map((f) => f.label).join(" | ");
+    expect(jatah).not.toContain("per bulan");
+    expect(jatah).toContain("poin");
+  });
+
+  /** Free tetap harus terbaca sebagai jatah seumur akun, bukan kuota berulang. */
+  it("paket gratis tetap menyebut sekali per akun", async () => {
+    (prisma.plan.findMany as any).mockResolvedValue([
+      { name: "Free", priceMonthly: 0, marketplaces: "adobe", rejectAnalyzer: false, hub: false },
+    ]);
+
+    const free = (await metadataTiers()).find((t) => t.name === "Free")!;
+    expect(free.features.map((f) => f.label).join(" | ")).toContain("sekali per akun");
+  });
+
+  /**
+   * `months=` di URL order adalah sisa alur berdurasi. Ia tidak mengubah apa
+   * pun lagi, tapi ia TERLIHAT — pembeli yang menaruh kursor di tombolnya
+   * membaca "months=1" dan menyimpulkan ada bulan kedua yang harus dibayar.
+   */
+  it("tautan order tidak lagi membawa durasi", async () => {
+    (prisma.plan.findMany as any).mockResolvedValue([
+      { name: "Pro", priceMonthly: 79000, marketplaces: "*", rejectAnalyzer: false, hub: true },
+    ]);
+
+    const pro = (await metadataTiers()).find((t) => t.name === "Pro")!;
+    expect(pro.href).not.toContain("months=");
+    expect(pro.href).toContain("product=metadata");
+    expect(pro.href).toContain("plan=Pro");
+  });
+});

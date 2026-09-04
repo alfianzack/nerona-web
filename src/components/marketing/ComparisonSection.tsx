@@ -1,4 +1,5 @@
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
+import { rejectAnalyzerAvailability } from "@/lib/marketing-plans";
 import { Band } from "@/components/ui/Band";
 import { Icon, type IconName } from "@/components/ui/icons";
 
@@ -28,7 +29,12 @@ interface BarisBanding {
  *    dibaca dari registry, bukan diketik.
  * 3. Batas batch nyata, bukan "ratusan gambar sekaligus".
  * 4. Reject analyzer memang membaca gambar bersama alasan penolakannya, dan
- *    memang hanya di satu paket — syarat itu ikut ditulis, tidak disembunyikan.
+ *    syarat paketnya ikut ditulis, tidak disembunyikan. Syarat itu DITURUNKAN
+ *    dari baris Plan, tidak diketik: saat ia diketik tangan, kalimat di sini
+ *    menyebut satu paket sementara tabel harga beberapa bagian di bawahnya
+ *    mencentang ketiganya, dan audit halaman menemukannya sebagai kontradiksi
+ *    yang terbaca dalam satu gulir. Seluruh barisnya ikut hilang kalau ternyata
+ *    tidak ada paket yang menawarkannya.
  *
  * Yang sengaja TIDAK ada di sini: klaim waktu, persentase penerimaan, dan
  * perbandingan biaya. Tidak satu pun bisa dibuktikan dari basis data hari ini
@@ -39,31 +45,33 @@ interface BarisBanding {
  * mengerjakan persis daftar itu tiap hari; menyebutnya "buang-buang waktu"
  * berarti menghina calon pembeli tepat di kalimat yang ingin dia setujui.
  */
-const BARIS: BarisBanding[] = [
-  {
-    icon: "tag",
-    lama: "Menulis judul, deskripsi, dan puluhan kata kunci sendiri untuk tiap gambar.",
-    nerona:
-      "Judul, deskripsi, dan kata kunci dibuat AI dari gambarnya — tetap bisa Anda sunting sebelum dikirim.",
-  },
-  {
-    icon: "link",
-    lama: "Mengulang seluruhnya untuk tiap marketplace tujuan.",
-    nerona: `Ditulis sekali, lalu diisikan ke formulir unggah ${CLAIMABLE_MARKETPLACES.length} marketplace.`,
-  },
-  {
-    icon: "image",
-    lama: "Satu gambar selesai dulu, baru gambar berikutnya.",
-    nerona: `Sampai ${BATCH_MAX_ITEMS} gambar dalam satu batch, dengan progres per gambar.`,
-  },
-  {
-    icon: "close",
-    lama: "Menebak kenapa sebuah gambar ditolak.",
-    nerona:
-      "Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang perlu diperbaiki.",
-    catatan: "Tersedia di paket Business",
-  },
-];
+function barisFor(catatanReject: string | null): BarisBanding[] {
+  return [
+    {
+      icon: "tag",
+      lama: "Menulis judul, deskripsi, dan puluhan kata kunci sendiri untuk tiap gambar.",
+      nerona:
+        "Judul, deskripsi, dan kata kunci dibuat AI dari gambarnya — tetap bisa Anda sunting sebelum dikirim.",
+    },
+    {
+      icon: "link",
+      lama: "Mengulang seluruhnya untuk tiap marketplace tujuan.",
+      nerona: `Ditulis sekali, lalu diisikan ke formulir unggah ${CLAIMABLE_MARKETPLACES.length} marketplace.`,
+    },
+    {
+      icon: "image",
+      lama: "Satu gambar selesai dulu, baru gambar berikutnya.",
+      nerona: `Sampai ${BATCH_MAX_ITEMS} gambar dalam satu batch, dengan progres per gambar.`,
+    },
+    {
+      icon: "close",
+      lama: "Menebak kenapa sebuah gambar ditolak.",
+      nerona:
+        "Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang perlu diperbaiki.",
+      catatan: catatanReject ?? undefined,
+    },
+  ];
+}
 
 /**
  * Perlakuan sel kanan, ditulis sekali karena dipakai lima sel.
@@ -92,7 +100,16 @@ const SISI_KANAN = "border-t border-border bg-accent/5 md:border-l md:border-t-0
  * Kepala kolom ikut menjadi baris pertama grid — bukan dua judul melayang di
  * atas panel — supaya garis pemisahnya benar-benar mulai dari tepi atas.
  */
-export function ComparisonSection({ id }: { id?: string }) {
+export async function ComparisonSection({ id }: { id?: string }) {
+  const reject = await rejectAnalyzerAvailability();
+  // Baris terakhir dibuang seluruhnya kalau tidak ada paket yang menawarkan
+  // reject analyzer. Membiarkannya berdiri tanpa syarat akan menjanjikan fitur
+  // yang tidak bisa dibeli siapa pun — kegagalan yang lebih mahal daripada
+  // kehilangan satu baris perbandingan.
+  const barisTampil = barisFor(reject.note).filter(
+    (b) => b.icon !== "close" || reject.plans.length > 0
+  );
+
   return (
     <Band id={id} tone="sunken">
       <h2 className="max-w-[20ch] text-balance text-display-2 text-ink">
@@ -114,7 +131,7 @@ export function ComparisonSection({ id }: { id?: string }) {
             </div>
           </div>
 
-          {BARIS.map((baris) => (
+          {barisTampil.map((baris) => (
             <div key={baris.lama} className="grid grid-cols-1 md:grid-cols-2">
               <div className="flex gap-3.5 px-6 py-6 md:px-7">
                 <Icon

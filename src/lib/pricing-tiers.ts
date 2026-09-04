@@ -15,10 +15,22 @@ import type { PricingTier } from "@/components/marketing/PricingTiers";
 
 const TIER_ORDER = ["Free", "Pro", "Business"];
 
+/**
+ * Business tidak lagi menyebut "tim, agensi".
+ *
+ * Tidak ada satu pun fitur tim di produk ini — tidak ada akun bersama, tidak
+ * ada peran, tidak ada tagihan terpusat; cari "team" atau "member" di skema dan
+ * hasilnya kosong. Audit halaman menemukannya sebagai janji tanpa isi, dan
+ * janji semacam itu ditemukan pembeli tepat setelah ia membayar, yaitu saat
+ * ongkos menemukannya paling mahal.
+ *
+ * Yang menggantikannya bisa ditunjuk ke baris Plan: Business adalah satu-satunya
+ * paket dengan reject analyzer dan Nerona Hub, dan jatah poinnya paling besar.
+ */
 const METADATA_TAGLINES: Record<string, string> = {
   Free: "Coba dulu, tanpa kartu kredit",
   Pro: "Untuk kontributor aktif",
-  Business: "Volume tinggi, tim, agensi",
+  Business: "Volume tinggi, dengan semua fitur",
 };
 
 function ctaFor(name: string): string {
@@ -35,20 +47,32 @@ function ctaFor(name: string): string {
  * enforced nowhere in the codebase, so displaying it promised a limit that does
  * not exist.
  *
- * Free is a lifetime allowance, paid plans are credited on every activation and
- * renewal; the wording has to distinguish them or Free reads as recurring.
+ * Free is a lifetime allowance, paid plans are credited on every activation;
+ * the wording has to distinguish them or Free reads as recurring.
  *
  * Paket berdurasi panjang dikredit sekaligus di muka, jadi angkanya dikalikan
  * durasi — kalau tidak, membeli 6 bulan terlihat memberi poin sebanyak 1 bulan.
+ *
+ * `sekaliBayar` memisahkan dua produk yang dijual dengan cara berbeda, dan
+ * memisahkannya di SINI bukan di pemanggil karena di sinilah kalimatnya
+ * dibentuk. Metadata sudah pindah ke sekali bayar: lisensinya tanpa tanggal
+ * akhir (admin-grants.ts) dan poinnya dikreditkan sekali per aktivasi
+ * (orders.ts), jadi "per bulan" di baris ini menjanjikan kiriman kedua yang
+ * tidak pernah datang — persis di kartu yang tiga baris di atasnya menulis
+ * "sekali bayar". Agent masih berdurasi, dan tetap memakai kalimat lamanya.
  */
 async function allowanceLabel(
   product: PlanProduct,
   planName: string,
-  months: number
+  months: number,
+  sekaliBayar = false
 ): Promise<string> {
   const monthly = await pointsForPlan(product, planName);
   if (normalizePlan(planName) === "free") {
     return `${monthly.toLocaleString("id-ID")} poin sekali per akun`;
+  }
+  if (sekaliBayar) {
+    return `${monthly.toLocaleString("id-ID")} poin, dikreditkan saat paket aktif`;
   }
   const total = monthly * months;
   const suffix = months === 1 ? "per bulan" : `untuk ${DURATION_LABELS[months] ?? `${months} bulan`}`;
@@ -100,12 +124,18 @@ export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTi
         poinAwal: await pointsForPlan("metadata", plan.name),
         features: [
           { label: describeMarketplaces(plan.marketplaces), included: true },
-          { label: await allowanceLabel("metadata", plan.name, planMonths), included: true },
+          { label: await allowanceLabel("metadata", plan.name, planMonths, true), included: true },
           { label: "Analisis penolakan (reject analyzer)", included: plan.rejectAnalyzer },
           { label: "Nerona Hub (aplikasi desktop, unggah FTP)", included: plan.hub },
         ],
         cta: ctaFor(plan.name),
-        href: `/order?product=metadata&plan=${plan.name}&months=${planMonths}`,
+        // Tanpa `months`. Parameternya sudah tidak mengubah apa pun — halaman
+        // order melewatkannya ke coerceDuration, yang mengembalikan 1 untuk
+        // nilai yang hilang — tapi ia TERLIHAT di bilah alamat dan di tooltip
+        // tautan, dan "months=1" membuat pembaca menyimpulkan ada bulan kedua
+        // yang harus dibayar. Itu tepat kesalahpahaman yang halaman ini sedang
+        // berusaha hilangkan.
+        href: `/order?product=metadata&plan=${plan.name}`,
         featured: plan.name === "Pro",
       };
     })
