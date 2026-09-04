@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { cn } from "@/components/ui/cn";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { KONTAK, WA_TAMPIL, waLink } from "@/lib/kontak";
 
 interface CheckoutViewProps {
   product: "metadata" | "agent";
@@ -158,6 +159,14 @@ export function CheckoutView({
                 )}
               />
               <span className={feature.included ? "" : "text-muted line-through"}>
+                {/* Ikonnya ber-aria-hidden dan coretannya cuma CSS, jadi tanpa
+                    baris ini pembaca layar mengumumkan fitur yang TIDAK didapat
+                    persis sama dengan yang didapat — di layar tempat orang
+                    memutuskan membayar. Perlakuan yang sama ada di
+                    PricingTierGrid; sebab lengkapnya ditulis di sana. */}
+                <span className="sr-only">
+                  {feature.included ? "Termasuk: " : "Tidak termasuk: "}
+                </span>
                 {feature.label}
               </span>
             </li>
@@ -198,6 +207,31 @@ export function CheckoutView({
           {metode === "qris"
             ? "Anda akan dibawa ke halaman QRIS. Paket aktif sendiri setelah pembayaran masuk."
             : "Pembayaran via transfer bank. Paket aktif setelah pembayaran dikonfirmasi admin."}
+        </p>
+
+        {/* Kontak DI LAYAR INI, bukan cuma di footer.
+            Inilah satu-satunya titik di seluruh situs tempat orang menyerahkan
+            uang kepada pihak yang belum pernah ia hubungi, lalu menunggu
+            manusia memverifikasinya. Nomor yang harus dicari dengan menggulir
+            ke dasar halaman tidak menjawab keraguan yang muncul persis di
+            detik sebelum tombol ini diklik. */}
+        <p className="mt-4 border-t border-divider pt-4 text-center text-caption text-muted">
+          Ada pertanyaan sebelum membayar?{" "}
+          <a
+            href={waLink(
+              KONTAK.waNomor,
+              `Halo Nerona, saya mau bertanya soal paket ${planName}.`
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-accent hover:underline"
+          >
+            WhatsApp {WA_TAMPIL}
+          </a>{" "}
+          atau{" "}
+          <a href={`mailto:${KONTAK.email}`} className="font-medium text-accent hover:underline">
+            {KONTAK.email}
+          </a>
         </p>
       </Card>
     </div>

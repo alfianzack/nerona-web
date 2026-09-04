@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { homeForRole } from "@/lib/auth-redirect";
 import { AGENT_ENABLED } from "@/lib/features";
+import { KONTAK, WA_TAMPIL, waLink } from "@/lib/kontak";
 
 // Hover-nya ke text-ink, bukan ke brand-blue: biru merek mentah gagal uji
 // kontras di atas putih, dan footer tidak butuh aksen sama sekali — cukup
@@ -22,6 +23,18 @@ const FOOTER_LINKS = AGENT_ENABLED
       { href: "/", label: "Home" },
       { href: "/pricing", label: "Harga" },
     ];
+
+/**
+ * Baris kedua, terpisah dari navigasi produk.
+ *
+ * Dokumen legal tidak dicampur ke deretan yang sama dengan "Home" dan "Harga":
+ * keduanya dibaca dengan niat yang berbeda, dan menyelipkannya di antara tautan
+ * produk membuatnya justru sulit ditemukan saat dicari.
+ */
+const LEGAL_LINKS = [
+  { href: "/syarat", label: "Syarat & Ketentuan" },
+  { href: "/privasi", label: "Kebijakan Privasi" },
+];
 
 export async function Footer() {
   const session = await getServerSession(authOptions);
@@ -52,8 +65,41 @@ export async function Footer() {
             </Link>
           ))}
         </nav>
+
+        {/* Kontak, dan ini bukan hiasan.
+            Nerona menagih lewat transfer manual yang diverifikasi "tim kami".
+            Selama tidak ada satu pun cara menghubungi tim itu di seluruh situs,
+            yang diminta dari pengunjung bukan pembelian melainkan kepercayaan
+            buta — audit halaman menyebutnya penghambat kepercayaan terbesar di
+            situs ini. Karena itu ia berdiri di footer, yang muncul di SETIAP
+            halaman publik, bukan di satu halaman kontak yang harus dicari. */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-caption text-muted">
+          <a href={`mailto:${KONTAK.email}`} className={footerLink}>
+            {KONTAK.email}
+          </a>
+          <span aria-hidden="true" className="text-divider">
+            ·
+          </span>
+          <a
+            href={waLink(KONTAK.waNomor, "Halo Nerona, saya mau bertanya.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={footerLink}
+          >
+            WhatsApp {WA_TAMPIL}
+          </a>
+        </div>
+
+        <nav className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-caption text-muted">
+          {LEGAL_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className={footerLink}>
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
         <p className="mt-8 text-caption text-muted">
-          &copy; {new Date().getFullYear()} Nerona. Hak cipta dilindungi.
+          &copy; {new Date().getFullYear()} {KONTAK.nama}. Hak cipta dilindungi.
         </p>
       </div>
     </footer>
