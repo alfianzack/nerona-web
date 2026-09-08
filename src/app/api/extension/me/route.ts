@@ -32,7 +32,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     account: { ...state, validUntil: state.validUntil ? state.validUntil.toISOString() : null },
-    ai: { model: ai.modelId },
+    // `label` yang ditampilkan, `model` yang tetap dikirim: extension yang sudah
+    // terpasang membaca `model`, jadi artinya tidak boleh berubah di bawahnya.
+    ai: { model: ai.modelId, label: ai.label },
     update,
     // Daftar marketplace yang BERWENANG, dikirim ke setiap klien di setiap
     // panggilan yang memang sudah terjadi.

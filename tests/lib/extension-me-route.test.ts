@@ -32,7 +32,7 @@ describe("GET /api/extension/me", () => {
       rejectAnalyzer: false, pointsBalance: 1250, active: true,
     });
     (resolveAiForUser as any).mockResolvedValue({
-      modelId: "gemini-2.5-flash", apiKey: "sk-secret", pricing: {},
+      modelId: "gemini-2.5-flash", label: "Gemini 2.5 Flash", apiKey: "sk-secret", pricing: {},
     });
     (infoPembaruanExtension as any).mockResolvedValue({
       latest: "1.2.0", min: "1.1.0", url: "https://nerona-web.vercel.app/unduh",
@@ -42,7 +42,9 @@ describe("GET /api/extension/me", () => {
     const body = await res.json();
     expect(body.account).toMatchObject({ plan: "Pro", active: true, pointsBalance: 1250 });
     expect(body.account.validUntil).toBe("2026-08-01T00:00:00.000Z");
-    expect(body.ai).toEqual({ model: "gemini-2.5-flash" });
+    // `model` tetap id mentah: extension lama yang sudah terpasang membaca field
+    // ini, dan mengubah artinya membuat barisnya salah di sana.
+    expect(body.ai).toEqual({ model: "gemini-2.5-flash", label: "Gemini 2.5 Flash" });
     // Kunci API tidak boleh ikut keluar ke ekstensi.
     expect(JSON.stringify(body)).not.toContain("sk-secret");
   });
@@ -62,6 +64,25 @@ describe("GET /api/extension/me", () => {
     expect(body.update).toEqual({
       latest: "1.2.0", min: "", url: "https://nerona-web.vercel.app/unduh",
     });
+  });
+
+  /// Model bawaan Koneksi AI tidak punya baris registri, jadi tidak punya label.
+  /// Yang dikirim null, bukan id yang disalin — kliennya yang memutuskan mau
+  /// menampilkan id itu atau tidak.
+  it("mengirim label null saat model tidak datang dari baris registri", async () => {
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({
+      email: "u@x.com", plan: "Pro", licenseStatus: "active",
+      validUntil: null, marketplaces: "*",
+      rejectAnalyzer: false, pointsBalance: 10, active: true,
+    });
+    (resolveAiForUser as any).mockResolvedValue({
+      modelId: "gemini-2.0-flash-lite", label: null, apiKey: "k", pricing: {},
+    });
+    (infoPembaruanExtension as any).mockResolvedValue({ latest: "", min: "", url: "" });
+
+    const body = await (await GET(req("Bearer nrx_ok"))).json();
+    expect(body.ai).toEqual({ model: "gemini-2.0-flash-lite", label: null });
   });
 
   /// Daftar marketplace yang berwenang ikut di setiap panggilan, jadi klien

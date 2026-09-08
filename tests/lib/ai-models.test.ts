@@ -93,6 +93,13 @@ describe("resolveAiForUser dengan registri kosong", () => {
     expect(resolved.apiKey).toBe("kunci-env");
     expect(resolved.baseUrl).toBe("https://ai.sumopod.com/v1");
   });
+
+  /// Tanpa baris registri tidak ada label yang bisa diambil, dan mengarang satu
+  /// dari id model hanya memindahkan id mentah ke tempat yang mengaku label.
+  it("tidak mengarang label saat model datang dari Koneksi AI", async () => {
+    const resolved = await resolveAiForUser("user-1");
+    expect(resolved.label).toBeNull();
+  });
 });
 
 describe("resolveAiForUser memakai provider baris yang dipilih", () => {
@@ -101,6 +108,15 @@ describe("resolveAiForUser memakai provider baris yang dipilih", () => {
     const resolved = await resolveAiForUser("user-1");
     expect(resolved.apiKey).toBe("kunci-a");
     expect(resolved.baseUrl).toBe("https://a.example/v1");
+  });
+
+  /// Nama yang dibaca manusia hanya ada di baris registri. Tanpa dibawa keluar
+  /// dari sini, satu-satunya yang bisa ditampilkan extension adalah id mentah.
+  it("membawa label baris itu, bukan cuma id modelnya", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1", aiModel: row() });
+    const resolved = await resolveAiForUser("user-1");
+    expect(resolved.label).toBe("Claude Opus 5");
+    expect(resolved.modelId).toBe("claude-opus-5");
   });
 
   it("jatuh ke kunci env saat provider baris itu belum diisi kuncinya", async () => {

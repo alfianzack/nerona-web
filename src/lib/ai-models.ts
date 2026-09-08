@@ -27,6 +27,12 @@ export interface ResolvedAi {
   /** Id BARIS registri yang dipakai; null kalau jatuh ke model bawaan Setting. */
   aiModelId: string | null;
   modelId: string;
+  /**
+   * Nama model yang dibaca manusia, dari baris registri. Null kalau modelnya
+   * datang dari Setting: di situ tidak ada label, dan menyalin `modelId` ke
+   * sini hanya memindahkan id mentah ke field yang mengaku label.
+   */
+  label: string | null;
   apiKey: string;
   baseUrl: string;
   pricing: AiPricing;
@@ -114,13 +120,14 @@ export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   if (!row) {
     const fallback = await prisma.aiProvider.findFirst({ where: { isDefault: true } });
     const creds = resolveProviderCredentials(fallback);
-    return { aiModelId: null, modelId: global.model, ...creds, pricing: global.pricing };
+    return { aiModelId: null, modelId: global.model, label: null, ...creds, pricing: global.pricing };
   }
 
   const creds = resolveProviderCredentials(row.provider ?? null);
   return {
     aiModelId: row.id,
     modelId: row.modelId,
+    label: row.label,
     ...creds,
     pricing: pricingFor(row, global.pricing.pointsPerUsd),
   };
