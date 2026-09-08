@@ -34,6 +34,19 @@ const MARKETPLACE_NAMES = CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ");
 export interface MarketingFaqItem {
   question: string;
   answer: string;
+  /**
+   * Ikut tampil di beranda. Tanpa penanda ini, item hanya hidup di /faq.
+   *
+   * Satu daftar dengan penanda, BUKAN dua array. Dua array berarti jawaban
+   * yang sama disalin dua kali, dan salinan kedua akan basi tanpa ada yang
+   * tahu — persis kegagalan yang docblock di atas melarang untuk angka.
+   *
+   * Yang ditandai adalah enam pertanyaan yang MENGHALANGI pembelian: kartu
+   * kredit, marketplace, privasi gambar, poin, pemasangan, pembayaran. Bukan
+   * enam yang paling sering ditanya — beranda bukan tempat menjawab semua
+   * pertanyaan, ia tempat menyingkirkan alasan untuk tidak mendaftar.
+   */
+  beranda?: true;
 }
 
 export interface MetadataFaqOptions {
@@ -64,12 +77,31 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     return [
     {
       question: "Apakah saya perlu kartu kredit untuk mulai?",
+      beranda: true,
       answer:
         "Tidak. Paket Free aktif seketika setelah daftar, tanpa data pembayaran apa pun. Free adalah poin percobaan sekali per akun, bukan kuota bulanan.",
     },
+    /**
+     * Dua nama terakhir diberi keterangan, dan keterangannya DOMAIN — bukan
+     * deskripsi.
+     *
+     * Magnific dan Miricanvas tidak familiar bagi sebagian besar kontributor
+     * stock, dan daftar berisi nama yang tidak dikenali membuat seluruh
+     * daftarnya terbaca lebih lemah. Yang dipakai untuk menerangkannya adalah
+     * satu-satunya hal yang bisa dibuktikan dari kode: pola host di
+     * nerona_medata/manifest.json, yaitu contributor.magnific.com dan
+     * designhub.miricanvas.com. Menuliskan "platform desain asal Korea" atau
+     * sejenisnya berarti mengarang keterangan tentang perusahaan orang lain di
+     * halaman jualan kita sendiri.
+     *
+     * Kalimatnya dirakit dari MARKETPLACE_NAMES, bukan mengetik ulang
+     * ketujuhnya: daftar itu diturunkan dari registry, dan mengetiknya di sini
+     * berarti nama kedelapan yang ditambahkan nanti tidak pernah muncul.
+     */
     {
       question: "Marketplace apa saja yang didukung?",
-      answer: `${MARKETPLACE_NAMES}.`,
+      beranda: true,
+      answer: `${MARKETPLACE_NAMES}. Dua yang terakhir adalah portal kontributor: Magnific di contributor.magnific.com dan Miricanvas di designhub.miricanvas.com.`,
     },
 
     /**
@@ -150,6 +182,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
      */
     {
       question: "Gambar saya diunggah ke server Nerona?",
+      beranda: true,
       answer:
         "Berkas asli di komputer Anda tidak pernah dibuka. Yang dikirim adalah salinan kecil dari pratinjau yang sudah tampil di halaman unggah — diperkecil sampai sisi terpanjang 1280 piksel dan dijadikan JPEG di browser Anda, dipakai sekali untuk dibaca AI, lalu tidak disimpan. Yang tersimpan hanya baris riwayat: marketplace, alamat halaman, judul, dan kata kunci hasilnya.",
     },
@@ -164,6 +197,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
      */
     {
       question: "Apa itu poin, dan bagaimana kalau habis?",
+      beranda: true,
       answer:
         "Poin terpakai setiap kali AI bekerja — besarnya tergantung gambar dan panjang teks yang diproses." +
         patokan(poinPerGambar) +
@@ -184,13 +218,47 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     },
     {
       question: "Bagaimana cara memasang ekstensinya?",
+      beranda: true,
       answer:
         "Unduh folder ekstensi dari halaman Profile Anda, lalu muat lewat Chrome dengan Load unpacked. Belum melalui Chrome Web Store, jadi pembaruan kami beritahukan dari dalam aplikasi.",
     },
     {
       question: "Bagaimana cara pembayarannya?",
+      beranda: true,
       answer:
         "Lewat transfer bank. Pilih paket, kirim order, transfer sesuai nominal, lalu unggah bukti transfer — tim kami memverifikasi dan mengaktifkan akun Anda, biasanya di hari yang sama.",
       },
+
+    /**
+     * TIDAK ada kebijakan refund tertulis di kode maupun di basis data — dicari
+     * di lib/orders.ts, lib/payments/, dan halaman /syarat: kosong. Jadi
+     * jawabannya menyebut JALURNYA, bukan janji berjangka waktu. Menuliskan
+     * "14 hari" di sini berarti mengarang kebijakan yang tidak dijaga apa pun,
+     * dan pembeli menemukannya justru saat ia sudah membayar.
+     *
+     * Begitu owner menetapkan kebijakannya, jawaban INI yang diubah, dan
+     * halaman /syarat ikut diperbarui — dua tempat, sengaja disebut di sini
+     * supaya yang kedua tidak terlupa.
+     *
+     * Tidak ditandai `beranda`: pertanyaan ini dicari orang yang sudah hendak
+     * membayar, dan tempatnya di /faq bersama syarat lengkapnya.
+     */
+    {
+      question: "Bagaimana kalau saya minta pengembalian dana?",
+      answer:
+        "Hubungi tim Nerona lewat halaman Kontak. Karena pembayarannya lewat transfer dan aktivasinya dilakukan tim kami, permintaan pengembalian dana ditangani satu per satu — sebutkan nomor order Anda beserta alasannya, dan kami jawab di hari kerja yang sama.",
+    },
   ];
+}
+
+/**
+ * Enam pertanyaan yang menghalangi pembelian — dipakai beranda.
+ *
+ * Sebelas item membuat FAQ sendiri hampir sepertiga panjang beranda, dan pada
+ * panjang itu bagian yang tugasnya menyingkirkan keberatan justru berubah jadi
+ * dinding teks yang dilewati. Sisanya tidak dibuang, hanya pindah ke /faq —
+ * dan beranda menautkannya.
+ */
+export function metadataFaqBeranda(opts: MetadataFaqOptions): MarketingFaqItem[] {
+  return metadataFaq(opts).filter((item) => item.beranda);
 }

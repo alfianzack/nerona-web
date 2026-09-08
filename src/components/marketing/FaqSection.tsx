@@ -1,5 +1,6 @@
 import { Band } from "@/components/ui/Band";
 import { Icon } from "@/components/ui/icons";
+import { TextLink } from "@/components/ui/TextLink";
 
 export interface FaqItem {
   question: string;
@@ -45,6 +46,7 @@ export function FaqSection({
   className = "",
   tone,
   id,
+  semuaHref,
 }: {
   items: FaqItem[];
   title?: string;
@@ -57,6 +59,15 @@ export function FaqSection({
   tone?: "plain" | "sunken";
   /** Anchor target, so the top nav can link to this section. */
   id?: string;
+  /**
+   * Tautan ke daftar pertanyaan yang LENGKAP.
+   *
+   * Wajib diisi oleh pemanggil yang menampilkan daftar terpotong. Beranda
+   * hanya memuat enam dari dua belas pertanyaan, dan tanpa tautan ini keenam
+   * yang tersisa menjadi satu-satunya yang bisa dicapai siapa pun — memotong
+   * daftarnya berubah dari "meringkas" menjadi "menghilangkan".
+   */
+  semuaHref?: string;
 }) {
   // Nama grup akordeon. Diturunkan dari `id` supaya dua FaqSection di satu
   // halaman tidak saling menutup jawaban.
@@ -92,6 +103,19 @@ export function FaqSection({
               <p className="mt-3 max-w-[68ch] text-body-lg text-muted">{item.answer}</p>
             </details>
           ))}
+
+          {/* Di DALAM kolom daftar, bukan di bawah pita: pembaca yang sampai ke
+              pertanyaan terakhir sedang menatap kolom ini, dan tautan yang
+              berdiri di tengah halaman di bawahnya terbaca sebagai bagian
+              berikutnya. Garis rambut daftarnya sengaja ditembus — tautan ini
+              bukan pertanyaan kesekian. */}
+          {semuaHref && (
+            <p className="border-t-0 py-5 text-body">
+              <TextLink href={semuaHref} className="font-semibold">
+                Semua pertanyaan
+              </TextLink>
+            </p>
+          )}
         </div>
       </div>
     </Band>
