@@ -1,6 +1,6 @@
 import { cn } from "./cn";
 
-type BandTone = "plain" | "sunken" | "navy" | "navy-gradient";
+type BandTone = "plain" | "sunken" | "navy" | "navy-gradient" | "navy-deep";
 type BandAlign = "left" | "center";
 
 /**
@@ -35,6 +35,7 @@ const TONES: Record<BandTone, string> = {
   sunken: "bg-surface-sunken",
   navy: "bg-navy-900 text-white",
   "navy-gradient": "band-navy-glow text-white",
+  "navy-deep": "band-navy-deep text-white",
 };
 
 export function Band({

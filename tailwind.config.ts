@@ -131,6 +131,13 @@ const config: Config = {
         action: token("action"),
         "on-action": token("on-action"),
 
+        // Hasil AI — chip kata kunci dan titik status. Sengaja BUKAN salah satu
+        // langkah `success`: hijau status menandai "berhasil", mint menandai
+        // "ini keluaran modelnya", dan keduanya muncul di halaman yang sama.
+        result: token("result"),
+        "result-bg": token("result-bg"),
+        "result-ink": token("result-ink"),
+
         // Peran semantik yang selama ini tidak punya token, sehingga rose dan
         // emerald melayang antara langkah 400 sampai 800 di 40+ berkas.
         success: token("success"),

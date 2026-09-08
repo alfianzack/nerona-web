@@ -91,8 +91,62 @@
     --divider: 237 241 246;
     --ink: 22 35 61;
     --muted: 92 107 133;
+
+    /**
+     * Biru aksen turun pangkat: navigasi, ikon, dan tautan sekunder saja.
+     *
+     * Sebelumnya `--accent` dan `--action` bernilai sama, jadi tombol utama
+     * dan tautan navigasi berwarna identik — dan tidak ada satu pun warna di
+     * halaman ini yang berlawanan dengan navy. Navy, putih, dan chip biru
+     * pucat semuanya keluarga biru, dan itulah sebab halaman terbaca kurang
+     * berwarna: bukan kurang banyak warna, kurang beda hue.
+     */
     --accent: 46 82 192;
-    --action: 46 82 192;
+
+    /**
+     * Amber adalah warna AKSI, dan itu satu-satunya tugasnya: tombol utama,
+     * angka besar, harga paket unggulan. Karena ia tidak dipakai sembarangan,
+     * mata langsung tahu mana yang bisa diklik.
+     *
+     * `--on-action` GELAP, bukan putih. Putih di atas #F2A93B hanya sekitar
+     * 2:1 — kesalahan yang di layar terbaca "kurang tegas", bukan terbaca
+     * salah. tests/lib/marketing-palette.test.ts memegang angkanya.
+     *
+     * Satu nilai di sini mengganti seluruh tombol utama halaman publik
+     * sekaligus: varian `primary` di button-styles.ts membaca `bg-action
+     * text-on-action`, jadi tidak ada satu pun berkas komponen yang perlu
+     * menyebut amber.
+     */
+    --action: 242 169 59;      /* #F2A93B */
+    --on-action: 32 22 10;     /* #20160A */
+
+    /**
+     * Amber untuk TEKS di latar terang.
+     *
+     * Amber mentah gagal kontras di atas putih, jadi setiap angka atau kata
+     * amber di seksi terang memakai nilai ini — bukan `--action`. Inilah sebab
+     * kedua token itu tidak boleh dijadikan satu.
+     *
+     * Nilai ini sendiri 3,26:1 di atas putih: sah untuk teks BESAR (mulai
+     * 24px), TIDAK sah untuk teks isi. Jadi ia hanya dipakai pada numeral
+     * besar dan harga — bukan paragraf, caption, atau label 11px. Kalau suatu
+     * hari ia dibutuhkan untuk teks isi, yang digelapkan adalah nilainya.
+     */
+    --emphasis: 198 127 10;    /* #C67F0A */
+
+    /**
+     * Mint = "Nerona menjawab". Dipakai HANYA untuk hasil AI: chip kata kunci
+     * dan titik status.
+     *
+     * Pasangan inilah yang mengajari pembaca membaca halaman tanpa dijelaskan
+     * — amber berarti Anda bertindak, mint berarti Nerona menjawab. Chip kata
+     * kunci sebelumnya tint biru aksen, dan biru pucat di atas kartu putih
+     * nyaris menyatu: justru chip itu yang memperparah kesan satu-hue, tepat
+     * di bagian yang tugasnya memperlihatkan hasil.
+     */
+    --result: 47 191 143;      /* #2FBF8F */
+    --result-bg: 219 243 234;  /* #DBF3EA */
+    --result-ink: 11 83 65;    /* #0B5341 */
 
     /**
      * Siku, bukan membulat.
@@ -176,6 +230,23 @@
    * seperti token permukaan, jadi nilainya terpaksa ditulis ulang di sini —
    * kalau deret itu berubah, berkas ini ikut diubah.
    */
+  /**
+   * Band demo: navy pekat rata, satu langkah lebih gelap dari hero.
+   *
+   * Rata, bukan bergradien, dan itu keputusan yang berlawanan dengan pita di
+   * bawahnya: hero butuh sumber cahaya karena isinya kartu putih yang harus
+   * terbaca sebagai benda yang disinari. Pita ini isinya satu video terang
+   * yang membawa cahayanya sendiri, dan latar yang punya sorotan kedua justru
+   * bersaing dengannya.
+   *
+   * Lebih gelap dari hero juga sengaja: dua pita navy berturut-turut dengan
+   * nada yang sama persis akan terbaca sebagai satu pita jangkung, dan yang
+   * kedua kehilangan seluruh alasannya berdiri sendiri.
+   */
+  .band-navy-deep {
+    background-color: #0b1130;
+  }
+
   .band-navy-glow {
     background-color: #16233d;
     background-image:
