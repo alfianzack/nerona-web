@@ -112,3 +112,45 @@ describe("metadataTiers — baris jatah poin", () => {
     expect(pro.href).toContain("plan=Pro");
   });
 });
+
+/**
+ * Poin di kartu tidak bisa ditimbang pembeli yang belum pernah memakai
+ * alatnya: "500 poin" tidak berarti apa-apa sampai diterjemahkan ke jumlah
+ * gambar. Patokannya memang sudah ada di halaman, tapi berdiri jauh di bawah
+ * ketiga kartu — yaitu justru bukan di tempat keputusan dibuat.
+ */
+describe("metadataTiers — jatah poin diterjemahkan ke gambar", () => {
+  beforeEach(() => {
+    (prisma.plan.findMany as any).mockResolvedValue([
+      { name: "Pro", priceMonthly: 89000, marketplaces: "*", rejectAnalyzer: true, hub: false },
+    ]);
+  });
+
+  it("menyebut perkiraan jumlah gambar di baris jatahnya", async () => {
+    // 500 poin bawaan (DEFAULT_PLAN_POINTS.metadata.pro) ÷ 2 poin per gambar.
+    const pro = (await metadataTiers(1, 2)).find((t) => t.name === "Pro")!;
+    const baris = pro.features.map((f) => f.label).join("\n");
+    expect(baris).toContain("500 poin");
+    expect(baris).toContain("≈ 250 gambar");
+  });
+
+  /**
+   * Tanpa tarif, angka gambarnya HILANG — tidak ditebak. Aturan yang sama
+   * dijaga marketing-points.ts: kalau ragu, KURANGI.
+   */
+  it("tidak menyebut jumlah gambar kalau tarifnya belum diketahui", async () => {
+    const pro = (await metadataTiers(1, null)).find((t) => t.name === "Pro")!;
+    expect(pro.features.map((f) => f.label).join("\n")).not.toContain("gambar");
+  });
+
+  /**
+   * Dibulatkan KE BAWAH, sama seperti gambarPerPoin: jatah yang dijanjikan
+   * lebih besar daripada yang benar-benar diberikan ditemukan pembeli di
+   * gambar terakhir yang gagal.
+   */
+  it("membulatkan ke bawah, tidak pernah ke atas", async () => {
+    const pro = (await metadataTiers(1, 3)).find((t) => t.name === "Pro")!;
+    // 500 ÷ 3 = 166,67 → 166.
+    expect(pro.features.map((f) => f.label).join("\n")).toContain("≈ 166 gambar");
+  });
+});

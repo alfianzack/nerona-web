@@ -3,6 +3,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
 import { CardRibbon } from "@/components/marketing/CardRibbon";
 import { cn } from "@/components/ui/cn";
+import { TextLink } from "@/components/ui/TextLink";
 import { Icon } from "@/components/ui/icons";
 
 export interface PricingTierFeature {
@@ -175,6 +176,7 @@ export function PricingTiers({
   subheading,
   tiers,
   catatanPoin,
+  catatanIsiUlang,
 }: {
   id?: string;
   heading: string;
@@ -189,6 +191,18 @@ export function PricingTiers({
    * ini tidak menebak angka.
    */
   catatanPoin?: string | null;
+  /**
+   * Satu baris yang menggantikan SELURUH seksi "Kehabisan poin? Isi ulang."
+   *
+   * Seksi itu menjawab pertanyaan yang muncul tepat setelah orang melihat
+   * ketiga kartu — "kalau poin habis, saya bayar apa lagi?" — tapi ia berdiri
+   * satu pita di bawahnya, dengan judul sebesar judul harga. Pertanyaan
+   * sepenting itu memang harus dijawab; ia tidak butuh satu layar penuh.
+   *
+   * Null berarti tidak ada paket isi ulang yang bisa dibeli, dan barisnya
+   * hilang seluruhnya — sama seperti TopupSection dulu mengembalikan null.
+   */
+  catatanIsiUlang?: string | null;
 }) {
   return (
     <Band id={id} align="center">
@@ -206,6 +220,17 @@ export function PricingTiers({
           "bagaimana cara transfernya". */}
       {catatanPoin && (
         <p className="mx-auto mt-10 max-w-[64ch] text-caption text-muted">{catatanPoin}</p>
+      )}
+
+      {/* Isi ulang, satu baris. Berdiri di ukuran body, bukan caption: ini
+          jawaban atas keberatan yang sungguhan, bukan catatan kaki. */}
+      {catatanIsiUlang && (
+        <p className="mx-auto mt-6 max-w-[64ch] text-body text-muted">
+          {catatanIsiUlang}{" "}
+          <TextLink href="/finance" className="font-semibold">
+            Isi ulang di halaman Keuangan
+          </TextLink>
+        </p>
       )}
 
       <p className={cn("mx-auto max-w-[64ch] text-caption text-muted", catatanPoin ? "mt-3" : "mt-10")}>

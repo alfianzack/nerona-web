@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { describeMarketplaces } from "./marketplaces";
 import { AGENT_PLAN_LIMITS } from "./agent/limits";
 import { normalizePlan, pointsForPlan, type PlanProduct } from "./plan-points";
+import { gambarPerPoin } from "./marketing-points";
 import { agentMonthlyPrice, DEFAULT_AGENT_MONTHLY_PRICES } from "./agent-pricing";
 import {
   coerceDuration,
@@ -34,7 +35,7 @@ const METADATA_TAGLINES: Record<string, string> = {
 };
 
 function ctaFor(name: string): string {
-  return name === "Free" ? "Mulai Gratis" : `Upgrade ke ${name}`;
+  return name === "Free" ? "Coba gratis" : `Upgrade ke ${name}`;
 }
 
 /**
@@ -65,14 +66,34 @@ async function allowanceLabel(
   product: PlanProduct,
   planName: string,
   months: number,
-  sekaliBayar = false
+  sekaliBayar = false,
+  /**
+   * Ongkos satu gambar dalam poin, dari lib/marketing-points.ts.
+   *
+   * `null` berarti tarifnya belum bisa dihitung — dan perkiraan gambarnya
+   * HILANG, bukan ditebak. Aturan yang sama dijaga marketing-points.ts: kalau
+   * ragu, KURANGI. Angka yang ditebak di baris ini akan berbeda dari yang
+   * benar-benar dipotong dari saldo, dan pembeli menemukan selisihnya persis
+   * setelah ia membayar.
+   */
+  poinPerGambar: number | null = null
 ): Promise<string> {
   const monthly = await pointsForPlan(product, planName);
+  /**
+   * Perkiraan jumlah gambar, ditempelkan ke baris jatahnya sendiri.
+   *
+   * Di kartu, bukan di catatan bawah pita: yang dibaca orang tepat setelah
+   * melihat "500 poin" adalah "berapa gambar itu?", dan sebelum ini
+   * jawabannya berdiri satu layar lebih bawah — yaitu bukan di tempat
+   * keputusan dibuat.
+   */
+  const gambar = gambarPerPoin(monthly, poinPerGambar);
+  const perkiraan = gambar && gambar > 0 ? ` ≈ ${gambar.toLocaleString("id-ID")} gambar` : "";
   if (normalizePlan(planName) === "free") {
-    return `${monthly.toLocaleString("id-ID")} poin sekali per akun`;
+    return `${monthly.toLocaleString("id-ID")} poin sekali per akun${perkiraan}`;
   }
   if (sekaliBayar) {
-    return `${monthly.toLocaleString("id-ID")} poin, dikreditkan saat paket aktif`;
+    return `${monthly.toLocaleString("id-ID")} poin, dikreditkan saat paket aktif${perkiraan}`;
   }
   const total = monthly * months;
   const suffix = months === 1 ? "per bulan" : `untuk ${DURATION_LABELS[months] ?? `${months} bulan`}`;
@@ -89,7 +110,22 @@ function durationForPlan(planName: string, months: number): number {
  * pemanggil lama (halaman harga dengan query `months`) tidak patah. Harga tidak
  * lagi dikalikan apa pun, dan poin yang disebutkan adalah jatah satu bulan.
  */
-export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTier[]> {
+export async function metadataTiers(
+  _monthsInput: number = 1,
+  /**
+   * Ongkos satu gambar dalam poin, dihitung pemanggil.
+   *
+   * Opsional dan default `null` supaya pemanggil lama tidak patah: halaman
+   * /order dan ringkasan checkout memanggil fungsi ini untuk mengambil harga
+   * dan poin awal, bukan untuk memasang kalimat pemasaran, dan di sana
+   * perkiraan gambar tidak dibutuhkan sama sekali.
+   *
+   * Diterima sebagai argumen, TIDAK dihitung di dalam sini: beranda sudah
+   * memanggil defaultModelPointsPerImage() untuk kalimat patokannya, dan
+   * menghitungnya lagi di sini berarti dua kueri untuk satu angka yang sama.
+   */
+  poinPerGambar: number | null = null
+): Promise<PricingTier[]> {
   const months = 1;
   const [plans, discounts] = await Promise.all([prisma.plan.findMany(), getDurationDiscounts()]);
   const ordered = plans
@@ -124,7 +160,10 @@ export async function metadataTiers(_monthsInput: number = 1): Promise<PricingTi
         poinAwal: await pointsForPlan("metadata", plan.name),
         features: [
           { label: describeMarketplaces(plan.marketplaces), included: true },
-          { label: await allowanceLabel("metadata", plan.name, planMonths, true), included: true },
+          {
+            label: await allowanceLabel("metadata", plan.name, planMonths, true, poinPerGambar),
+            included: true,
+          },
           { label: "Analisis penolakan (reject analyzer)", included: plan.rejectAnalyzer },
           { label: "Nerona Hub (aplikasi desktop, unggah FTP)", included: plan.hub },
         ],
