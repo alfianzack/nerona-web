@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import { AGENT_ENABLED } from "@/lib/features";
+import { baseUrl } from "@/lib/base-url";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -30,8 +31,31 @@ const plexMono = IBM_Plex_Mono({
  * halamannya sudah tidak ada. Satu-satunya salinan pemasaran yang berlaku di
  * SEMUA halaman, termasuk yang di dalam aplikasi.
  */
+/**
+ * Judulnya deskriptif, bukan cuma nama merek.
+ *
+ * "Nerona" saja adalah judul yang hanya berguna bagi orang yang sudah tahu apa
+ * itu Nerona — yaitu bukan orang yang sedang menemukannya di hasil pencarian.
+ * Nama produknya tetap di depan supaya ia masih terbaca sebagai judul merek
+ * saat dipotong di tab peramban yang sempit.
+ */
 export const metadata: Metadata = {
-  title: "Nerona",
+  /**
+   * WAJIB ada begitu halaman punya opengraph-image.
+   *
+   * Tanpa `metadataBase`, Next merakit URL gambar pratinjau relatif terhadap
+   * `http://localhost:3000` — dan itu bukan peringatan kosmetik: setiap tautan
+   * yang dibagikan ke WhatsApp atau Twitter akan menunjuk gambar di mesin yang
+   * tidak ada, jadi pratinjaunya kosong sementara build-nya hijau.
+   *
+   * Alamatnya dari baseUrl(), yang sudah menyelesaikan NEXTAUTH_URL → domain
+   * produksi Vercel → localhost. Fungsi itu ada justru karena bug yang sama
+   * pernah membagikan localhost ke setiap Nerona Hub yang menyambung.
+   */
+  metadataBase: new URL(baseUrl()),
+  title: AGENT_ENABLED
+    ? "Nerona — alat AI untuk kontributor stock dan pemilik bisnis"
+    : "Nerona Metadata — metadata AI untuk kontributor stock",
   description: AGENT_ENABLED
     ? "Alat AI Nerona — metadata otomatis untuk kontributor stock, dan asisten AI WhatsApp untuk pemilik bisnis."
     : "Nerona Metadata — judul, deskripsi, dan kata kunci dibuat otomatis dengan AI, lalu diisi langsung ke formulir unggah marketplace stock Anda.",
