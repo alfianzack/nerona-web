@@ -1,66 +1,86 @@
 import { Hero } from "@/components/marketing/Hero";
 import { TrustBar } from "@/components/marketing/TrustBar";
+import { DemoBand } from "@/components/marketing/DemoBand";
+import { KeyNumbersSection } from "@/components/marketing/KeyNumbersSection";
 import { ContributorPainSection } from "@/components/marketing/ContributorPainSection";
-import { FeatureSection } from "@/components/marketing/FeatureSection";
 import { ProofSection } from "@/components/marketing/ProofSection";
-import { ComparisonSection } from "@/components/marketing/ComparisonSection";
+import { BatchDanRejectSection } from "@/components/marketing/BatchDanRejectSection";
 import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
-import { StepsSection } from "@/components/marketing/StepsSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
-import { MarketplaceTabsMockup } from "@/components/marketing/mockups/MarketplaceTabsMockup";
-import { KeywordChipsMockup } from "@/components/marketing/mockups/KeywordChipsMockup";
-import { BatchProgressMockup } from "@/components/marketing/mockups/BatchProgressMockup";
-import { RejectAnalysisMockup } from "@/components/marketing/mockups/RejectAnalysisMockup";
-import { TopupSection } from "@/components/marketing/TopupSection";
 import { metadataTiers } from "@/lib/pricing-tiers";
-import { getTopupPackages } from "@/lib/topup";
+import { getTopupPackages, perPointLabel } from "@/lib/topup";
 import { rejectAnalyzerAvailability } from "@/lib/marketing-plans";
 import { defaultModelPointsPerImage, gambarPerPoin } from "@/lib/marketing-points";
-import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
+import { demoVideoUrl } from "@/lib/marketing-demo";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
-import { metadataFaq } from "@/lib/marketing-faq";
-
-const MARKETPLACE_NAMES = CLAIMABLE_MARKETPLACES.map((m) => m.label).join(", ");
-
-/** Batas satu batch di ekstensi (BATCH_MAX_ITEMS di nerona_medata). */
-const BATCH_MAX_ITEMS = 50;
+import { metadataFaqBeranda } from "@/lib/marketing-faq";
 
 /**
  * Beranda satu produk: halaman jualan Nerona Metadata.
  *
- * Susunannya ditulis ulang setelah audit menemukan halaman ini memakai DUA
- * bentuk bagian saja — empat pita dua-kolom bolak-balik, lalu lima tumpukan
- * rata tengah. Mata belajar polanya di bagian ketiga lalu berhenti melihat.
- * Itu penyakit yang sama dengan monokultur komponen yang sudah dibereskan,
- * hanya satu tingkat lebih tinggi.
+ * ─────────────────────────────────────────────────────────────────────────
+ * DELAPAN SEKSI, BUKAN SEBELAS
+ * ─────────────────────────────────────────────────────────────────────────
+ * Susunan sebelumnya sudah memecah monokultur BENTUK — empat bentuk seksi
+ * berbeda menyisip di antara pita dua-kolom. Yang belum dipecah adalah
+ * monokultur BOBOT: setiap seksi, bentuk apa pun, membawa judul + subjudul +
+ * paragraf + bullet + kartu, dan menjelaskan hal yang sama tiga kali padahal
+ * mockup di sebelahnya sudah membuktikannya sendiri.
  *
- * Empat bentuk baru menyisip di antara yang lama, masing-masing dengan
- * siluetnya sendiri:
+ * Yang dipotong, dan ke mana:
  *
- * - TrustBar: strip tipis, bukan pita. Angkanya nyata dari basis data, dan
- *   seluruh barisnya tidak dirender kalau belum cukup besar.
- * - ProofSection: foto sungguhan bersanding dengan metadata yang benar-benar
- *   dihasilkan untuknya. Ini bagian terpenting di halaman — pembaca menilai
- *   mutu AI langsung dari kata kuncinya, bukan dari kalimat kita. Belum
- *   dirender sampai owner mengisi contohnya; sampai saat itu ia mengembalikan
- *   kosong, bukan bingkai gambar yang menganga.
- * - ComparisonSection: dua kolom berdampingan, memecah deretan empat
- *   FeatureSection jadi dua-dua.
- * - FaqSection: judul di samping, daftar di kanan.
+ * - "Pekerjaan yang sama, dari dua sisi" (ComparisonSection) — dihapus dari
+ *   beranda. Keempat barisnya mengulang seksi lain satu per satu, dan ini
+ *   pemotongan terbesar sekaligus paling aman di halaman. Komponennya tetap
+ *   ada di repo.
+ * - "Satu klik. N marketplace." — jadi satu angka di KeyNumbersSection.
+ * - "Kata kunci yang konsisten." — lebur ke ProofSection, yang memang
+ *   memperlihatkan kata kuncinya, bukan menjanjikannya.
+ * - "Mulai dalam tiga langkah" (StepsSection) — perannya diambil band demo:
+ *   satu rekaman layar membuktikan alurnya lebih cepat daripada tiga kartu
+ *   yang menjelaskannya.
+ * - "Kehabisan poin? Isi ulang." (TopupSection) — jadi SATU baris di bawah
+ *   kartu harga, tempat pertanyaannya benar-benar muncul.
+ * - "Ditolak? Cari tahu kenapa" — bergabung dengan seksi batch jadi satu pita
+ *   dua kolom.
  *
- * Latarnya juga berselang-seling sampai bawah sekarang. Sebelumnya pergantian
- * berhenti setelah bagian keenam dan menyisakan empat pita putih berturut-turut.
+ * ─────────────────────────────────────────────────────────────────────────
+ * IRAMA LATAR
+ * ─────────────────────────────────────────────────────────────────────────
+ * Navy hanya di pembuka, band demo, dan penutup. Kalau seluruh halaman navy,
+ * kesan monoton tidak hilang seberapa pun warnanya ditambah — dan pergantian
+ * latar inilah alat ritme utamanya: itu yang membuat mata tahu seksi baru
+ * dimulai, tanpa perlu memperbesar judulnya.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * DUA RAK YANG TETAP TINGGAL
+ * ─────────────────────────────────────────────────────────────────────────
+ * MarketplaceRow dan TrustBar bukan seksi — keduanya rak tipis dengan garis
+ * rambut dan tanpa irama pita (lihat docblock masing-masing), jadi keduanya
+ * tidak masuk hitungan delapan. TrustBar juga satu-satunya bukti sosial di
+ * halaman ini, dan ia sudah mengembalikan null sendiri selama angkanya belum
+ * melewati ambang.
  */
 export async function HomeMetadataOnly() {
-  // Satu putaran, bukan lima `await` berturut-turut: bagian-bagian ini tidak
-  // saling bergantung, dan beranda adalah halaman yang paling sering dibuka.
-  const [tiers, topupPackages, reject, poinPerGambar] = await Promise.all([
-    metadataTiers(),
+  /**
+   * Dihitung lebih dulu, DI LUAR Promise.all, karena tabel harga ikut
+   * memakainya.
+   *
+   * Menaruhnya di dalam Promise.all berarti memanggilnya dua kali — sekali
+   * untuk kalimat patokan, sekali lagi di dalam argumen metadataTiers — dan
+   * dua kueri untuk satu angka yang sama.
+   */
+  const poinPerGambar = await defaultModelPointsPerImage();
+
+  // Satu putaran untuk sisanya: bagian-bagian ini tidak saling bergantung, dan
+  // beranda adalah halaman yang paling sering dibuka.
+  const [tiers, topupPackages, reject, demoUrl] = await Promise.all([
+    metadataTiers(1, poinPerGambar),
     getTopupPackages(),
     rejectAnalyzerAvailability(),
-    defaultModelPointsPerImage(),
+    demoVideoUrl(),
   ]);
 
   /**
@@ -77,13 +97,10 @@ export async function HomeMetadataOnly() {
   /**
    * Patokan yang membuat setiap angka poin di tabel harga bisa ditimbang.
    *
-   * Tanpa ini, "10 poin" dan "500 poin" tidak berarti apa-apa bagi orang yang
-   * belum pernah memakai alatnya — ia tidak bisa menilai apakah paketnya murah,
-   * jadi ia tidak bisa memutuskan. Audit halaman menemukan ini sebagai lubang
-   * terbesar di bagian harga.
-   *
-   * Berdiri tepat di bawah ketiga kartu, bukan di dalam salah satunya: satu
-   * kalimat menerangkan ketiga angka sekaligus.
+   * Sejak perkiraan "≈ N gambar" masuk ke baris jatah di setiap kartu, kalimat
+   * ini berhenti jadi satu-satunya penerjemah dan turun jadi keterangan
+   * tarifnya. Ia tetap ada karena angka di kartu adalah pembulatan ke bawah,
+   * dan orang yang menghitung sendiri berhak tahu angka aslinya.
    *
    * Hilang seluruhnya kalau tarifnya belum bisa dihitung. Menebaknya berarti
    * memasang angka yang berbeda dari yang dipotong dari saldo pembeli, dan
@@ -93,6 +110,21 @@ export async function HomeMetadataOnly() {
     poinPerGambar === null
       ? null
       : `Dengan model bawaan hari ini, satu gambar memakai sekitar ${poinPerGambar.toLocaleString("id-ID")} poin.`;
+
+  /**
+   * Satu baris pengganti seluruh seksi isi ulang.
+   *
+   * Harga per poin diambil dari paket TERMURAH per poin, sama seperti yang
+   * ditandai "Paling hemat" di seksi lamanya — bukan dari paket pertama, yang
+   * kebetulan urutannya saja. Null kalau tidak ada paket sama sekali, dan
+   * barisnya hilang.
+   */
+  const termurah = topupPackages.length
+    ? topupPackages.reduce((a, b) => (b.price / b.points < a.price / a.points ? b : a))
+    : null;
+  const catatanIsiUlang = termurah
+    ? `Poin habis? Isi ulang dari ${perPointLabel(termurah)} — tanpa langganan, dan poin yang belum terpakai tidak hangus.`
+    : null;
 
   /**
    * Berapa gambar yang benar-benar tercakup jatah gratis.
@@ -117,133 +149,58 @@ export async function HomeMetadataOnly() {
           di lib/marketing-stats.ts. Menaruhnya di sini aman sejak hari pertama. */}
       <TrustBar />
 
+      {/* Mengembalikan kosong sampai URL videonya diisi owner — lihat
+          lib/marketing-demo.ts. Sampai saat itu, halaman melompat langsung ke
+          tiga angka, dan tidak ada satu pun bingkai kosong yang tertinggal. */}
+      <DemoBand url={demoUrl} />
+
+      <KeyNumbersSection poinPerGambar={poinPerGambar} />
+
       <ContributorPainSection />
 
-      <FeatureSection
-        id="fitur"
-        title={`Satu klik. ${CLAIMABLE_MARKETPLACES.length} marketplace.`}
-        body={`Bekerja langsung di formulir unggah ${MARKETPLACE_NAMES} — tanpa salin-tempel.`}
-        mockup={<MarketplaceTabsMockup />}
-        theme="dark"
-        imageSide="left"
-      />
-
-      {/* Ditaruh tepat setelah klaim pertama, bukan di dasar halaman: klaim
-          "metadata otomatis" paling murah dibuktikan persis setelah diucapkan. */}
-      {/* "Karya", bukan "foto". Contoh yang terpasang hari ini adalah vektor,
-          dan menjanjikan foto tepat di atas sebuah vektor adalah kontradiksi
-          yang terbaca dalam satu tarikan mata — di bagian yang seluruh tugasnya
-          adalah membangun kepercayaan. Kata ini juga tetap benar begitu contoh
-          foto dan render 3D menyusul, jadi ia tidak perlu diubah lagi. */}
+      {/* Bagian terpenting di halaman: satu-satunya yang MEMPERLIHATKAN mutu
+          AI alih-alih mengatakannya. Judul dan kalimatnya dipangkas jadi dua
+          baris — kata kuncinya sendiri yang harus dibaca, bukan pengantarnya. */}
       <ProofSection
         id="contoh"
-        title="Ini hasilnya, apa adanya."
-        body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya. Nilai sendiri kata kuncinya sebelum Anda mendaftar."
+        title="Ini hasilnya, apa adanya"
+        body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya."
       />
 
-      <FeatureSection
-        title="Kata kunci yang konsisten."
-        body="Puluhan kata kunci hasil AI — sebanyak yang marketplace tujuan izinkan — plus ruang untuk kata kunci Anda sendiri di setiap unggahan."
-        mockup={<KeywordChipsMockup />}
-        theme="dark"
-        imageSide="right"
-      />
+      {/* `id="fitur"` pindah ke sini: nav menunjuk /#fitur, dan seksi yang
+          dulu memegang anchor itu ("Satu klik. N marketplace.") sudah lebur
+          jadi satu angka. Anchor yang menunjuk seksi yang tidak ada lagi
+          membawa pengunjung ke dasar halaman tanpa satu pun galat. */}
+      <BatchDanRejectSection id="fitur" reject={reject} />
 
-      <ComparisonSection id="banding" />
-
-      <FeatureSection
-        title="Dibuat untuk unggahan massal."
-        body="Pilih banyak gambar sekaligus, pantau progres per gambar, dan terapkan ke semua tab marketplace yang terbuka."
-        bullets={[
-          `Sampai ${BATCH_MAX_ITEMS} gambar dalam satu batch`,
-          "Progres per gambar, bukan satu bar buta",
-          "Berhenti kapan saja tanpa kehilangan yang sudah jadi",
-        ]}
-        mockup={<BatchProgressMockup />}
-        theme="dark"
-        imageSide="left"
-      />
-
-      {/* Syarat paketnya DITURUNKAN dari baris Plan, tidak diketik — sebab
-          lengkapnya di lib/marketing-plans.ts. Seluruh bagiannya hilang kalau
-          tidak ada paket yang menawarkannya: satu pita penuh untuk fitur yang
-          tidak bisa dibeli siapa pun lebih buruk daripada tidak ada bagiannya. */}
-      {reject.plans.length > 0 && (
-        <FeatureSection
-          title="Ditolak? Cari tahu kenapa."
-          body="Reject analyzer membaca gambar Anda bersama alasan penolakan marketplace, lalu menyebut apa yang sebenarnya perlu diperbaiki — supaya unggahan berikutnya tidak mengulang kesalahan yang sama."
-          bullets={[
-            "Menunjuk masalahnya, bukan menebak",
-            "Memberi tahu juga apa yang sudah benar",
-            ...(reject.note ? [reject.note] : []),
-          ]}
-          mockup={<RejectAnalysisMockup />}
-          theme="navy"
-          imageSide="right"
-        />
-      )}
-
-      {/* Deretan marketplace yang dulu berdiri di sini sudah pindah ke bawah
-          hero. Tidak digandakan: tujuh nama yang sama, dua kali di satu
-          halaman, berhenti jadi bukti dan mulai jadi pengulangan — dan
-          halaman ini sudah terlalu panjang. */}
-
-      <StepsSection
-        tone="sunken"
-        title="Mulai dalam tiga langkah"
-        subtitle="Tanpa kartu kredit."
-        steps={[
-          {
-            title: "Daftar gratis",
-            body: "Buat akun dengan email — paket Free langsung aktif, tanpa data pembayaran.",
-          },
-          {
-            title: "Pasang ekstensi Chrome",
-            body: "Unduh folder ekstensi Nerona Metadata, lalu muat lewat Chrome — kami memandu langkahnya.",
-          },
-          {
-            title: "Upgrade saat butuh",
-            body: "Poin habis? Pilih paket, transfer sekali, dan akun aktif setelah verifikasi tim kami — tanpa tagihan bulanan.",
-          },
-        ]}
-      />
-
-      {/* Subjudul lamanya berbunyi "Upgrade untuk poin bulanan" sementara tiap
-          kartu di bawahnya menulis "sekali bayar". Yang benar ada di kode:
-          lisensi tanpa tanggal akhir, poin dikreditkan sekali per aktivasi. */}
       <PricingTiers
         id="pricing"
         heading="Harga Nerona Metadata"
         subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali — aksesnya berlaku selamanya."
         tiers={tiers}
         catatanPoin={catatanPoin}
+        catatanIsiUlang={catatanIsiUlang}
       />
 
-      {/* Sudah ada di /pricing sejak alur sekali bayar, tapi tidak pernah di
-          beranda — padahal beranda punya tabel harganya sendiri, dan justru di
-          sinilah pertanyaan "kalau poin habis, saya bayar apa lagi?" muncul.
-          Bagian ini adalah jawabannya, dan tanpanya seluruh model harga baru
-          hanya terjelaskan setengah. */}
-      <TopupSection packages={topupPackages} />
-
-      {/* Daftarnya pindah ke lib/marketing-faq.ts: isinya tumbuh dari lima jadi
-          sepuluh, dan tiap jawaban baru diturunkan dari kode yang benar-benar
-          berjalan — sumbernya dicatat per pertanyaan di berkas itu. */}
-      {/* Cekung, supaya pergantian latar benar-benar sampai ke bawah.
-          Sebelumnya bagian harga dan bagian ini sama-sama putih — dua pita
-          putih berturut-turut tepat sebelum banner penutup, persis cacat yang
-          docblock di atas mengaku sudah dibereskan. Terhitung dari peramban,
-          bukan dari membaca kode: keduanya rgb(255,255,255). */}
-      <FaqSection id="faq" tone="sunken" items={metadataFaq({ poinPerGambar })} />
+      {/* Enam pertanyaan, bukan sebelas — sisanya di /faq, dan FaqSection
+          sendiri yang menautkannya. Cekung, supaya pergantian latar benar-benar
+          sampai ke bawah: sebelumnya bagian harga dan bagian ini sama-sama
+          putih, dua pita putih berturut-turut tepat sebelum banner penutup. */}
+      <FaqSection
+        id="faq"
+        tone="sunken"
+        items={metadataFaqBeranda({ poinPerGambar })}
+        semuaHref="/faq"
+      />
 
       <CtaBanner
         title="Coba gratis hari ini"
         body={
           gambarGratis && gambarGratis > 0
-            ? `Paket Free memberi ${freePoints} poin Metadata, sekali per akun — sekitar ${gambarGratis.toLocaleString("id-ID")} gambar. Cukup untuk menilai hasilnya sebelum Anda memutuskan.`
-            : `Paket Free memberi ${freePoints} poin Metadata, sekali per akun. Poin terpakai setiap kali AI bekerja — cukup untuk menilai hasilnya sebelum Anda memutuskan.`
+            ? `${freePoints} poin, sekitar ${gambarGratis.toLocaleString("id-ID")} gambar — cukup untuk menilai hasilnya.`
+            : `${freePoints} poin percobaan, cukup untuk menilai hasilnya.`
         }
-        ctaLabel="Buat akun gratis"
+        ctaLabel="Coba gratis"
         ctaHref="/register"
       />
     </main>

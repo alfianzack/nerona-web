@@ -57,7 +57,18 @@ export function ProofSection({
       <h2 className="max-w-[20ch] text-balance text-display-2 text-ink">{title}</h2>
       <p className="mt-5 max-w-2xl text-body-lg text-muted">{body}</p>
 
-      <div className="mt-12 space-y-6">
+      {/* Grid tiga kolom, bukan tumpukan.
+          Kartunya sekarang vertikal — gambar di atas, metadata di bawah —
+          karena tiga kartu dua-kolom yang berdampingan menyisakan kolom teks
+          selebar 20-an karakter, dan kata kunci itulah isi bagian ini.
+
+          Hari ini hanya SATU contoh yang `imageReady`, jadi gridnya merender
+          satu kartu. Itu disengaja: dua contoh sisanya (foto dan render 3D)
+          menuntut karya sungguhan beserta metadata yang benar-benar
+          dihasilkan untuknya, dan mengarangnya melanggar aturan yang dijaga
+          docblock lib/marketing-samples.ts. Gridnya menyala sendiri begitu
+          entrinya masuk — tanpa satu baris pun diubah di sini. */}
+      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {samples.map((sample) => (
           <SampleCard key={sample.src} sample={sample} />
         ))}
@@ -75,7 +86,7 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <div className="flex h-full flex-col">
         {/* Pembungkus yang menentukan tinggi, bukan gambarnya: di layar sempit
             lewat rasio 4:3, di layar lebar lewat tinggi barisnya di kisi —
             sehingga karyanya selalu setinggi kolom metadata di sebelahnya.
@@ -86,18 +97,18 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
             dinamai kata kuncinya — garpu sebuah forklift, misalnya. Karya yang
             terpotong di bagian bukti melemahkan persis hal yang sedang
             dibuktikan. */}
-        <div className="relative aspect-[4/3] bg-surface-sunken p-6 md:aspect-auto md:min-h-[20rem]">
+        <div className="relative aspect-[4/3] bg-surface-sunken p-6">
           <Image
             src={sample.src}
             alt={sample.alt}
             width={1400}
             height={1050}
-            sizes="(min-width: 768px) 45vw, 100vw"
+            sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
             className="absolute inset-0 h-full w-full p-6 object-contain"
           />
         </div>
 
-        <div className="p-7 sm:p-9">
+        <div className="flex flex-1 flex-col p-7">
           <p className="font-mono text-label uppercase text-muted">Metadata yang dihasilkan</p>
 
           {/* Judul dan deskripsi berbahasa Inggris apa adanya — lihat sebab
@@ -129,7 +140,7 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
             {shown.map((keyword) => (
               <li
                 key={keyword}
-                className="rounded-chip bg-accent/10 px-3 py-1.5 text-body font-medium text-accent"
+                className="rounded-chip bg-result-bg px-3 py-1.5 text-body font-medium text-result-ink"
               >
                 {keyword}
               </li>

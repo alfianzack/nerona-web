@@ -1,51 +1,31 @@
 import { Band } from "@/components/ui/Band";
-import { Card } from "@/components/ui/Card";
 
 /**
- * Tiga keluhan yang bikin unggahan tertahan — bentuknya meniru halaman
- * jualan sejenis, tapi TANPA statistik: tidak ada angka yang tidak bisa
- * kita buktikan (lihat spec marketing-honesty).
- */
-const PAINS = [
-  {
-    quote: "Karyanya sudah siap. Metadatanya belum.",
-    body: "Satu gambar butuh judul, deskripsi, dan puluhan kata kunci. Dikerjakan tangan, itu menit yang hilang sebelum karya pertama naik.",
-  },
-  {
-    quote: "500 gambar. Proses yang sama. Setiap kali.",
-    body: "Batch besar bukan pekerjaan yang lebih sulit — hanya pekerjaan yang sama, diulang sampai Anda berhenti.",
-  },
-  {
-    quote: "Tiap marketplace punya aturannya sendiri.",
-    body: "Batas kata kunci, format judul, gaya deskripsi — semuanya berbeda, dan salah format berarti ditolak.",
-  },
-];
-
-/**
- * Skala tipografinya tetap yang paling digarap di halaman ini, hanya sekarang
- * memakai nama dari skala bersama alih-alih ukuran piksel lepas: judul bagian
- * text-display-2, kalimat pembuka text-lead, kutipan text-title-2.
+ * Satu paragraf, kolom sempit, tanpa kartu.
  *
- * Garis emas 3px di atas tiap kutipan dibuang. Emas tidak dipakai di halaman
- * publik sama sekali, dan garis itu tidak menandai apa pun — persis jenis
- * hiasan yang membuat halaman terbaca sebagai dirakit, bukan dirancang.
+ * Sebelumnya: judul rata tengah, kalimat pembuka, lalu tiga kartu kutipan
+ * dengan paragraf masing-masing — sekitar 90 kata untuk satu gagasan. Ketiga
+ * kutipan itu tidak salah; yang salah adalah memberi mereka satu pita penuh
+ * seukuran pita harga.
+ *
+ * Yang dipotong bukan hanya kata, tapi KEPADATAN. Halaman ini terasa monoton
+ * karena setiap seksi punya bobot yang sama: judul, subjudul, paragraf,
+ * bullet, kartu. Beberapa seksi harus terasa hampir kosong, dan ruang kosong
+ * itulah yang membuat seksi padat di bawahnya masih terbaca. Ini salah
+ * satunya, dan itu sebab ia tidak boleh "dilengkapi" lagi nanti.
+ *
+ * Rata kiri di kolom 46ch, bukan rata tengah selebar pita: prosa rata tengah
+ * sepanjang tiga kalimat memaksa mata mencari awal baris setiap kali.
  */
 export function ContributorPainSection() {
   return (
-    <Band tone="sunken">
-      <h2 className="text-balance text-center text-display-2 text-ink">
-        Kenapa unggahan Anda tertahan
-      </h2>
-      <p className="mx-auto mt-5 max-w-2xl text-balance text-center text-lead text-muted">
-        Bukan karyanya yang lambat — pekerjaan sesudahnyalah yang lambat.
-      </p>
-      <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        {PAINS.map((pain) => (
-          <Card key={pain.quote} padding="lg" className="flex flex-col gap-2.5">
-            <p className="text-title-2 text-ink">&ldquo;{pain.quote}&rdquo;</p>
-            <p className="text-body text-muted">{pain.body}</p>
-          </Card>
-        ))}
+    <Band>
+      <div className="max-w-[46ch]">
+        <h2 className="text-balance text-display-2 text-ink">Kenapa unggahan Anda tertahan</h2>
+        <p className="mt-5 text-pretty text-lead text-muted">
+          Bukan karyanya yang lambat — pekerjaan sesudahnyalah yang lambat. Satu gambar butuh
+          judul, deskripsi, dan puluhan kata kunci. Lalu diulang, per marketplace.
+        </p>
       </div>
     </Band>
   );

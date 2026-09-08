@@ -6,8 +6,9 @@ import { prisma } from "./prisma";
  * Tabel harga sudah membaca baris Plan langsung, jadi ia tidak pernah salah.
  * Yang salah adalah kalimat-kalimat di sekitarnya: sebelum berkas ini ada,
  * "Tersedia di paket Business" diketik tangan di dua tempat — bullet
- * FeatureSection di beranda dan catatan baris di ComparisonSection — sementara
- * tabel yang berdiri beberapa bagian di bawahnya mencentang fitur yang sama di
+ * FeatureSection di beranda dan catatan baris di seksi perbandingan (yang kini
+ * sudah dihapus) — sementara tabel yang berdiri beberapa bagian di bawahnya
+ * mencentang fitur yang sama di
  * ketiga paket. Audit halaman menemukannya sebagai kontradiksi yang bisa dibaca
  * pengunjung dalam satu gulir.
  *

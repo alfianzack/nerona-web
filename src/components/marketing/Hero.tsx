@@ -107,9 +107,22 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
           pita hanya membuat chip kata kuncinya berbaris terlalu renggang. */}
       <div className="grid items-center gap-x-14 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div>
-          <p className="text-body-lg font-semibold text-brand-sky">Nerona Metadata</p>
+          {/* Eyebrow menyebut BENTUK produknya, bukan namanya lagi.
+              "Nerona Metadata" sudah berdiri di bilah atas dan di judul seksi
+              harga. Yang belum pernah disebut di layar pertama adalah bahwa
+              ini ekstensi Chrome — dan pembaca yang wajar mengira ini aplikasi
+              web baru menemukannya di FAQ, jauh setelah ia memutuskan. Itu
+              titik drop-off terbesar halaman ini, dan sebelum perubahan ini
+              justru yang paling belakangan diungkap. */}
+          <p className="font-mono text-label uppercase text-brand-sky">Ekstensi Chrome</p>
 
-          <h1 className="mt-3 text-balance text-display-1 text-white">
+          {/* Batas ukur 18ch dipasang lagi di judulnya, dan kali ini bukan
+              pengganti kolom.
+              Kolom kiri memang membatasi panjang baris, tapi pada display-1
+              (sampai 80px) batas itu masih menyisakan lima baris dengan satu
+              kata berdiri sendiri di dua di antaranya. Yang dibatasi di sini
+              adalah panjang barisnya, bukan lebar kolomnya. */}
+          <h1 className="mt-3 max-w-[18ch] text-balance text-display-1 leading-[1.22] text-white">
             Metadata untuk kontributor stock, ditulis otomatis.
           </h1>
 
@@ -121,14 +134,18 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
           {/* Halaman jualan meminta pendaftaran lebih dulu; harga jadi pilihan
               kedua. Sebelumnya "Lihat Harga" adalah satu-satunya tombol, yang
               menggeser orang ke tabel harga sebelum mereka punya alasan. */}
-          {/* Tombolnya turun dari pil biru ke pil putih, sebab yang sama dengan
-              banner penutup: pil biru membaca token aksi permukaan pemasaran, dan
-              biru itu dipilih untuk berdiri di atas putih. Di atas navy ia kehilangan
-              hampir seluruh kontrasnya. Putih di atas navy adalah kontras tertinggi
-              yang bisa diberikan halaman ini. */}
+          {/* Tombolnya naik lagi jadi pil berwarna, sekarang amber.
+              Riwayatnya: dulu pil biru, lalu diturunkan ke pil putih karena
+              biru itu adalah token aksi yang dipilih untuk berdiri di atas
+              PUTIH, dan di atas navy ia kehilangan hampir seluruh
+              kontrasnya. Putih memang kontras tertinggi di atas navy — tapi
+              putih juga warna judul dan warna kartu contoh di sebelahnya,
+              jadi tombol putih berhenti menandakan "ini yang bisa diklik".
+              Amber menyelesaikan keduanya: ia satu-satunya warna hangat di
+              layar, dan labelnya gelap (`--on-action`), bukan putih. */}
           <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
-            <ButtonLink href="/register" variant="secondary" size="lg">
-              Mulai gratis
+            <ButtonLink href="/register" size="lg">
+              Coba gratis
             </ButtonLink>
             <TextLink href="#pricing" tone="on-navy" className="text-body-lg">
               Lihat harga

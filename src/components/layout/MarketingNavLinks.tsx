@@ -22,11 +22,16 @@ export function MarketingNavLinks({
   // area becomes a way back in rather than a redirect. (/pricing is the one
   // exception — it hands tenants over to /paket, where the sidebar is.)
   //
-  // Satu tombol berisi saja di bilah ini. "Coba Gratis" memakai variant
-  // primary, yang di permukaan pemasaran keluar sebagai pil biru; pil emas
+  // Satu tombol berisi saja di bilah ini. "Coba gratis" memakai variant
+  // primary, yang di permukaan pemasaran keluar sebagai pil amber; pil emas
   // yang dulu berdiri di sini adalah warna uang, dan header tidak menjual
   // apa pun. "Masuk" turun jadi tautan teks supaya kedua aksi berhenti
   // terlihat sama penting.
+  //
+  // Labelnya dipakai kata-per-kata sama dengan tombol hero dan kartu Free.
+  // Sebelumnya halaman ini punya empat label untuk satu aksi — "Coba Gratis",
+  // "Mulai gratis", "Mulai Gratis", "Buat akun gratis" — dan empat nama untuk
+  // satu pintu membuat pembaca menduga ada empat pintu.
   const authArea = dashboardHref ? (
     <ButtonLink href={dashboardHref} variant="secondary" size="sm">
       Dashboard
@@ -38,7 +43,7 @@ export function MarketingNavLinks({
         Masuk
       </Link>
       <ButtonLink href="/register" size="sm">
-        Coba Gratis
+        Coba gratis
       </ButtonLink>
     </>
   );
