@@ -1,4 +1,5 @@
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Reveal } from "@/components/ui/Reveal";
 
 /**
  * Ajakan penutup halaman.
@@ -30,13 +31,19 @@ export function CtaBanner({
 }) {
   return (
     <section className="px-6 pb-band">
-      <div className="mx-auto max-w-band rounded-card bg-gradient-to-br from-navy-900 to-navy-700 px-8 py-16 text-center">
-        <h2 className="text-balance text-display-2 text-white">{title}</h2>
-        <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
-        <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
-          {ctaLabel}
-        </ButtonLink>
-      </div>
+      {/* Reveal dipasang di sini, bukan lewat prop `Band`: penutup ini bukan
+          pita — ia kartu bergradien di dalam section-nya sendiri. Yang naik
+          kartunya, dan itu memang yang benar: kartu yang naik utuh terbaca
+          sebagai ajakan yang baru muncul, bukan sebagai latar yang bergeser. */}
+      <Reveal className="mx-auto max-w-band">
+        <div className="rounded-card bg-gradient-to-br from-navy-900 to-navy-700 px-8 py-16 text-center">
+          <h2 className="text-balance text-display-2 text-white">{title}</h2>
+          <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
+          <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
+            {ctaLabel}
+          </ButtonLink>
+        </div>
+      </Reveal>
     </section>
   );
 }

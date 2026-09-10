@@ -1,4 +1,5 @@
 import { cn } from "./cn";
+import { Reveal } from "./Reveal";
 
 type BandTone = "plain" | "sunken" | "navy" | "navy-gradient" | "navy-deep";
 type BandAlign = "left" | "center";
@@ -42,6 +43,7 @@ export function Band({
   tone = "plain",
   align = "left",
   padat = false,
+  reveal = false,
   id,
   className,
   children,
@@ -57,6 +59,19 @@ export function Band({
    * "ada yang gagal dimuat".
    */
   padat?: boolean;
+  /**
+   * Isinya naik-memudar saat pita ini masuk layar.
+   *
+   * SATU reveal untuk seluruh pita, bukan satu per elemen. Judul, paragraf,
+   * dan kartu yang masuk bergantian menarik perhatian ke urutannya sendiri,
+   * dan yang perlu dibaca di halaman ini kalimatnya. Pita yang naik utuh
+   * terbaca sebagai "seksi baru dimulai" — pekerjaan yang selama ini
+   * dikerjakan sendirian oleh pergantian latar.
+   *
+   * Pita paling atas TIDAK memakainya: ia sudah terlihat saat halaman dimuat,
+   * dan hero punya urutan animasinya sendiri.
+   */
+  reveal?: boolean;
   id?: string;
   className?: string;
   children: React.ReactNode;
@@ -67,7 +82,7 @@ export function Band({
       className={cn("px-6", padat ? "py-band-padat" : "py-band", TONES[tone], className)}
     >
       <div className={cn("mx-auto max-w-band", align === "center" && "text-center")}>
-        {children}
+        {reveal ? <Reveal>{children}</Reveal> : children}
       </div>
     </section>
   );

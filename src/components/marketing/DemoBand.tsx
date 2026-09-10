@@ -21,7 +21,7 @@ export function DemoBand({ url }: { url: string | null }) {
   if (!url) return null;
 
   return (
-    <Band tone="navy-deep" align="center">
+    <Band tone="navy-deep" align="center" reveal>
       <video
         className="mx-auto w-full max-w-4xl"
         src={url}

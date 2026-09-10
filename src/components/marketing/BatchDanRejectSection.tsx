@@ -33,7 +33,7 @@ export function BatchDanRejectSection({
   reject: { plans: string[]; note: string | null };
 }) {
   return (
-    <Band id={id}>
+    <Band id={id} reveal>
       <div className="grid gap-14 md:grid-cols-2 md:gap-16">
         <div>
           <h2 className="text-balance text-display-2 text-ink">Dibuat untuk unggahan massal</h2>

@@ -19,7 +19,7 @@ import { Band } from "@/components/ui/Band";
  */
 export function ContributorPainSection() {
   return (
-    <Band>
+    <Band reveal>
       <div className="max-w-[46ch]">
         <h2 className="text-balance text-display-2 text-ink">Kenapa unggahan Anda tertahan</h2>
         <p className="mt-5 text-pretty text-lead text-muted">

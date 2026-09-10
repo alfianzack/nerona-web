@@ -74,7 +74,7 @@ export function FaqSection({
   const group = id ? `faq-${id}` : "faq";
 
   return (
-    <Band id={id} tone={tone} className={className}>
+    <Band id={id} tone={tone} className={className} reveal>
       <div className="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:gap-x-16">
         {/* Menempel saat digulir, dengan jarak aman dari bilah atas setinggi
             56px yang juga menempel. */}

@@ -1,5 +1,6 @@
 import { CLAIMABLE_MARKETPLACES } from "@/lib/marketplaces";
 import { Band } from "@/components/ui/Band";
+import { Reveal } from "@/components/ui/Reveal";
 
 /**
  * Batas satu batch di ekstensi (BATCH_MAX_ITEMS di nerona_medata).
@@ -47,15 +48,21 @@ export function KeyNumbersSection({ poinPerGambar }: { poinPerGambar: number | n
   return (
     <Band padat>
       <ul className="grid grid-cols-1 gap-10 text-center sm:grid-cols-3">
-        {angka.map((item) => (
-          <li key={item.label}>
+        {/* Satu-satunya tempat di halaman ini yang memakai jeda bergantian.
+            Ketiganya sebaris dan sederajat, jadi masuk berurutan membacanya
+            sebagai hitungan — bentuk yang cocok dengan isinya. Di seksi
+            berisi judul + paragraf + kartu, jeda semacam ini justru menarik
+            perhatian ke urutannya alih-alih ke kalimatnya, dan di sana satu
+            reveal untuk seluruh pita yang dipakai. */}
+        {angka.map((item, i) => (
+          <Reveal key={item.label} delay={i * 90}>
             {/* Mono berlebar-angka-tetap, bentuk yang sama dipakai TrustBar dan
                 ubin angka di dalam aplikasi: ketiga kolomnya terbaca sebagai
                 satu keluarga, dan angkanya tidak bergeser saat nilainya
                 berubah. */}
             <p className="font-mono text-display-2 tabular-nums text-emphasis">{item.nilai}</p>
             <p className="mt-2 text-body-lg text-muted">{item.label}</p>
-          </li>
+          </Reveal>
         ))}
       </ul>
     </Band>
