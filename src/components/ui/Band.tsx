@@ -41,18 +41,31 @@ const TONES: Record<BandTone, string> = {
 export function Band({
   tone = "plain",
   align = "left",
+  padat = false,
   id,
   className,
   children,
 }: {
   tone?: BandTone;
   align?: BandAlign;
+  /**
+   * Irama setengah, untuk pita yang isinya satu baris.
+   *
+   * Irama penuh dipilih untuk seksi bertumpuk — judul, subjudul, lalu kartu.
+   * Dipakai pada pita berisi tiga angka setinggi 89px, paddingnya jadi lebih
+   * tinggi daripada isinya, dan yang terbaca bukan "seksi lapang" melainkan
+   * "ada yang gagal dimuat".
+   */
+  padat?: boolean;
   id?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className={cn("px-6 py-band", TONES[tone], className)}>
+    <section
+      id={id}
+      className={cn("px-6", padat ? "py-band-padat" : "py-band", TONES[tone], className)}
+    >
       <div className={cn("mx-auto max-w-band", align === "center" && "text-center")}>
         {children}
       </div>

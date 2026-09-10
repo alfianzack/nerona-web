@@ -45,7 +45,7 @@ export function KeyNumbersSection({ poinPerGambar }: { poinPerGambar: number | n
   ];
 
   return (
-    <Band>
+    <Band padat>
       <ul className="grid grid-cols-1 gap-10 text-center sm:grid-cols-3">
         {angka.map((item) => (
           <li key={item.label}>

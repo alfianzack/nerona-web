@@ -174,7 +174,23 @@
      */
     --radius-action: 980px;
 
-    --band: 104px;
+    /**
+     * Irama antar-pita, dan ia TIDAK boleh satu angka tetap.
+     *
+     * 104px atas + 104px bawah berarti 208px kosong di antara setiap dua
+     * seksi — dan pada seksi berkepadatan rendah paddingnya melampaui isinya
+     * sendiri. Diukur di produksi: pita tiga-angka setinggi 297px, yang 208px
+     * di antaranya padding. Isinya 89px. Owner menyebutnya "terlalu banyak
+     * space kosong", dan angkanya membenarkan itu.
+     *
+     * Yang lebih buruk: nilai tetap itu berlaku sama di layar 420px, tempat
+     * 208px kosong memakan separuh layar sebelum satu kata pun terbaca.
+     *
+     * Clamp menyelesaikan keduanya sekaligus — 56px di ponsel, tumbuh sampai
+     * 88px di layar sangat lebar. Batas atasnya sengaja DI BAWAH 104px: irama
+     * yang dulu dipilih terbukti terlalu longgar bahkan di layar besar.
+     */
+    --band: clamp(3.5rem, 5.5vw, 5.5rem);
   }
 
   /**

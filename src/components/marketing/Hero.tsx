@@ -116,13 +116,16 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
               justru yang paling belakangan diungkap. */}
           <p className="font-mono text-label uppercase text-brand-sky">Ekstensi Chrome</p>
 
-          {/* Batas ukur 18ch dipasang lagi di judulnya, dan kali ini bukan
-              pengganti kolom.
-              Kolom kiri memang membatasi panjang baris, tapi pada display-1
-              (sampai 80px) batas itu masih menyisakan lima baris dengan satu
-              kata berdiri sendiri di dua di antaranya. Yang dibatasi di sini
-              adalah panjang barisnya, bukan lebar kolomnya. */}
-          <h1 className="mt-3 max-w-[18ch] text-balance text-display-1 leading-[1.22] text-white">
+          {/* Ukurannya turun mulai `lg`, dan hanya di sana.
+              `display-1` dikalibrasi untuk judul selebar pita penuh; mulai
+              `lg` kolom ini tinggal 544px sementara `6.6vw` terus tumbuh
+              mengikuti viewport. Diukur di produksi: 80px di kolom 544px =
+              lima baris, 488px tinggi. `display-hero` menuruninya ke 60px di
+              1440px, dan batas 18ch di bawah ini akhirnya benar-benar yang
+              menentukan panjang baris — bukan lebar kolom yang kehabisan
+              tempat. Di bawah `lg` hero masih satu kolom selebar pita, jadi
+              `display-1` tetap ukuran yang benar di sana. */}
+          <h1 className="mt-3 max-w-[18ch] text-balance text-display-1 leading-[1.22] text-white lg:text-display-hero">
             Metadata untuk kontributor stock, ditulis otomatis.
           </h1>
 

@@ -57,27 +57,46 @@ export function ProofSection({
       <h2 className="max-w-[20ch] text-balance text-display-2 text-ink">{title}</h2>
       <p className="mt-5 max-w-2xl text-body-lg text-muted">{body}</p>
 
-      {/* Grid tiga kolom, bukan tumpukan.
-          Kartunya sekarang vertikal — gambar di atas, metadata di bawah —
-          karena tiga kartu dua-kolom yang berdampingan menyisakan kolom teks
-          selebar 20-an karakter, dan kata kunci itulah isi bagian ini.
+      {/* Jumlah kolom mengikuti jumlah contoh, TIDAK dipatok tiga.
+          Grid tiga kolom yang diisi satu kartu meninggalkan dua pertiga baris
+          kosong — diukur di produksi: kartu 311px di dalam baris 980px, 669px
+          menganga di sebelahnya. Yang terbaca bukan "contohnya baru satu",
+          melainkan "ada dua yang gagal dimuat", dan itu terjadi tepat di
+          bagian yang seluruh tugasnya membangun kepercayaan.
 
-          Hari ini hanya SATU contoh yang `imageReady`, jadi gridnya merender
-          satu kartu. Itu disengaja: dua contoh sisanya (foto dan render 3D)
-          menuntut karya sungguhan beserta metadata yang benar-benar
-          dihasilkan untuknya, dan mengarangnya melanggar aturan yang dijaga
-          docblock lib/marketing-samples.ts. Gridnya menyala sendiri begitu
-          entrinya masuk — tanpa satu baris pun diubah di sini. */}
-      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          Satu contoh karena itu memakai kartu MELEBAR — gambar di kiri,
+          metadata di kanan — yang memakai lebar pita apa adanya. Dua atau
+          lebih kembali ke kartu tegak berdampingan, karena di sanalah bentuk
+          tegak memang menang: tiga kartu dua-kolom yang berjajar menyisakan
+          kolom teks selebar 20-an karakter, dan kata kunci itulah isi bagian
+          ini.
+
+          Dua contoh sisanya (foto dan render 3D) menunggu karya sungguhan
+          beserta metadata yang benar-benar dihasilkan untuknya; mengarangnya
+          melanggar aturan yang dijaga docblock lib/marketing-samples.ts.
+          Bentuknya berganti sendiri begitu entrinya masuk. */}
+      <div
+        className={
+          "mt-12 grid gap-6 " +
+          (samples.length === 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-3")
+        }
+      >
         {samples.map((sample) => (
-          <SampleCard key={sample.src} sample={sample} />
+          <SampleCard key={sample.src} sample={sample} lebar={samples.length === 1} />
         ))}
       </div>
     </Band>
   );
 }
 
-function SampleCard({ sample }: { sample: MetadataSample }) {
+function SampleCard({
+  sample,
+  lebar = false,
+}: {
+  sample: MetadataSample;
+  /** Satu-satunya contoh di halaman: gambar di kiri, metadata di kanan. */
+  lebar?: boolean;
+}) {
   const shown = sample.keywords.slice(0, KEYWORDS_SHOWN);
   // Sisanya dihitung dari total sebenarnya, bukan dari panjang array: entri
   // boleh menyimpan dua belas kata kunci saja sementara generate-nya menghasilkan
@@ -86,7 +105,13 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="flex h-full flex-col">
+      <div
+        className={
+          lebar
+            ? "grid sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+            : "flex h-full flex-col"
+        }
+      >
         {/* Pembungkus yang menentukan tinggi, bukan gambarnya: di layar sempit
             lewat rasio 4:3, di layar lebar lewat tinggi barisnya di kisi —
             sehingga karyanya selalu setinggi kolom metadata di sebelahnya.
@@ -97,13 +122,26 @@ function SampleCard({ sample }: { sample: MetadataSample }) {
             dinamai kata kuncinya — garpu sebuah forklift, misalnya. Karya yang
             terpotong di bagian bukti melemahkan persis hal yang sedang
             dibuktikan. */}
-        <div className="relative aspect-[4/3] bg-surface-sunken p-6">
+        <div
+          className={
+            "relative bg-surface-sunken p-6 " +
+            // Rasio 4:3 di layar sempit; begitu kartunya melebar, tingginya
+            // ditentukan tinggi barisnya supaya karyanya selalu setinggi kolom
+            // metadata di sebelahnya — bukan menyisakan pita kosong di bawah
+            // salah satunya.
+            (lebar ? "aspect-[4/3] sm:aspect-auto sm:min-h-[22rem]" : "aspect-[4/3]")
+          }
+        >
           <Image
             src={sample.src}
             alt={sample.alt}
             width={1400}
             height={1050}
-            sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
+            sizes={
+              lebar
+                ? "(min-width: 640px) 45vw, 100vw"
+                : "(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
+            }
             className="absolute inset-0 h-full w-full p-6 object-contain"
           />
         </div>

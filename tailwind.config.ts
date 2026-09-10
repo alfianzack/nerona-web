@@ -32,6 +32,27 @@ const config: Config = {
           "clamp(2.375rem, 6.6vw, 5rem)",
           { lineHeight: "1.04", letterSpacing: "-0.024em", fontWeight: "600" },
         ],
+        /**
+         * Judul hero SAAT ia berbagi baris dengan kartu contoh.
+         *
+         * `display-1` dikalibrasi untuk judul yang memakai SELURUH lebar pita.
+         * Hero tidak begitu: mulai `lg` ia terbelah dua kolom dan kolom kiri
+         * tinggal 544px, sementara `6.6vw` tetap tumbuh mengikuti VIEWPORT.
+         * Akibatnya justru terbalik dari yang dimaui — makin lebar layarnya,
+         * makin besar hurufnya di kolom yang makin sempit. Diukur di
+         * nerona-web.vercel.app: 80px di dalam kolom 544px, judulnya pecah
+         * jadi LIMA baris setinggi 488px. Di 900px, tempat hero masih satu
+         * kolom selebar 705px, ukurannya 59px dan tiga baris — jauh lebih
+         * seimbang.
+         *
+         * Karena itu ukuran ini hanya dipakai mulai `lg`, persis di titik
+         * kolomnya menyempit. Loncatan ukurannya di breakpoint memang terlihat,
+         * dan itu benar: yang meloncat lebih dulu adalah lebar kolomnya.
+         */
+        "display-hero": [
+          "clamp(2.75rem, 4.4vw, 3.75rem)",
+          { lineHeight: "1.06", letterSpacing: "-0.024em", fontWeight: "600" },
+        ],
         "display-2": [
           "clamp(1.8125rem, 4.6vw, 3.25rem)",
           { lineHeight: "1.07", letterSpacing: "-0.022em", fontWeight: "600" },
@@ -72,6 +93,9 @@ const config: Config = {
       spacing: {
         // Irama vertikal antar bagian: 72px di aplikasi, 104px di pemasaran.
         band: "var(--band)",
+        // Setengah irama, untuk pita berisi satu baris. Lihat prop `padat` di
+        // components/ui/Band.tsx.
+        "band-padat": "calc(var(--band) * 0.55)",
       },
       maxWidth: {
         band: "980px",
