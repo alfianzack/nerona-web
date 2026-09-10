@@ -173,7 +173,14 @@ export async function HomeMetadataOnly() {
           membawa pengunjung ke dasar halaman tanpa satu pun galat. */}
       <BatchDanRejectSection id="fitur" reject={reject} />
 
+      {/* Cekung, dan FAQ di bawahnya justru polos.
+          Sebelumnya kebalikannya, dan akibatnya empat pita putih berdiri
+          hampir berturut-turut (angka, keluhan, batch, harga) dengan cuma satu
+          pita cekung menyela — itulah "banyak kartu putih" yang terlihat.
+          Ditukar begini, iramanya jadi polos-polos-cekung-polos-cekung-polos
+          -navy, sama dengan mockup navy-amber. */}
       <PricingTiers
+        tone="sunken"
         id="pricing"
         heading="Harga Nerona Metadata"
         subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali — aksesnya berlaku selamanya."
@@ -183,15 +190,14 @@ export async function HomeMetadataOnly() {
       />
 
       {/* Enam pertanyaan, bukan sebelas — sisanya di /faq, dan FaqSection
-          sendiri yang menautkannya. Cekung, supaya pergantian latar benar-benar
-          sampai ke bawah: sebelumnya bagian harga dan bagian ini sama-sama
-          putih, dua pita putih berturut-turut tepat sebelum banner penutup. */}
-      <FaqSection
-        id="faq"
-        tone="sunken"
-        items={metadataFaqBeranda({ poinPerGambar })}
-        semuaHref="/faq"
-      />
+          sendiri yang menautkannya.
+
+          POLOS, dan pita harga di atasnya yang cekung — kebalikan dari susunan
+          sebelumnya. Susunan lama membuat harga dan FAQ sama-sama putih; yang
+          ini menaruh cekungnya di harga, jadi iramanya berselang benar sampai
+          ke dasar: polos, polos, cekung, polos, cekung, polos, navy. Menaruh
+          cekung di keduanya cuma memindahkan cacatnya satu pita ke bawah. */}
+      <FaqSection id="faq" items={metadataFaqBeranda({ poinPerGambar })} semuaHref="/faq" />
 
       <CtaBanner
         title="Coba gratis hari ini"

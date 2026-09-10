@@ -188,6 +188,7 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
  */
 export function PricingTiers({
   id,
+  tone,
   heading,
   subheading,
   tiers,
@@ -195,6 +196,8 @@ export function PricingTiers({
   catatanIsiUlang,
 }: {
   id?: string;
+  /** Nada pita, supaya irama latar halaman bisa diatur dari pemanggilnya. */
+  tone?: "plain" | "sunken";
   heading: string;
   subheading: string;
   tiers: PricingTier[];
@@ -221,7 +224,7 @@ export function PricingTiers({
   catatanIsiUlang?: string | null;
 }) {
   return (
-    <Band id={id} align="center" reveal>
+    <Band id={id} tone={tone} align="center" reveal>
       <h2 className="text-balance text-display-2 text-ink">{heading}</h2>
       <p className="mx-auto mt-5 max-w-[46ch] text-balance text-lead text-muted">{subheading}</p>
 

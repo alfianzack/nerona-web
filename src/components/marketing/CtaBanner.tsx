@@ -1,5 +1,5 @@
+import { Band } from "@/components/ui/Band";
 import { ButtonLink } from "@/components/ui/ButtonLink";
-import { Reveal } from "@/components/ui/Reveal";
 
 /**
  * Ajakan penutup halaman.
@@ -15,8 +15,18 @@ import { Reveal } from "@/components/ui/Reveal";
  * untuk dibedakan, dan putih di atas navy sudah kontras paling tinggi yang bisa
  * diberikan halaman ini.
  *
- * Tanpa padding atas: ketiga pemanggilnya menaruh banner ini persis setelah
- * FaqSection, yang sudah menyumbang satu pita penuh (104px) di bawah isinya.
+ * PITA PENUH, bukan kartu membulat di dalam pita putih.
+ *
+ * Sebelumnya penutup ini kartu bergradien yang mengambang di atas latar putih,
+ * jadi halaman berakhir dengan pita putih — dan bersama pita harga serta pita
+ * batch di atasnya, itu membuat separuh bawah halaman terbaca sebagai deretan
+ * putih yang sama. Mockup navy-amber menutup halaman dengan navy yang mengisi
+ * lebar penuh, dan itu memang yang benar: warna gelap di ujung memberi halaman
+ * dasar, bukan sekadar satu kartu lagi.
+ *
+ * `reveal` lewat prop Band sekarang, bukan <Reveal> sendiri: yang naik isinya,
+ * dan latar navy-nya diam. Latar sebesar ini yang ikut memudar terbaca sebagai
+ * halaman yang berkedip, bukan sebagai ajakan yang muncul.
  */
 export function CtaBanner({
   title,
@@ -30,20 +40,12 @@ export function CtaBanner({
   ctaHref: string;
 }) {
   return (
-    <section className="px-6 pb-band">
-      {/* Reveal dipasang di sini, bukan lewat prop `Band`: penutup ini bukan
-          pita — ia kartu bergradien di dalam section-nya sendiri. Yang naik
-          kartunya, dan itu memang yang benar: kartu yang naik utuh terbaca
-          sebagai ajakan yang baru muncul, bukan sebagai latar yang bergeser. */}
-      <Reveal className="mx-auto max-w-band">
-        <div className="rounded-card bg-gradient-to-br from-navy-900 to-navy-700 px-8 py-16 text-center">
-          <h2 className="text-balance text-display-2 text-white">{title}</h2>
-          <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
-          <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
-            {ctaLabel}
-          </ButtonLink>
-        </div>
-      </Reveal>
-    </section>
+    <Band tone="navy-gradient" align="center" reveal>
+      <h2 className="text-balance text-display-2 text-white">{title}</h2>
+      <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
+      <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
+        {ctaLabel}
+      </ButtonLink>
+    </Band>
   );
 }

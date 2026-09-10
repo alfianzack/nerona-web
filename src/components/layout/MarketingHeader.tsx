@@ -21,7 +21,16 @@ export async function MarketingHeader() {
   const session = await getServerSession(authOptions);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-canvas/80 px-6 backdrop-blur-xl">
+    /* `data-nav="navy"` yang menimpa tokennya — lihat globals.css.
+       PEKAT, bukan `bg-canvas/80` + blur seperti sebelumnya. Bilah tembus
+       pandang menumpuk di atas latar HALAMAN, dan latar halaman putih — jadi
+       navy 80% di atas putih menghasilkan navy pucat yang tidak pernah cocok
+       dengan hero di bawahnya, lengkap dengan garis sambung yang terlihat.
+       Buram pun tidak ada gunanya lagi begitu latarnya pekat. */
+    <header
+      data-nav="navy"
+      className="sticky top-0 z-50 border-b border-border bg-canvas px-6"
+    >
       <div className="mx-auto flex h-14 max-w-band items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-body font-semibold text-ink">
           <img src="/logo-nerona.svg" alt="" className="h-5 w-5" />

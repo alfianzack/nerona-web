@@ -256,6 +256,41 @@
     }
   }
 
+  /**
+   * Topbar navy, menyatu dengan hero.
+   *
+   * Ditulis sebagai TIMPAAN TOKEN, bukan sebagai kelas warna di komponennya.
+   * Isi bilah ini — tautan nav, tombol Dashboard, panel menu ponsel — hidup di
+   * komponen klien yang memakai `text-muted`, `text-ink`, `bg-surface`, dan
+   * `border-border`. Menavykan bilahnya dengan menulis ulang kelas-kelas itu
+   * berarti menyentuh setiap elemen satu per satu dan melewatkan satu setiap
+   * kali ada yang ditambahkan nanti. Dengan menimpa tokennya, seluruh isi
+   * bilah ikut menyesuaikan sendiri — termasuk yang belum ditulis.
+   *
+   * Nilai bilahnya #16233D — sama dengan `navy-900` yang dipakai hero, BUKAN
+   * #131B42 dari mockup. Mockup memakai satu nilai untuk nav dan hero
+   * sekaligus; hero kita sudah berdiri di #16233D, jadi menyalin hex mockup
+   * apa adanya justru menghasilkan garis sambung yang terlihat di antara
+   * keduanya. Yang ditiru susunannya, bukan angkanya.
+   *
+   * Sisanya dari mockup: tautan #A9B2D0, garis #262F5C, permukaan tombol
+   * sekunder #18204A.
+   *
+   * Yang SENGAJA tidak ditimpa: `--action` dan `--on-action`. Tombol "Coba
+   * gratis" harus tetap amber berlabel gelap di sini persis seperti di hero —
+   * ia satu-satunya benda hangat di bilah, dan itulah yang membuatnya terbaca
+   * sebagai tombol.
+   */
+  [data-surface="marketing"] header[data-nav="navy"] {
+    --canvas: 22 35 61;      /* #16233D — sama dengan hero */
+    --surface: 24 32 74;     /* #18204A */
+    --surface-sunken: 24 32 74;
+    --ink: 255 255 255;
+    --muted: 169 178 208;    /* #A9B2D0 */
+    --border: 38 47 92;      /* #262F5C */
+    --divider: 38 47 92;
+  }
+
   :focus-visible {
     outline: 2px solid rgb(var(--accent));
     outline-offset: 2px;
