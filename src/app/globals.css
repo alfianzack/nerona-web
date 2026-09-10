@@ -121,6 +121,19 @@
     --on-action: 32 22 10;     /* #20160A */
 
     /**
+     * Amber LEMBUT, untuk lencana kecil di latar terang — pita "Paling
+     * populer" di kartu harga.
+     *
+     * Sepasang, dan harus tetap sepasang. Godaannya adalah memakai
+     * `--emphasis` sebagai teksnya, dan itu salah: docblock di bawah menyebut
+     * `--emphasis` sah hanya mulai 24px, sedangkan lencana ini 11px. Teks
+     * kecil menuntut kontras yang jauh lebih tinggi daripada numeral besar,
+     * dan #7A4E06 di atas #FBEBD2 memberi ~7:1 — lolos untuk ukuran apa pun.
+     */
+    --action-soft: 251 235 210;    /* #FBEBD2 */
+    --on-action-soft: 122 78 6;    /* #7A4E06 */
+
+    /**
      * Amber untuk TEKS di latar terang.
      *
      * Amber mentah gagal kontras di atas putih, jadi setiap angka atau kata

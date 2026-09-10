@@ -147,7 +147,18 @@ function SampleCard({
         </div>
 
         <div className="flex flex-1 flex-col p-7">
-          <p className="font-mono text-label uppercase text-muted">Metadata yang dihasilkan</p>
+          {/* Bentuk karya + marketplace, di KEPALA kartu.
+              Sebelumnya nama marketplace-nya berdiri sendirian di kaki kartu,
+              sesudah kata kuncinya — tempat yang dibaca paling akhir, kalau
+              sempat. Padahal inilah yang menjawab pertanyaan pertama pembaca:
+              "apakah alat ini paham bentuk karya yang SAYA kerjakan?".
+              Titiknya memakai warna hasil (mint), warna yang halaman ini pakai
+              untuk apa pun yang datang dari AI. */}
+          <p className="flex items-center gap-2 text-caption text-muted">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-result" />
+            {sample.jenis} &middot; {sample.marketplace}
+          </p>
+          <p className="mt-4 font-mono text-label uppercase text-muted">Metadata yang dihasilkan</p>
 
           {/* Judul dan deskripsi berbahasa Inggris apa adanya — lihat sebab
               lengkapnya di docblock lib/marketing-samples.ts. */}
@@ -190,18 +201,19 @@ function SampleCard({
             )}
           </ul>
 
-          <p className="mt-7 border-t border-divider pt-4 font-mono text-caption text-muted">
-            {sample.marketplace}
-            {/* Detiknya cuma ditulis kalau benar-benar diukur. Tidak ada yang
-                mencatatnya — bukan basis data, bukan panel ekstensi — jadi
-                mengisinya dengan perkiraan berarti mengarang pengukuran. */}
-            {sample.seconds !== undefined && (
-              <>
-                {" "}
-                &middot; <span className="tabular-nums">{formatDetik(sample.seconds)}</span> detik
-              </>
-            )}
-          </p>
+          {/* Nama marketplace-nya PINDAH ke kepala kartu, jadi kaki ini
+              tinggal memuat detiknya — dan seluruh barisnya hilang kalau
+              detiknya tidak ada. Menyisakan garis pemisah dengan baris kosong
+              di bawahnya membuat kartu terlihat seperti ada yang gagal dimuat.
+
+              Detiknya sendiri cuma ditulis kalau benar-benar diukur. Tidak ada
+              yang mencatatnya — bukan basis data, bukan panel ekstensi — jadi
+              mengisinya dengan perkiraan berarti mengarang pengukuran. */}
+          {sample.seconds !== undefined && (
+            <p className="mt-7 border-t border-divider pt-4 font-mono text-caption text-muted">
+              <span className="tabular-nums">{formatDetik(sample.seconds)}</span> detik
+            </p>
+          )}
         </div>
       </div>
     </Card>

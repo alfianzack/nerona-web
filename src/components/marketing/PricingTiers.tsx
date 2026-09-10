@@ -88,21 +88,37 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
         return (
           <Card
             key={tier.name}
-            variant={tier.featured ? "accent" : "default"}
+            variant={tier.featured ? "unggulan" : "default"}
             padding="lg"
             className="relative flex h-full flex-col"
           >
             {/* Aksen, bukan emas: halaman publik hanya punya satu warna aksen,
                 dan emas disimpan untuk aksi yang menggerakkan uang di dalam
                 aplikasi. */}
-            {tier.featured && <CardRibbon>Paling populer</CardRibbon>}
+            {/* Pitanya MENGAMBANG di tepi atas, tidak ikut aliran kartu.
+                Pil sejajar isi akan mendorong seluruh isi kartu unggulan turun
+                relatif terhadap dua tetangganya, dan tiga kartu yang harganya
+                tidak sebaris adalah cacat yang docblock di atas sudah
+                menghabiskan empat poin untuk mencegahnya. */}
+            {tier.featured && <CardRibbon nada="amber">Paling populer</CardRibbon>}
 
             <h3 className="text-title-2 text-ink">{tier.name}</h3>
             {/* Dua baris dipesan di sini, bukan disamakan belakangan: caption
                 12px × line-height 1.5 = 18px per baris. */}
             <p className="mt-1 min-h-[2.25rem] text-caption text-muted">{tier.tagline}</p>
 
-            <p className="mt-4 text-title-1 tabular-nums text-ink">{tier.priceLabel}</p>
+            {/* Harga kartu unggulan ber-amber-gelap (`emphasis`), bukan
+                amber mentah: angka sebesar ini di atas putih adalah tempat
+                kontras paling mudah gagal, dan `--action` memang dipilih untuk
+                jadi LATAR tombol, bukan warna teks. */}
+            <p
+              className={cn(
+                "mt-4 text-title-1 tabular-nums",
+                tier.featured ? "text-emphasis" : "text-ink",
+              )}
+            >
+              {tier.priceLabel}
+            </p>
             {/* Barisnya tetap ada walau kosong — kalau tidak, kartu "Hubungi
                 kami" naik 18px sendirian. */}
             <p className="mt-1.5 text-caption text-muted">{tier.priceNote || " "}</p>

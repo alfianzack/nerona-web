@@ -1,6 +1,6 @@
 import { cn } from "./cn";
 
-type CardVariant = "default" | "sunken" | "accent" | "flush";
+type CardVariant = "default" | "sunken" | "accent" | "unggulan" | "flush";
 type CardPadding = "none" | "sm" | "md" | "lg";
 
 /**
@@ -37,6 +37,19 @@ const VARIANTS: Record<CardVariant, string> = {
    * membuat kasus ini mustahil ditulis salah.
    */
   accent: "bg-surface ring-2 ring-accent",
+  /**
+   * Cincin AMBER, untuk satu kartu yang sedang ditawarkan di halaman jualan.
+   *
+   * Terpisah dari `accent` karena keduanya menjawab pertanyaan berbeda:
+   * `accent` menandai kartu yang sedang AKTIF di dalam aplikasi (biru, warna
+   * antarmuka), sedangkan ini menandai kartu yang ingin kita jual. Amber
+   * adalah warna aksi di halaman pemasaran — warna yang sama dengan tombolnya
+   * — jadi cincin ini dan tombol "Coba gratis" saling menegaskan.
+   *
+   * Menyatukan keduanya berarti kartu paket unggulan berubah warna kapan pun
+   * warna antarmuka aplikasi berubah, dan sebaliknya.
+   */
+  unggulan: "bg-surface ring-2 ring-action",
   // Tanpa latar dan tanpa garis — untuk kartu yang sudah berada di dalam
   // permukaan lain dan hanya butuh radius serta padding.
   flush: "bg-transparent",

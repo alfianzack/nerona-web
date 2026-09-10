@@ -126,7 +126,14 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
               tempat. Di bawah `lg` hero masih satu kolom selebar pita, jadi
               `display-1` tetap ukuran yang benar di sana. */}
           <h1 className="mt-3 max-w-[18ch] text-balance text-display-1 leading-[1.22] text-white lg:text-display-hero">
-            Metadata untuk kontributor stock, ditulis otomatis.
+            Metadata untuk kontributor stock, ditulis{" "}
+            {/* Satu kata amber, dan hanya satu.
+                Amber adalah warna AKSI di halaman ini — tombol "Coba gratis"
+                memakainya beberapa sentimeter di bawah. Mewarnai satu kata di
+                judul dengan warna yang sama mengikat janji produknya
+                ("otomatis") ke tindakan yang menjualnya, dan itu bekerja
+                justru karena tidak ada kata lain yang ikut diwarnai. */}
+            <span className="text-action">otomatis</span>.
           </h1>
 
           <p className="mt-5 max-w-[42ch] text-pretty text-lead text-navy-100">
@@ -146,13 +153,25 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
               jadi tombol putih berhenti menandakan "ini yang bisa diklik".
               Amber menyelesaikan keduanya: ia satu-satunya warna hangat di
               layar, dan labelnya gelap (`--on-action`), bukan putih. */}
-          <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
+          {/* Yang kedua kini tombol BERGARIS, bukan tautan teks.
+              Bukan `variant="secondary"`: varian itu berlatar putih, dan
+              docblock di atas sudah menolak tombol putih di sini — putih
+              adalah warna judul DAN warna kartu contoh di sebelahnya, jadi
+              tombol putih berhenti menandakan "ini yang bisa diklik". Yang
+              dipakai garis navy terang di atas navy gelap: ia terbaca sebagai
+              tombol tanpa bersaing dengan yang amber. */}
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <ButtonLink href="/register" size="lg">
               Coba gratis
             </ButtonLink>
-            <TextLink href="#pricing" tone="on-navy" className="text-body-lg">
+            <ButtonLink
+              href="#pricing"
+              size="lg"
+              variant="ghost"
+              className="text-white ring-1 ring-navy-500 hover:bg-white/5 hover:text-white"
+            >
               Lihat harga
-            </TextLink>
+            </ButtonLink>
           </div>
 
           <ul className="mt-10 flex flex-wrap gap-x-7 gap-y-2 text-caption text-navy-100">

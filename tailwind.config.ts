@@ -153,6 +153,8 @@ const config: Config = {
         accent: token("accent"),
         emphasis: token("emphasis"),
         action: token("action"),
+        "action-soft": token("action-soft"),
+        "on-action-soft": token("on-action-soft"),
         "on-action": token("on-action"),
 
         // Hasil AI — chip kata kunci dan titik status. Sengaja BUKAN salah satu

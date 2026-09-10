@@ -89,4 +89,25 @@ describe("palet pemasaran", () => {
   it("membuktikan amber mentah TIDAK boleh jadi teks di atas putih", () => {
     expect(contrast(token("action"), PUTIH)).toBeLessThan(3);
   });
+
+  /**
+   * Lencana "Paling populer" 11px, jadi ia menuntut 4,5:1 — bukan 3:1 yang
+   * berlaku untuk teks besar.
+   *
+   * Godaan yang dijaga di sini: memakai `--emphasis` sebagai warna teksnya.
+   * `--emphasis` sengaja dipilih untuk numeral BESAR dan hanya 3,26:1 di atas
+   * putih; di lencana sekecil ini ia gagal. Pasangan `--action-soft` /
+   * `--on-action-soft` ada persis untuk kasus itu, dan keduanya harus tetap
+   * dipakai berpasangan.
+   */
+  it("lencana amber lembut lolos kontras untuk teks kecil", () => {
+    const rasio = contrast(token("on-action-soft"), token("action-soft"));
+    expect(rasio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /** Kalau seseorang menukarnya dengan `--emphasis`, tes di atas harus merah. */
+  it("emphasis memang TIDAK cukup untuk lencana kecil", () => {
+    const rasio = contrast(token("emphasis"), token("action-soft"));
+    expect(rasio).toBeLessThan(4.5);
+  });
 });

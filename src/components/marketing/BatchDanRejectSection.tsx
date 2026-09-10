@@ -1,6 +1,7 @@
 import { Band } from "@/components/ui/Band";
 import { BatchProgressMockup } from "./mockups/BatchProgressMockup";
 import { RejectAnalysisMockup } from "./mockups/RejectAnalysisMockup";
+import { Icon } from "@/components/ui/icons";
 
 /**
  * Batas satu batch di ekstensi (BATCH_MAX_ITEMS di nerona_medata).
@@ -36,7 +37,16 @@ export function BatchDanRejectSection({
     <Band id={id} reveal>
       <div className="grid gap-14 md:grid-cols-2 md:gap-16">
         <div>
-          <h2 className="text-balance text-display-2 text-ink">Dibuat untuk unggahan massal</h2>
+          {/* `title-1`, bukan `display-2`.
+              Keduanya berdampingan di satu baris, jadi dua judul seukuran
+              judul seksi membuat pita ini berteriak dua kali sekeras pita
+              lain yang cuma punya satu judul — dan tidak ada di antaranya
+              yang lebih penting. Ikonnya yang membedakan keduanya sekarang,
+              bukan ukurannya. */}
+          <h2 className="flex items-start gap-2.5 text-balance text-title-1 text-ink">
+            <Icon name="image" className="mt-1.5 h-5 w-5 flex-none text-accent" />
+            Dibuat untuk unggahan massal
+          </h2>
           <p className="mt-4 text-body-lg text-muted">
             Sampai {BATCH_MAX_ITEMS} gambar sekali jalan, progres per gambar.
           </p>
@@ -47,7 +57,12 @@ export function BatchDanRejectSection({
 
         {reject.plans.length > 0 && (
           <div>
-            <h2 className="text-balance text-display-2 text-ink">Ditolak? Cari tahu kenapa</h2>
+            <h2 className="flex items-start gap-2.5 text-balance text-title-1 text-ink">
+              {/* Mint, bukan biru: warna itu dipakai halaman ini untuk HASIL
+                  yang datang dari AI, dan analisis penolakan salah satunya. */}
+              <Icon name="check-circle" className="mt-1.5 h-5 w-5 flex-none text-result" />
+              Ditolak? Cari tahu kenapa
+            </h2>
             <p className="mt-4 text-body-lg text-muted">
               Tempel alasan penolakan, Nerona menunjuk perbaikannya.
             </p>

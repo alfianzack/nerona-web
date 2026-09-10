@@ -95,6 +95,17 @@ export interface MetadataSample {
   alt: string;
   /** Nama marketplace tujuan, mis. "Adobe Stock". */
   marketplace: string;
+  /**
+   * Bentuk karyanya: "Foto", "Vektor", "Render 3D".
+   *
+   * Berdiri di kepala kartu bersama nama marketplace-nya, dan gunanya bukan
+   * hiasan: kontributor stock mengerjakan bentuk yang berbeda-beda, dan yang
+   * ia cari di bagian bukti adalah apakah alat ini paham BENTUK yang ia
+   * kerjakan. Tiga kartu yang semuanya vektor membuktikan jauh lebih sedikit
+   * daripada tiga kartu yang masing-masing beda bentuk — dan itu tidak
+   * terbaca dari gambarnya sendiri di ukuran sekecil ini.
+   */
+  jenis: string;
   /** BAHASA INGGRIS — judul yang benar-benar dihasilkan. */
   title: string;
   /**
@@ -152,6 +163,7 @@ export const METADATA_SAMPLES: MetadataSample[] = [
     imageReady: true,
     alt: "Ilustrasi vektor forklift oranye bergaya datar, tampak samping",
     marketplace: "Canva",
+    jenis: "Vektor",
     title: "Orange Forklift Industrial Vehicle Vector Illustration",
     keywords: [
       "forklift",
@@ -192,6 +204,7 @@ export const METADATA_SAMPLES: MetadataSample[] = [
     imageReady: false,
     alt: "Ilustrasi sekelompok anak muslim duduk belajar dan menulis bersama",
     marketplace: "Adobe Stock",
+    jenis: "Foto",
     title: "Group of Muslim Children Studying and Writing Together",
     keywords: [
       "muslim children",
