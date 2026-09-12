@@ -7,7 +7,8 @@ export type BadgeTone =
   | "success"
   | "warning"
   | "danger"
-  | "points";
+  | "points"
+  | "points-navy";
 
 /**
  * Menggantikan dua hal sekaligus.
@@ -19,6 +20,19 @@ export type BadgeTone =
  *
  * `points` memakai emas karena saldo poin adalah uang, dan itu satu-satunya
  * tempat emas muncul di luar tombol yang menggerakkan uang.
+ *
+ * `points-navy` adalah nada yang SAMA di atas permukaan gelap, dan ia ada
+ * sebagai nada tersendiri karena `points` benar-benar tidak bisa dipakai di
+ * sana: warna tulisannya `brand-gold-ink` (#9A6B08), coklat gelap yang dipilih
+ * untuk berdiri di atas putih, dan di atas navy-900 ia tinggal sekitar 1,7:1 —
+ * praktis hilang. Pembalikannya menukar peran emas: yang tadinya latar kini
+ * jadi tulisan.
+ *
+ * Ini pasangan nada pertama yang begitu, jadi satu aturan supaya tidak
+ * berkembang jadi kebiasaan: nada `-navy` hanya dibuat untuk hal yang memang
+ * muncul di dua permukaan sekaligus. Saldo poin begitu — ia berdiri di sidebar
+ * navy DAN di bar ponsel yang berlatar canvas putih. Status seperti `success`
+ * atau `danger` tidak pernah, jadi jangan dibuatkan.
  */
 const TONES: Record<BadgeTone, string> = {
   neutral: "bg-surface-sunken text-muted ring-1 ring-border",
@@ -31,6 +45,7 @@ const TONES: Record<BadgeTone, string> = {
   warning: "bg-warning-bg text-warning ring-1 ring-warning/25",
   danger: "bg-danger-bg text-danger ring-1 ring-danger/25",
   points: "bg-gold-400/20 text-brand-gold-ink ring-1 ring-gold-400/40",
+  "points-navy": "bg-gold-400/15 text-gold-400 ring-1 ring-gold-400/30",
 };
 
 export function Badge({

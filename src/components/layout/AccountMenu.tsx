@@ -5,8 +5,31 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/icons";
 
-export function AccountMenu({ email }: { email: string }) {
+/**
+ * Tiga bentuk, karena tombol ini sekarang berdiri di tiga tempat yang bentuk
+ * dan LATARNYA berbeda — bukan karena ada tiga selera.
+ *
+ * - `chip` — bar ramping di bawah `sm`, satu-satunya sisa topbar lama. Latarnya
+ *   canvas putih, jadi ia memakai token terang apa adanya.
+ * - `row`  — puncak sidebar berlabel (`xl`+) dan laci. Ada ruang untuk alamat
+ *   surel, jadi identitasnya dibaca tanpa perlu diklik dulu.
+ * - `rail` — puncak strip 56px. Hanya inisial yang muat.
+ *
+ * Arah panelnya ikut bentuk, dan itu bukan hiasan: panel selebar 208px yang
+ * jatuh ke bawah di dalam strip 56px akan menjorok keluar rail dan terpotong
+ * tepi jendela di layar sempit, jadi `rail` melemparkannya ke SAMPING.
+ */
+type AccountMenuVariant = "chip" | "row" | "rail";
+
+export function AccountMenu({
+  email,
+  variant = "chip",
+}: {
+  email: string;
+  variant?: AccountMenuVariant;
+}) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -17,19 +40,72 @@ export function AccountMenu({ email }: { email: string }) {
   }
 
   const initial = email.trim().charAt(0).toUpperCase() || "?";
+  const onNavy = variant !== "chip";
+
+  // Inisialnya dibalik dengan tangan untuk permukaan gelap, sama seperti yang
+  // sudah dilakukan hero: token `ink` dan `border` dua-duanya dipilih untuk
+  // berdiri di atas putih.
+  const avatar = (
+    <span
+      className={`flex h-8 w-8 flex-none items-center justify-center rounded-full text-caption font-semibold ${
+        onNavy ? "text-white ring-1 ring-white/25" : "text-ink ring-1 ring-border"
+      }`}
+    >
+      {initial}
+    </span>
+  );
+
+  const trigger =
+    variant === "row" ? (
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Menu akun"
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 text-left transition hover:bg-white/10"
+      >
+        {avatar}
+        {/* min-w-0 pada pembungkusnya, bukan cuma truncate pada teksnya: tanpa
+            itu butir flex menolak menyusut di bawah lebar isinya dan alamat
+            surel panjang justru melebarkan seluruh baris. */}
+        <span className="min-w-0 flex-1 truncate font-mono text-caption text-navy-100">
+          {email}
+        </span>
+        <Icon
+          name={open ? "chevron-up" : "chevron-down"}
+          className="h-3.5 w-3.5 flex-none text-navy-100"
+        />
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Menu akun"
+        aria-expanded={open}
+        title={variant === "rail" ? email : undefined}
+        className={`flex items-center justify-center rounded-full transition ${
+          onNavy ? "hover:opacity-80" : "hover:bg-surface-sunken"
+        }`}
+      >
+        {avatar}
+      </button>
+    );
+
+  // Panelnya tetap kartu PUTIH melayang di ketiga bentuk. Di atas navy itu
+  // memang yang benar — preseden yang sama dengan kartu contoh di atas hero:
+  // permukaan terang yang mengapung terbaca sebagai lapisan di atas, bukan
+  // sebagai tambalan.
+  const panelPlacement =
+    variant === "rail"
+      ? "left-full top-0 ml-2 w-52"
+      : variant === "row"
+        ? "left-0 right-0 mt-2"
+        : "right-0 mt-2 w-52";
 
   return (
     <>
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Menu akun"
-          aria-expanded={open}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-caption font-semibold text-ink ring-1 ring-border transition hover:bg-surface-sunken"
-        >
-          {initial}
-        </button>
+        {trigger}
 
         {open && (
           <>
@@ -39,7 +115,9 @@ export function AccountMenu({ email }: { email: string }) {
             {/* Satu-satunya lapisan di kerangka aplikasi yang benar-benar
                 melayang, jadi satu-satunya yang boleh berbayang. Kartu diam di
                 halaman mana pun dipisahkan oleh garis rambut saja. */}
-            <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-card bg-surface shadow-float ring-1 ring-border">
+            <div
+              className={`absolute z-50 overflow-hidden rounded-card bg-surface shadow-float ring-1 ring-border ${panelPlacement}`}
+            >
               {/* Alamat surel dibaca sebagai identitas, bukan kalimat — mono
                   membuatnya berhenti terlihat seperti teks badan. */}
               <p className="truncate border-b border-divider px-3 py-2 font-mono text-caption text-muted">
