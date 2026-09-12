@@ -4,7 +4,7 @@ import { Band } from "@/components/ui/Band";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { TextLink } from "@/components/ui/TextLink";
 import { Icon } from "@/components/ui/icons";
-import { HeroKeywordColumns } from "./HeroKeywordColumns";
+import { HeroKeywordRain } from "./HeroKeywordRain";
 import { MetadataCardMockup } from "./mockups/MetadataCardMockup";
 
 /**
@@ -103,24 +103,27 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
     // `overflow-hidden` KEMBALI, dan sebabnya bukan sebab lama.
     //
     // Docblock di atas mencatat blob emas kabur dibuang karena ia "satu-satunya
-    // alasan bagian ini butuh overflow-hidden". Yang memintanya sekarang kolom
-    // kata kunci: kolomnya sengaja menjorok 240px ke atas dan ke bawah pita
-    // supaya parallax-nya tidak pernah meninggalkan ruang kosong, dan
-    // kelebihannya harus dipotong di tepi pita.
+    // alasan bagian ini butuh overflow-hidden". Yang memintanya sekarang hujan
+    // kata kunci: kata lahir DI ATAS pita supaya tampak turun dari langit, dan
+    // bagian yang masih di atas tepi harus terpotong.
     //
-    // `relative` dipasang di sini, bukan di dalam komponen kolomnya, karena
-    // yang harus jadi wadah pemosisian adalah PITA-nya — selokan yang mau
-    // diisi kolom itu berada di luar wadah `max-w-band`, jadi menjadikan wadah
-    // isi sebagai patokan justru mengurung kolomnya di tempat yang salah.
+    // `relative` dipasang di sini, bukan di dalam komponen hujannya, karena
+    // yang harus jadi wadah pemosisian adalah PITA-nya — selokan tempat kata
+    // jatuh berada di luar wadah `max-w-band`, jadi menjadikan wadah isi
+    // sebagai patokan justru mengurung hujannya di tempat yang salah.
     <Band tone="navy-gradient" className="relative overflow-hidden">
-      <HeroKeywordColumns />
+      <HeroKeywordRain />
 
       {/* Kartu jauh lebih pendek dari kolom teks, jadi items-center — rata atas
           akan menggantungnya di sepertiga atas dengan ruang kosong menganga di
           bawahnya. Kolom kanan dipatok minmax(0,380px), bukan pecahan: kartu
           ini punya lebar terbaca sendiri, dan membiarkannya melar mengikuti
           pita hanya membuat chip kata kuncinya berbaris terlalu renggang. */}
-      <div className="grid items-center gap-x-14 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      {/* `relative` supaya isi dicat DI ATAS lapisan hujan yang absolut: dua
+          elemen berposisi tanpa z-index dicat menurut urutan DOM, dan isi ini
+          datang belakangan. Kata memang tidak pernah masuk kolom ini (ada
+          dinding fisik), tapi urutan cat tidak boleh bergantung pada itu. */}
+      <div className="relative grid items-center gap-x-14 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div>
           {/* Eyebrow menyebut BENTUK produknya, bukan namanya lagi.
               "Nerona Metadata" sudah berdiri di bilah atas dan di judul seksi
