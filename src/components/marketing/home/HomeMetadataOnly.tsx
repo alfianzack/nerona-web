@@ -5,6 +5,7 @@ import { RUANG } from "@/lib/ruang";
 import { ProofSection } from "@/components/marketing/ProofSection";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
+import { KontakRuang } from "@/components/marketing/ruang/KontakRuang";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { metadataTiers } from "@/lib/pricing-tiers";
 import { getTopupPackages, perPointLabel } from "@/lib/topup";
@@ -201,7 +202,11 @@ export async function HomeMetadataOnly() {
             }
             ctaLabel="Coba gratis"
             ctaHref="/register"
-          />
+          >
+            {/* Beranda tidak punya Footer (lihat app/(beranda)/layout.tsx),
+                jadi kontak dan tautan legal berdiri di lapisan penutup. */}
+            <KontakRuang />
+          </CtaBanner>
         </Lapisan>
       </RuangKata>
     </main>

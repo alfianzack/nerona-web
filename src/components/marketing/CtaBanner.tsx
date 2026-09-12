@@ -34,20 +34,29 @@ export function CtaBanner({
   ctaLabel,
   ctaHref,
   tone = "navy-gradient",
+  children,
 }: {
   title: string;
   body: string;
   ctaLabel: string;
   ctaHref: string;
   tone?: "navy-gradient" | "ruang";
+  /** Baris di bawah tombol: di Ruang Kata dipakai untuk kontak & tautan legal. */
+  children?: React.ReactNode;
 }) {
   return (
     <Band tone={tone} align="center" reveal>
       <h2 className="text-balance text-display-2 text-white">{title}</h2>
       <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
-      <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
+      {/* `surface-light` pada tombol: varian secondary itu putih dengan teks
+          `text-ink`, dan di dalam scope ruang `--ink` diselesaikan ke PUTIH —
+          hasilnya tombol putih tanpa tulisan (terlihat di produksi). Kelas ini
+          mengembalikan token terang di dalam tombolnya sendiri; di luar ruang
+          ia tidak berbuat apa-apa. */}
+      <ButtonLink href={ctaHref} variant="secondary" size="lg" className="surface-light mt-9">
         {ctaLabel}
       </ButtonLink>
+      {children}
     </Band>
   );
 }
