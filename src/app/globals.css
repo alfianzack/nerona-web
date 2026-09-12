@@ -174,28 +174,30 @@
     --result-ink: 11 83 65;    /* #0B5341 */
 
     /**
-     * Siku, bukan membulat.
+     * Membulat lagi, seluruh permukaan publik sekaligus.
      *
-     * Diterapkan ke seluruh permukaan publik sekaligus, bukan hanya kartu
-     * harga: kartu harga siku sementara kartu bukti dan kartu keluhan tetap
-     * membulat membuat satu halaman berbicara dua bahasa bentuk, dan mata
-     * membaca itu sebagai kelalaian, bukan sebagai pilihan.
+     * Sebelumnya siku (0px) — keputusan 2026-08 yang alasannya masih benar
+     * separuhnya: satu halaman tidak boleh berbicara dua bahasa bentuk. Owner
+     * membalik keputusannya 2026-09-12 ("setiap ada persegi, tambahkan sudut
+     * membulat") setelah melihat Ruang Kata: di atas navy, kartu putih
+     * bersudut siku terbaca sebagai potongan kertas yang ditempel, bukan
+     * permukaan yang melayang; mockup yang disetujui memang 12px.
      *
-     * Aplikasi TIDAK ikut. Nilai di :root tetap 12px dan 8px — di sana sudut
-     * membulat memisahkan panel yang bertumpuk rapat, sedangkan halaman publik
-     * punya ruang kosong berlimpah untuk mengerjakan pemisahan itu sendiri.
+     * Yang tetap dari keputusan lama: diterapkan ke SEMUA halaman publik,
+     * bukan hanya beranda — kalau hanya beranda yang membulat, / dan /pricing
+     * jadi dua bahasa bentuk, cacat yang persis ingin dihindari. Nilainya
+     * disamakan dengan aplikasi (:root) supaya tidak ada langkah radius ketiga.
      */
-    --radius-card: 0px;
-    --radius-control: 0px;
-    --radius-chip: 0px;
+    --radius-card: 12px;
+    --radius-control: 8px;
+    --radius-chip: 6px;
     /**
-     * Pil dipertahankan, dan ini satu-satunya bentuk membulat yang tersisa di
-     * halaman publik.
+     * Pil untuk tombol utama tetap, dan tetap satu-satunya bentuk pil.
      *
-     * Sengaja: kartu siku dengan tombol pil di dalamnya adalah pasangan yang
-     * saling menegaskan — yang satu tenang dan bersudut, yang satu jelas bisa
-     * ditekan. Kalau semuanya ikut siku, satu-satunya penanda "ini tombol"
-     * tinggal warnanya. Menjadikannya siku juga cukup satu nilai di sini.
+     * Kartu 12px dengan tombol pil di dalamnya masih pasangan yang saling
+     * menegaskan: yang satu permukaan, yang satu jelas bisa ditekan. Kalau
+     * tombolnya ikut 8px, penanda "ini tombol" di antara kartu-kartu membulat
+     * tinggal warnanya.
      */
     --radius-action: 980px;
 
