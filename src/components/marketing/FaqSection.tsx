@@ -56,7 +56,7 @@ export function FaqSection({
    * yang sama dengan latar yang akan ditumpangkan, dan pemenangnya ditentukan
    * urutan abjad di CSS keluaran.
    */
-  tone?: "plain" | "sunken";
+  tone?: "plain" | "sunken" | "ruang";
   /** Anchor target, so the top nav can link to this section. */
   id?: string;
   /**

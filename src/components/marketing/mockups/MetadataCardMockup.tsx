@@ -50,7 +50,7 @@ export function MetadataCardMockup({ animated = false }: { animated?: boolean })
   const sisa = TOTAL_KEYWORDS - KEYWORDS.length;
 
   return (
-    <div className="rounded-card bg-surface p-7 text-left ring-1 ring-border">
+    <div className="surface-light rounded-card bg-surface p-7 text-left ring-1 ring-border">
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-label uppercase text-muted">Metadata yang dihasilkan</p>
         <span className="flex h-2 w-2">

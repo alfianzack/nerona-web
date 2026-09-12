@@ -197,7 +197,7 @@ export function PricingTiers({
 }: {
   id?: string;
   /** Nada pita, supaya irama latar halaman bisa diatur dari pemanggilnya. */
-  tone?: "plain" | "sunken";
+  tone?: "plain" | "sunken" | "ruang";
   heading: string;
   subheading: string;
   tiers: PricingTier[];
@@ -253,7 +253,7 @@ export function PricingTiers({
       )}
 
       <p className={cn("mx-auto max-w-[64ch] text-caption text-muted", catatanPoin ? "mt-3" : "mt-10")}>
-        Paket dibeli sekali dan aksesnya berlaku selamanya — tidak ada tagihan bulanan dan tidak ada
+        Paket dibeli sekali dan aksesnya berlaku selamanya: tidak ada tagihan bulanan dan tidak ada
         perpanjangan. Pembayaran diatur langsung dengan tim Nerona: pilih paket, kirim order,
         selesaikan pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
       </p>

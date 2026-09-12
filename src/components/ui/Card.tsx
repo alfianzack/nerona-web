@@ -74,7 +74,9 @@ export function Card({
 }) {
   return (
     <div
-      className={cn("rounded-card shadow-card", VARIANTS[variant], PADDING[padding], className)}
+      // `surface-light`: di dalam Ruang Kata (data-surface="ruang") kartu putih
+      // kembali ke token terang; di luar ruang kelas ini tidak berbuat apa-apa.
+      className={cn("surface-light rounded-card shadow-card", VARIANTS[variant], PADDING[padding], className)}
       {...rest}
     >
       {children}

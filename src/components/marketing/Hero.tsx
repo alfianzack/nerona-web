@@ -94,35 +94,25 @@ function heroFacts(freePoints: number) {
  * berarti memotong ukur dua kali dengan angka yang tidak lagi ada hubungannya
  * dengan lebar yang sebenarnya berlaku.
  */
-export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freePoints?: number }) {
+export function Hero({
+  freePoints = DEFAULT_PLAN_POINTS.metadata.free,
+  dalamRuang = false,
+}: {
+  freePoints?: number;
+  /**
+   * Di dalam Ruang Kata: tanpa Band (latarnya panggung) dan tanpa hujan kata
+   * (ruangnya sendiri sudah berisi kata). Isinya persis sama.
+   */
+  dalamRuang?: boolean;
+}) {
   // Default-nya tetap konstanta kode supaya pemanggil yang belum mengoper nilai
   // sungguhan tidak menampilkan kosong — tapi beranda WAJIB mengopernya.
   const facts = heroFacts(freePoints);
 
-  return (
-    // `overflow-hidden` KEMBALI, dan sebabnya bukan sebab lama.
-    //
-    // Docblock di atas mencatat blob emas kabur dibuang karena ia "satu-satunya
-    // alasan bagian ini butuh overflow-hidden". Yang memintanya sekarang hujan
-    // kata kunci: kata lahir DI ATAS pita supaya tampak turun dari langit, dan
-    // bagian yang masih di atas tepi harus terpotong.
-    //
-    // `relative` dipasang di sini, bukan di dalam komponen hujannya, karena
-    // yang harus jadi wadah pemosisian adalah PITA-nya — selokan tempat kata
-    // jatuh berada di luar wadah `max-w-band`, jadi menjadikan wadah isi
-    // sebagai patokan justru mengurung hujannya di tempat yang salah.
-    <Band tone="navy-gradient" className="relative overflow-hidden">
-      <HeroKeywordRain />
-
-      {/* Kartu jauh lebih pendek dari kolom teks, jadi items-center — rata atas
-          akan menggantungnya di sepertiga atas dengan ruang kosong menganga di
-          bawahnya. Kolom kanan dipatok minmax(0,380px), bukan pecahan: kartu
-          ini punya lebar terbaca sendiri, dan membiarkannya melar mengikuti
-          pita hanya membuat chip kata kuncinya berbaris terlalu renggang. */}
-      {/* `relative` supaya isi dicat DI ATAS lapisan hujan yang absolut: dua
-          elemen berposisi tanpa z-index dicat menurut urutan DOM, dan isi ini
-          datang belakangan. Kata memang tidak pernah masuk kolom ini (ada
-          dinding fisik), tapi urutan cat tidak boleh bergantung pada itu. */}
+  // Grid-nya `relative` supaya isi dicat DI ATAS lapisan hujan yang absolut
+  // (dua elemen berposisi tanpa z-index dicat menurut urutan DOM). Di dalam
+  // ruang tidak ada hujan, dan kelasnya tidak mengganggu apa pun.
+  const isi = (
       <div className="relative grid items-center gap-x-14 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div>
           {/* Eyebrow menyebut BENTUK produknya, bukan namanya lagi.
@@ -155,7 +145,7 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
           </h1>
 
           <p className="mt-5 max-w-[42ch] text-pretty text-lead text-navy-100">
-            Judul, deskripsi, dan kata kunci dibuat AI — lalu diisikan langsung ke formulir unggah
+            Judul, deskripsi, dan kata kunci dibuat AI, lalu diisikan langsung ke formulir unggah
             marketplace Anda.
           </p>
 
@@ -210,6 +200,14 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
           <MetadataCardMockup animated />
         </div>
       </div>
+  );
+
+  if (dalamRuang) return isi;
+
+  return (
+    <Band tone="navy-gradient" className="relative overflow-hidden">
+      <HeroKeywordRain />
+      {isi}
     </Band>
   );
 }

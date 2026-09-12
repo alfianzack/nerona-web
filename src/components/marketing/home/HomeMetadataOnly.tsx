@@ -1,15 +1,14 @@
 import { Hero } from "@/components/marketing/Hero";
-import { TrustBar } from "@/components/marketing/TrustBar";
-import { DemoBand } from "@/components/marketing/DemoBand";
+import { RuangKata } from "@/components/marketing/ruang/RuangKata";
+import { Lapisan } from "@/components/marketing/ruang/Lapisan";
+import { RUANG } from "@/lib/ruang";
 import { ProofSection } from "@/components/marketing/ProofSection";
-import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { metadataTiers } from "@/lib/pricing-tiers";
 import { getTopupPackages, perPointLabel } from "@/lib/topup";
 import { defaultModelPointsPerImage, gambarPerPoin } from "@/lib/marketing-points";
-import { demoVideoUrl } from "@/lib/marketing-demo";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
 import { metadataFaqBeranda } from "@/lib/marketing-faq";
 
@@ -89,10 +88,9 @@ export async function HomeMetadataOnly() {
 
   // Satu putaran untuk sisanya: bagian-bagian ini tidak saling bergantung, dan
   // beranda adalah halaman yang paling sering dibuka.
-  const [tiers, topupPackages, demoUrl] = await Promise.all([
+  const [tiers, topupPackages] = await Promise.all([
     metadataTiers(1, poinPerGambar),
     getTopupPackages(),
-    demoVideoUrl(),
   ]);
 
   /**
@@ -135,7 +133,7 @@ export async function HomeMetadataOnly() {
     ? topupPackages.reduce((a, b) => (b.price / b.points < a.price / a.points ? b : a))
     : null;
   const catatanIsiUlang = termurah
-    ? `Poin habis? Isi ulang dari ${perPointLabel(termurah)} — tanpa langganan, dan poin yang belum terpakai tidak hangus.`
+    ? `Poin habis? Isi ulang dari ${perPointLabel(termurah)}, tanpa langganan, dan poin yang belum terpakai tidak hangus.`
     : null;
 
   /**
@@ -147,70 +145,64 @@ export async function HomeMetadataOnly() {
    */
   const gambarGratis = gambarPerPoin(freePoints, poinPerGambar);
 
+  // Lima lapisan pada kedalaman RUANG.LAPISAN_Z. `id` anchor dipegang
+  // Lapisan, BUKAN seksi di dalamnya: dua elemen ber-id sama membuat nav dan
+  // tombol hero mendarat di yang salah.
+  const lapisan = [
+    { z: RUANG.LAPISAN_Z[0], nama: "Beranda" },
+    { z: RUANG.LAPISAN_Z[1], nama: "Contoh", id: "contoh" },
+    { z: RUANG.LAPISAN_Z[2], nama: "Harga", id: "pricing" },
+    { z: RUANG.LAPISAN_Z[3], nama: "FAQ", id: "faq" },
+    { z: RUANG.LAPISAN_Z[4], nama: "Mulai" },
+  ];
+
   return (
     <main>
-      <Hero freePoints={freePoints} />
+      <RuangKata lapisan={lapisan}>
+        <Lapisan {...lapisan[0]}>
+          <Hero freePoints={freePoints} dalamRuang />
+        </Lapisan>
 
-      {/* Langsung menutup hero, bukan di dasar halaman.
-          Nama-nama inilah yang paling cepat dikenali pengunjung, dan sebelumnya
-          mereka baru muncul di layar keenam — jauh setelah orang memutuskan
-          apakah halaman ini layak dibaca terus. */}
-      <MarketplaceRow variant="strip" />
+        {/* Bagian terpenting di halaman: satu-satunya yang MEMPERLIHATKAN mutu
+            AI alih-alih mengatakannya. */}
+        <Lapisan {...lapisan[1]}>
+          <ProofSection
+            tone="ruang"
+            title="Ini hasilnya, apa adanya"
+            body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya."
+          />
+        </Lapisan>
 
-      {/* Mengembalikan kosong sampai angkanya melewati ambang — lihat sebabnya
-          di lib/marketing-stats.ts. Menaruhnya di sini aman sejak hari pertama. */}
-      <TrustBar />
+        <Lapisan {...lapisan[2]}>
+          <PricingTiers
+            tone="ruang"
+            heading="Harga Nerona Metadata"
+            subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali, aksesnya berlaku selamanya."
+            tiers={tiers}
+            catatanPoin={catatanPoin}
+            catatanIsiUlang={catatanIsiUlang}
+          />
+        </Lapisan>
 
-      {/* Mengembalikan kosong sampai URL videonya diisi owner — lihat
-          lib/marketing-demo.ts. Sampai saat itu, halaman melompat langsung ke
-          contoh hasil, dan tidak ada satu pun bingkai kosong yang tertinggal. */}
-      <DemoBand url={demoUrl} />
+        {/* Enam pertanyaan, bukan sebelas; sisanya di /faq. */}
+        <Lapisan {...lapisan[3]}>
+          <FaqSection tone="ruang" items={metadataFaqBeranda({ poinPerGambar })} semuaHref="/faq" />
+        </Lapisan>
 
-      {/* Bagian terpenting di halaman: satu-satunya yang MEMPERLIHATKAN mutu
-          AI alih-alih mengatakannya. Judul dan kalimatnya dipangkas jadi dua
-          baris — kata kuncinya sendiri yang harus dibaca, bukan pengantarnya. */}
-      <ProofSection
-        id="contoh"
-        title="Ini hasilnya, apa adanya"
-        body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya."
-      />
-
-      {/* POLOS, karena contoh hasil di atasnya sudah cekung.
-          Sebelum tiga seksi dipangkas, di antara keduanya ada dua pita polos,
-          jadi harga yang cekung memang bergantian. Sekarang mereka
-          bersebelahan, dan dua pita cekung berturut-turut menghapus satu-satunya
-          tanda "seksi baru dimulai" di sini. Iramanya kini: cekung (contoh),
-          polos (harga), cekung (FAQ), navy (penutup). */}
-      <PricingTiers
-        tone="plain"
-        id="pricing"
-        heading="Harga Nerona Metadata"
-        subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali — aksesnya berlaku selamanya."
-        tiers={tiers}
-        catatanPoin={catatanPoin}
-        catatanIsiUlang={catatanIsiUlang}
-      />
-
-      {/* Enam pertanyaan, bukan sebelas — sisanya di /faq, dan FaqSection
-          sendiri yang menautkannya. Cekung, mengapit harga yang polos; lihat
-          komentar di atas PricingTiers. */}
-      <FaqSection
-        id="faq"
-        tone="sunken"
-        items={metadataFaqBeranda({ poinPerGambar })}
-        semuaHref="/faq"
-      />
-
-      <CtaBanner
-        title="Coba gratis hari ini"
-        body={
-          gambarGratis && gambarGratis > 0
-            ? `${freePoints} poin, sekitar ${gambarGratis.toLocaleString("id-ID")} gambar — cukup untuk menilai hasilnya.`
-            : `${freePoints} poin percobaan, cukup untuk menilai hasilnya.`
-        }
-        ctaLabel="Coba gratis"
-        ctaHref="/register"
-      />
+        <Lapisan {...lapisan[4]}>
+          <CtaBanner
+            tone="ruang"
+            title="Coba gratis hari ini"
+            body={
+              gambarGratis && gambarGratis > 0
+                ? `${freePoints} poin, sekitar ${gambarGratis.toLocaleString("id-ID")} gambar: cukup untuk menilai hasilnya.`
+                : `${freePoints} poin percobaan, cukup untuk menilai hasilnya.`
+            }
+            ctaLabel="Coba gratis"
+            ctaHref="/register"
+          />
+        </Lapisan>
+      </RuangKata>
     </main>
   );
 }

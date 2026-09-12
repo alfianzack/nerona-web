@@ -219,6 +219,48 @@
   }
 
   /**
+   * Ruang — beranda sebagai ruang kedalaman (components/marketing/ruang).
+   *
+   * Permukaan gelap AKHIRNYA punya set tokennya sendiri, dan bukan lewat
+   * pembalikan tangan seperti hero. Seksi contoh, harga, dan FAQ ditulis dengan
+   * text-ink/text-muted untuk permukaan terang; di dalam scope ini token yang
+   * sama diselesaikan ke putih dan navy-100, jadi markup seksinya tidak
+   * disentuh sama sekali. Kartu putih memakai `.surface-light` di bawah untuk
+   * kembali ke token terang di dalam dirinya.
+   *
+   * Nilai-nilainya: ink putih; muted = navy-100 (#C7CDEB, ±9:1 di atas
+   * navy-900); border/divider = navy-500 (garis rambut yang terlihat di atas
+   * navy tanpa jadi putih); accent = brand-sky (tautan sekunder di atas navy);
+   * emphasis = amber aksi (angka besar di atas navy lolos jauh di atas 3:1).
+   */
+  [data-surface="ruang"] {
+    --canvas: 22 35 61;
+    --surface: 255 255 255;
+    --surface-sunken: 30 44 78;
+    --border: 61 68 168;
+    --divider: 61 68 168;
+    --ink: 255 255 255;
+    --muted: 199 205 235;
+    --accent: 110 201 242;
+    --emphasis: 242 169 59;
+  }
+
+  /* Kartu putih di dalam ruang: kembali ke token terang halaman publik.
+     Dibatasi ke DALAM ruang dengan sengaja — Card memakai kelas ini di mana
+     pun, dan di aplikasi (Presisi) nilai ink/muted-nya berbeda; tanpa pembatas
+     ini kartu aplikasi diam-diam ikut memakai warna pemasaran. */
+  [data-surface="ruang"] .surface-light {
+    --canvas: 255 255 255;
+    --surface-sunken: 245 247 250;
+    --border: 228 233 240;
+    --divider: 237 241 246;
+    --ink: 22 35 61;
+    --muted: 92 107 133;
+    --accent: 46 82 192;
+    --emphasis: 198 127 10;
+  }
+
+  /**
    * Satu aturan ini menyelesaikan 43 tombol utama yang selama ini tidak punya
    * jejak fokus papan ketik sama sekali.
    */
@@ -374,5 +416,75 @@
     background-image:
       radial-gradient(120% 100% at 76% 20%, rgb(61 68 168 / 0.55), rgb(61 68 168 / 0) 62%),
       linear-gradient(160deg, #16233d 0%, #10107a 100%);
+  }
+
+  /**
+   * Ruang Kata. Dua keadaan, satu DOM:
+   *
+   * - TANPA `.ruang-hidup` (markup server, layar < lg, reduced-motion, atau
+   *   JS gagal): lima lapisan bertumpuk biasa di atas navy. Kanvas, rel, dan
+   *   petunjuk tidak dirender. Ini halaman yang utuh, bukan keadaan rusak.
+   * - DENGAN `.ruang-hidup` (dipasang RuangKata setelah memeriksa lebar dan
+   *   preferensi gerak): panggung sticky di bawah header, lapisan absolut
+   *   ditumpuk di pusat dan digerakkan lewat transform/opacity/filter.
+   *
+   * Sticky, bukan fixed: header tetap di alirannya dan Footer asli muncul
+   * begitu wadahnya habis. `--ruang-atas` = tinggi header, diukur RuangKata.
+   */
+  .ruang { position: relative; }
+  .ruang-panggung { position: relative; overflow: hidden; }
+  .ruang-kanvas, .ruang-rel, .ruang-petunjuk { display: none; }
+  .ruang-lapisan { padding-block: var(--band); }
+  .ruang-isi { max-width: var(--band-w); margin-inline: auto; padding-inline: 24px; }
+
+  .ruang-hidup .ruang-panggung {
+    position: sticky;
+    top: var(--ruang-atas, 57px);
+    height: calc(100vh - var(--ruang-atas, 57px));
+  }
+  .ruang-hidup .ruang-kanvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ruang-hidup .ruang-lapisan {
+    position: absolute; left: 50%; top: 50%;
+    width: min(var(--band-w), calc(100vw - 48px));
+    padding: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+    pointer-events: none;
+    transform-origin: center;
+    will-change: transform, opacity, filter;
+  }
+  .ruang-hidup .ruang-lapisan.ruang-fokus { pointer-events: auto; }
+  .ruang-hidup .ruang-isi { padding-inline: 0; }
+
+  .ruang-hidup .ruang-rel {
+    display: grid; gap: 14px;
+    position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+    z-index: 5;
+  }
+  .ruang-rel button {
+    all: unset; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    color: rgb(var(--muted)); opacity: 0.55; transition: opacity 200ms;
+    font-family: theme(fontFamily.mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .ruang-rel button i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; transition: transform 200ms; }
+  .ruang-rel button span { display: none; }
+  .ruang-rel button.ruang-rel-aktif { opacity: 1; color: #fff; }
+  .ruang-rel button.ruang-rel-aktif i { transform: scale(1.8); background: rgb(var(--brand-sky)); }
+  .ruang-rel:hover button span, .ruang-rel button:focus-visible span { display: inline; }
+  .ruang-rel button:focus-visible { outline: 2px solid rgb(var(--brand-sky)); outline-offset: 4px; border-radius: 4px; }
+
+  .ruang-hidup .ruang-petunjuk {
+    display: flex; align-items: center; gap: 10px;
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    margin: 0; z-index: 5;
+    font-family: theme(fontFamily.mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgb(var(--muted)); opacity: 0.8; transition: opacity 300ms;
+  }
+  .ruang-petunjuk i { width: 1px; height: 28px; background: linear-gradient(to bottom, rgb(var(--brand-sky)), transparent); display: block; animation: ruang-turun 1.6s ease-in-out infinite; }
+  .ruang-dalam .ruang-petunjuk { opacity: 0; }
+  @keyframes ruang-turun {
+    0% { transform: translateY(-6px); opacity: 0; }
+    40% { opacity: 1; }
+    100% { transform: translateY(10px); opacity: 0; }
   }
 }

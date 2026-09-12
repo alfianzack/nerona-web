@@ -41,10 +41,12 @@ export function ProofSection({
   id,
   title,
   body,
+  tone = "sunken",
 }: {
   id?: string;
   title: string;
   body: string;
+  tone?: "sunken" | "plain" | "ruang";
 }): JSX.Element | null {
   // Disaring per entri, bukan sekadar dicek kosong: teks metadata dan berkas
   // karyanya datang terpisah, jadi entri boleh terisi lengkap teksnya sambil
@@ -53,7 +55,7 @@ export function ProofSection({
   if (samples.length === 0) return null;
 
   return (
-    <Band id={id} tone="sunken" reveal>
+    <Band id={id} tone={tone} reveal>
       <h2 className="max-w-[20ch] text-balance text-display-2 text-ink">{title}</h2>
       <p className="mt-5 max-w-2xl text-body-lg text-muted">{body}</p>
 

@@ -1,7 +1,7 @@
 import { cn } from "./cn";
 import { Reveal } from "./Reveal";
 
-type BandTone = "plain" | "sunken" | "navy" | "navy-gradient" | "navy-deep";
+type BandTone = "plain" | "sunken" | "navy" | "navy-gradient" | "navy-deep" | "ruang";
 type BandAlign = "left" | "center";
 
 /**
@@ -37,6 +37,9 @@ const TONES: Record<BandTone, string> = {
   navy: "bg-navy-900 text-white",
   "navy-gradient": "band-navy-glow text-white",
   "navy-deep": "band-navy-deep text-white",
+  // Di dalam Ruang Kata: latarnya panggung, paddingnya lapisan, dan reveal
+  // dimatikan — lapisannya sendiri yang mendekat dari kabur.
+  ruang: "bg-transparent",
 };
 
 export function Band({
@@ -79,10 +82,14 @@ export function Band({
   return (
     <section
       id={id}
-      className={cn("px-6", padat ? "py-band-padat" : "py-band", TONES[tone], className)}
+      className={cn(
+        tone === "ruang" ? "px-0 py-0" : cn("px-6", padat ? "py-band-padat" : "py-band"),
+        TONES[tone],
+        className,
+      )}
     >
       <div className={cn("mx-auto max-w-band", align === "center" && "text-center")}>
-        {reveal ? <Reveal>{children}</Reveal> : children}
+        {reveal && tone !== "ruang" ? <Reveal>{children}</Reveal> : children}
       </div>
     </section>
   );

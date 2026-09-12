@@ -33,14 +33,16 @@ export function CtaBanner({
   body,
   ctaLabel,
   ctaHref,
+  tone = "navy-gradient",
 }: {
   title: string;
   body: string;
   ctaLabel: string;
   ctaHref: string;
+  tone?: "navy-gradient" | "ruang";
 }) {
   return (
-    <Band tone="navy-gradient" align="center" reveal>
+    <Band tone={tone} align="center" reveal>
       <h2 className="text-balance text-display-2 text-white">{title}</h2>
       <p className="mx-auto mt-5 max-w-[42ch] text-balance text-lead text-navy-100">{body}</p>
       <ButtonLink href={ctaHref} variant="secondary" size="lg" className="mt-9">
