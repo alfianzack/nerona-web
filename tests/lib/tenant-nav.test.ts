@@ -129,7 +129,6 @@ describe("marketing navigation", () => {
 
   it("offers in-page anchors for the single-product landing", () => {
     expect(marketingNav(false).map((i) => i.href)).toEqual([
-      "/#fitur",
       "/pricing",
       "/#faq",
     ]);

@@ -1,17 +1,13 @@
 import { Hero } from "@/components/marketing/Hero";
 import { TrustBar } from "@/components/marketing/TrustBar";
 import { DemoBand } from "@/components/marketing/DemoBand";
-import { KeyNumbersSection } from "@/components/marketing/KeyNumbersSection";
-import { ContributorPainSection } from "@/components/marketing/ContributorPainSection";
 import { ProofSection } from "@/components/marketing/ProofSection";
-import { BatchDanRejectSection } from "@/components/marketing/BatchDanRejectSection";
 import { MarketplaceRow } from "@/components/marketing/MarketplaceRow";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { CtaBanner } from "@/components/marketing/CtaBanner";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { metadataTiers } from "@/lib/pricing-tiers";
 import { getTopupPackages, perPointLabel } from "@/lib/topup";
-import { rejectAnalyzerAvailability } from "@/lib/marketing-plans";
 import { defaultModelPointsPerImage, gambarPerPoin } from "@/lib/marketing-points";
 import { demoVideoUrl } from "@/lib/marketing-demo";
 import { DEFAULT_PLAN_POINTS } from "@/lib/plan-points";
@@ -21,7 +17,24 @@ import { metadataFaqBeranda } from "@/lib/marketing-faq";
  * Beranda satu produk: halaman jualan Nerona Metadata.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * DELAPAN SEKSI, BUKAN SEBELAS
+ * LIMA SEKSI, BUKAN DELAPAN
+ * ─────────────────────────────────────────────────────────────────────────
+ * Tiga seksi lagi dibuang 2026-09-12 atas permintaan owner ("kurang menarik"):
+ * baris tiga angka (KeyNumbersSection), keluhan kontributor
+ * (ContributorPainSection), dan pita batch + analisis penolakan
+ * (BatchDanRejectSection). Komponennya tetap ada di repo, seperti
+ * ComparisonSection sebelumnya. Yang tersisa: hero, contoh hasil, harga, FAQ,
+ * penutup — plus dua rak tipis di bawah hero.
+ *
+ * Yang IKUT hilang: anchor `#fitur`. Tautan "Fitur" di bilah atas sempat
+ * dibiarkan menunjuk ke tujuan yang tidak ada, lalu DIHAPUS dari
+ * marketingNav() hari yang sama: tautan nav tanpa tujuan adalah cacat, bukan
+ * cadangan (antislop R-24). Kalau seksi fitur kembali, kembalikan tautannya
+ * bersama seksinya, bukan sebaliknya.
+ *
+ * Riwayat pemangkasan sebelumnya (sebelas → delapan) tetap di bawah, karena
+ * alasan tiap potongannya masih berlaku.
+ *
  * ─────────────────────────────────────────────────────────────────────────
  * Susunan sebelumnya sudah memecah monokultur BENTUK — empat bentuk seksi
  * berbeda menyisip di antara pita dua-kolom. Yang belum dipecah adalah
@@ -76,10 +89,9 @@ export async function HomeMetadataOnly() {
 
   // Satu putaran untuk sisanya: bagian-bagian ini tidak saling bergantung, dan
   // beranda adalah halaman yang paling sering dibuka.
-  const [tiers, topupPackages, reject, demoUrl] = await Promise.all([
+  const [tiers, topupPackages, demoUrl] = await Promise.all([
     metadataTiers(1, poinPerGambar),
     getTopupPackages(),
-    rejectAnalyzerAvailability(),
     demoVideoUrl(),
   ]);
 
@@ -151,12 +163,8 @@ export async function HomeMetadataOnly() {
 
       {/* Mengembalikan kosong sampai URL videonya diisi owner — lihat
           lib/marketing-demo.ts. Sampai saat itu, halaman melompat langsung ke
-          tiga angka, dan tidak ada satu pun bingkai kosong yang tertinggal. */}
+          contoh hasil, dan tidak ada satu pun bingkai kosong yang tertinggal. */}
       <DemoBand url={demoUrl} />
-
-      <KeyNumbersSection poinPerGambar={poinPerGambar} />
-
-      <ContributorPainSection />
 
       {/* Bagian terpenting di halaman: satu-satunya yang MEMPERLIHATKAN mutu
           AI alih-alih mengatakannya. Judul dan kalimatnya dipangkas jadi dua
@@ -167,20 +175,14 @@ export async function HomeMetadataOnly() {
         body="Karya sungguhan, metadata yang benar-benar dihasilkan Nerona untuknya."
       />
 
-      {/* `id="fitur"` pindah ke sini: nav menunjuk /#fitur, dan seksi yang
-          dulu memegang anchor itu ("Satu klik. N marketplace.") sudah lebur
-          jadi satu angka. Anchor yang menunjuk seksi yang tidak ada lagi
-          membawa pengunjung ke dasar halaman tanpa satu pun galat. */}
-      <BatchDanRejectSection id="fitur" reject={reject} />
-
-      {/* Cekung, dan FAQ di bawahnya justru polos.
-          Sebelumnya kebalikannya, dan akibatnya empat pita putih berdiri
-          hampir berturut-turut (angka, keluhan, batch, harga) dengan cuma satu
-          pita cekung menyela — itulah "banyak kartu putih" yang terlihat.
-          Ditukar begini, iramanya jadi polos-polos-cekung-polos-cekung-polos
-          -navy, sama dengan mockup navy-amber. */}
+      {/* POLOS, karena contoh hasil di atasnya sudah cekung.
+          Sebelum tiga seksi dipangkas, di antara keduanya ada dua pita polos,
+          jadi harga yang cekung memang bergantian. Sekarang mereka
+          bersebelahan, dan dua pita cekung berturut-turut menghapus satu-satunya
+          tanda "seksi baru dimulai" di sini. Iramanya kini: cekung (contoh),
+          polos (harga), cekung (FAQ), navy (penutup). */}
       <PricingTiers
-        tone="sunken"
+        tone="plain"
         id="pricing"
         heading="Harga Nerona Metadata"
         subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali — aksesnya berlaku selamanya."
@@ -190,14 +192,14 @@ export async function HomeMetadataOnly() {
       />
 
       {/* Enam pertanyaan, bukan sebelas — sisanya di /faq, dan FaqSection
-          sendiri yang menautkannya.
-
-          POLOS, dan pita harga di atasnya yang cekung — kebalikan dari susunan
-          sebelumnya. Susunan lama membuat harga dan FAQ sama-sama putih; yang
-          ini menaruh cekungnya di harga, jadi iramanya berselang benar sampai
-          ke dasar: polos, polos, cekung, polos, cekung, polos, navy. Menaruh
-          cekung di keduanya cuma memindahkan cacatnya satu pita ke bawah. */}
-      <FaqSection id="faq" items={metadataFaqBeranda({ poinPerGambar })} semuaHref="/faq" />
+          sendiri yang menautkannya. Cekung, mengapit harga yang polos; lihat
+          komentar di atas PricingTiers. */}
+      <FaqSection
+        id="faq"
+        tone="sunken"
+        items={metadataFaqBeranda({ poinPerGambar })}
+        semuaHref="/faq"
+      />
 
       <CtaBanner
         title="Coba gratis hari ini"

@@ -19,9 +19,13 @@ export type NavSection = { title?: string; items: SidebarItem[] };
 // /pricing rather than the landing's own pricing block, because /pricing is
 // the only place the 3/6/12-month duration switcher lives.
 export function marketingNav(agentEnabled: boolean): NavItem[] {
+  // "Fitur" dulu menunjuk /#fitur. Seksi pemegang anchor itu dibuang dari
+  // beranda 2026-09-12, dan tautan nav ke tujuan yang tidak ada adalah cacat,
+  // bukan cadangan (antislop R-24) — jadi butirnya ikut dibuang, bukan
+  // dipindahkan diam-diam ke seksi lain. Kembalikan hanya bersama seksi yang
+  // benar-benar memegang anchornya.
   if (!agentEnabled) {
     return [
-      { href: "/#fitur", label: "Fitur" },
       { href: "/pricing", label: "Harga" },
       { href: "/#faq", label: "FAQ" },
     ];
