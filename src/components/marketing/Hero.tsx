@@ -4,6 +4,7 @@ import { Band } from "@/components/ui/Band";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { TextLink } from "@/components/ui/TextLink";
 import { Icon } from "@/components/ui/icons";
+import { HeroKeywordColumns } from "./HeroKeywordColumns";
 import { MetadataCardMockup } from "./mockups/MetadataCardMockup";
 
 /**
@@ -99,7 +100,21 @@ export function Hero({ freePoints = DEFAULT_PLAN_POINTS.metadata.free }: { freeP
   const facts = heroFacts(freePoints);
 
   return (
-    <Band tone="navy-gradient">
+    // `overflow-hidden` KEMBALI, dan sebabnya bukan sebab lama.
+    //
+    // Docblock di atas mencatat blob emas kabur dibuang karena ia "satu-satunya
+    // alasan bagian ini butuh overflow-hidden". Yang memintanya sekarang kolom
+    // kata kunci: kolomnya sengaja menjorok 240px ke atas dan ke bawah pita
+    // supaya parallax-nya tidak pernah meninggalkan ruang kosong, dan
+    // kelebihannya harus dipotong di tepi pita.
+    //
+    // `relative` dipasang di sini, bukan di dalam komponen kolomnya, karena
+    // yang harus jadi wadah pemosisian adalah PITA-nya — selokan yang mau
+    // diisi kolom itu berada di luar wadah `max-w-band`, jadi menjadikan wadah
+    // isi sebagai patokan justru mengurung kolomnya di tempat yang salah.
+    <Band tone="navy-gradient" className="relative overflow-hidden">
+      <HeroKeywordColumns />
+
       {/* Kartu jauh lebih pendek dari kolom teks, jadi items-center — rata atas
           akan menggantungnya di sepertiga atas dengan ruang kosong menganga di
           bawahnya. Kolom kanan dipatok minmax(0,380px), bukan pecahan: kartu

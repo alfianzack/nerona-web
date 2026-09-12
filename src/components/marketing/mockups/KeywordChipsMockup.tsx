@@ -1,40 +1,15 @@
 /**
- * Kata kuncinya WAJIB berbahasa Inggris — lihat sebab lengkapnya di
- * MetadataCardMockup. Ringkasnya: prompt produksi menuliskan "English only", dan
- * contoh berbahasa Indonesia memberi tahu kontributor berpengalaman bahwa
- * karyanya akan ditolak marketplace.
+ * Daftarnya sendiri sekarang tinggal di lib/marketing-keywords, karena hero
+ * ikut memakainya — aturan "wajib berbahasa Inggris" dan sebabnya pindah ke
+ * sana bersama daftarnya.
  *
- * Jumlahnya sengaja banyak. Bagian ini berjudul "Puluhan kata kunci hasil AI",
- * dan versi sebelumnya menampilkan sepuluh — bukti yang menyanggah klaimnya
- * sendiri. Sekarang jumlahnya benar-benar puluhan, jadi pembaca menghitungnya
- * dan klaimnya terbukti tanpa satu kalimat tambahan.
+ * Yang tetap jadi keputusan BERKAS INI: menampilkan daftar itu utuh, tanpa
+ * dipotong. Bagian ini berjudul "Puluhan kata kunci hasil AI", dan versi
+ * sebelumnya menampilkan sepuluh — bukti yang menyanggah klaimnya sendiri.
+ * Sekarang pembaca bisa menghitungnya dan klaimnya terbukti tanpa satu kalimat
+ * tambahan, jadi jangan diberi slice.
  */
-const KEYWORDS = [
-  "city skyline",
-  "golden hour",
-  "aerial view",
-  "coastal city",
-  "harbour",
-  "waterfront",
-  "cityscape",
-  "urban skyline",
-  "sunset",
-  "architecture",
-  "modern city",
-  "travel destination",
-  "downtown",
-  "high rise",
-  "office building",
-  "bay",
-  "reflection",
-  "dusk",
-  "panorama",
-  "drone shot",
-  "business district",
-  "skyscraper",
-  "tourism",
-  "seaside",
-];
+import { SAMPLE_KEYWORDS } from "@/lib/marketing-keywords";
 
 export function KeywordChipsMockup() {
   return (
@@ -43,10 +18,10 @@ export function KeywordChipsMockup() {
         <p className="font-mono text-label uppercase text-muted">
           Kata kunci hasil AI, siap disunting
         </p>
-        <p className="font-mono text-label tabular-nums text-muted">{KEYWORDS.length}</p>
+        <p className="font-mono text-label tabular-nums text-muted">{SAMPLE_KEYWORDS.length}</p>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {KEYWORDS.map((word) => (
+        {SAMPLE_KEYWORDS.map((word) => (
           <span
             key={word}
             className="rounded-chip bg-surface-sunken px-3 py-1 text-caption font-medium text-muted"

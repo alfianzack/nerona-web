@@ -98,7 +98,11 @@ const config: Config = {
         "band-padat": "calc(var(--band) * 0.55)",
       },
       maxWidth: {
-        band: "980px",
+        // Angkanya tinggal di globals.css sebagai `--band-w`, bukan di sini:
+        // kolom kata kunci hero menghitung selokan dari lebar yang sama, dan
+        // dua tempat yang menyimpan angka yang sama adalah dua tempat yang
+        // akan berbeda.
+        band: "var(--band-w)",
       },
       /**
        * Urutan "AI sedang menulis metadata" di kartu hero.

@@ -75,6 +75,18 @@
     --shadow-float: 0 8px 24px -8px rgb(15 23 36 / 0.18);
 
     --band: 72px;
+
+    /* Lebar isi pita. Sengaja DIPISAH namanya dari `--band` di atas, yang
+       adalah irama VERTIKAL — keduanya sempat sama-sama disebut "band" dan
+       akibatnya sudah terjadi sekali: sebuah calc() mengambil `var(--band)`
+       untuk menghitung lebar selokan hero, mendapat 72px alih-alih 980px, dan
+       tetap menghasilkan kolom yang kelihatan masuk akal sehingga salahnya
+       tidak ketahuan sampai lebarnya benar-benar diukur di peramban.
+
+       Nilainya dipakai dua pihak: `maxWidth.band` di tailwind.config.ts (yang
+       membacanya dari sini, bukan menyalin angkanya) dan kolom kata kunci di
+       hero. Satu sumber, jadi menggeser lebar pita menggeser keduanya. */
+    --band-w: 980px;
   }
 
   /**
