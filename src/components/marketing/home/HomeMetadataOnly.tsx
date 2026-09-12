@@ -176,6 +176,7 @@ export async function HomeMetadataOnly() {
         <Lapisan {...lapisan[2]}>
           <PricingTiers
             tone="ruang"
+            ringkas
             heading="Harga Nerona Metadata"
             subheading="Paket Free memberi poin percobaan sekali per akun. Paket berbayar dibeli sekali, aksesnya berlaku selamanya."
             tiers={tiers}

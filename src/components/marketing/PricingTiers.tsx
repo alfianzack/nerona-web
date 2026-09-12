@@ -56,11 +56,15 @@ export function fullPriceLabel(tier: Pick<PricingTier, "priceLabel" | "priceNote
  * lingkaran berlatar emerald/rose dengan glyph ✓ dan ✕ — dua warna status
  * tambahan di kartu yang sudah punya biru, emas, dan hijau sekaligus.
  */
-function FeatureIcon({ included }: { included: boolean }) {
+function FeatureIcon({ included, ringkas = false }: { included: boolean; ringkas?: boolean }) {
   return (
     <Icon
       name={included ? "check" : "close"}
-      className={cn("mt-1 h-4 w-4 flex-none", included ? "text-accent" : "text-muted")}
+      className={cn(
+        "flex-none",
+        ringkas ? "mt-0.5 h-3.5 w-3.5" : "mt-1 h-4 w-4",
+        included ? "text-accent" : "text-muted",
+      )}
     />
   );
 }
@@ -79,9 +83,25 @@ function FeatureIcon({ included }: { included: boolean }) {
  * 4. Daftar fitur yang memanjang (`flex-1`) mendorong tombol ke dasar kartu,
  *    jadi jumlah fitur yang berbeda tidak lagi menggeser tombolnya.
  */
-export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
+export function PricingTierGrid({
+  tiers,
+  ringkas = false,
+}: {
+  tiers: PricingTier[];
+  /**
+   * Versi ringkas untuk Ruang Kata.
+   *
+   * Di dalam ruang, lapisan yang lebih tinggi dari panggungnya diskalakan
+   * supaya muat saat fokus, dan tabel harga penuh (±940px) turun ke 0,66 pada
+   * 1280×720 — huruf 9–10px. Alih-alih mengecilkan seluruhnya, kartunya yang
+   * dirapatkan: padding md, harga title-2, fitur caption, tagline satu baris.
+   * Isinya (nama, harga, empat fitur, tombol) sama persis; yang berubah hanya
+   * napasnya. /pricing tetap memakai versi penuh.
+   */
+  ringkas?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+    <div className={cn("grid grid-cols-1 sm:grid-cols-3", ringkas ? "gap-4" : "gap-6")}>
       {tiers.map((tier) => {
         // Varian accent, bukan default plus cincin dari luar: menimpa cincin
         // lewat className gagal secara diam-diam. Sebabnya ditulis di Card.tsx.
@@ -89,7 +109,7 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
           <Card
             key={tier.name}
             variant={tier.featured ? "unggulan" : "default"}
-            padding="lg"
+            padding={ringkas ? "md" : "lg"}
             className="relative flex h-full flex-col"
           >
             {/* Aksen, bukan emas: halaman publik hanya punya satu warna aksen,
@@ -105,7 +125,9 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
             <h3 className="text-title-2 text-ink">{tier.name}</h3>
             {/* Dua baris dipesan di sini, bukan disamakan belakangan: caption
                 12px × line-height 1.5 = 18px per baris. */}
-            <p className="mt-1 min-h-[2.25rem] text-caption text-muted">{tier.tagline}</p>
+            <p className={cn("mt-1 text-caption text-muted", ringkas ? "truncate" : "min-h-[2.25rem]")}>
+              {tier.tagline}
+            </p>
 
             {/* Harga kartu unggulan ber-amber-gelap (`emphasis`), bukan
                 amber mentah: angka sebesar ini di atas putih adalah tempat
@@ -113,7 +135,8 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
                 jadi LATAR tombol, bukan warna teks. */}
             <p
               className={cn(
-                "mt-4 text-title-1 tabular-nums",
+                "tabular-nums",
+                ringkas ? "mt-3 text-title-2" : "mt-4 text-title-1",
                 tier.featured ? "text-emphasis" : "text-ink",
               )}
             >
@@ -126,12 +149,12 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
               <p className="mt-1.5 text-caption text-success">{tier.savingsLabel}</p>
             )}
 
-            <div className="my-6 h-px bg-divider" />
+            <div className={cn("h-px bg-divider", ringkas ? "my-4" : "my-6")} />
 
-            <ul className="flex-1 space-y-3 text-body text-ink">
+            <ul className={cn("flex-1 text-ink", ringkas ? "space-y-2 text-caption" : "space-y-3 text-body")}>
               {tier.features.map((feature) => (
                 <li key={feature.label} className="flex items-start gap-2.5">
-                  <FeatureIcon included={feature.included} />
+                  <FeatureIcon included={feature.included} ringkas={ringkas} />
                   <span className={feature.included ? "" : "text-muted line-through decoration-1"}>
                     {/* Satu-satunya penanda "tidak termasuk" di baris ini
                         dulunya adalah coretan CSS dan sebuah glyph di dalam
@@ -159,7 +182,7 @@ export function PricingTierGrid({ tiers }: { tiers: PricingTier[] }) {
                 cincin dan pitanya — bukan tombolnya, karena tombol emas di
                 sebelah tombol abu-abu membuat paket lain terlihat seperti
                 pilihan yang salah. */}
-            <ButtonLink href={tier.href} full className="mt-7">
+            <ButtonLink href={tier.href} full className={ringkas ? "mt-5" : "mt-7"}>
               {tier.cta}
             </ButtonLink>
           </Card>
@@ -194,10 +217,13 @@ export function PricingTiers({
   tiers,
   catatanPoin,
   catatanIsiUlang,
+  ringkas = false,
 }: {
   id?: string;
   /** Nada pita, supaya irama latar halaman bisa diatur dari pemanggilnya. */
   tone?: "plain" | "sunken" | "ruang";
+  /** Kartu & catatan versi ringkas; lihat PricingTierGrid. */
+  ringkas?: boolean;
   heading: string;
   subheading: string;
   tiers: PricingTier[];
@@ -226,25 +252,34 @@ export function PricingTiers({
   return (
     <Band id={id} tone={tone} align="center" reveal>
       <h2 className="text-balance text-display-2 text-ink">{heading}</h2>
-      <p className="mx-auto mt-5 max-w-[46ch] text-balance text-lead text-muted">{subheading}</p>
+      <p
+        className={cn(
+          "mx-auto max-w-[46ch] text-balance text-muted",
+          ringkas ? "mt-3 text-body-lg" : "mt-5 text-lead",
+        )}
+      >
+        {subheading}
+      </p>
 
       {/* Yang rata tengah cuma judul pitanya; isi kartu tetap rata kiri supaya
           daftar fiturnya bisa dibaca menurun. */}
-      <div className="mt-14 text-left">
-        <PricingTierGrid tiers={tiers} />
+      <div className={cn("text-left", ringkas ? "mt-8" : "mt-14")}>
+        <PricingTierGrid tiers={tiers} ringkas={ringkas} />
       </div>
 
       {/* Di atas catatan pembayaran, bukan di bawahnya: yang dibaca orang tepat
           setelah melihat tiga angka poin adalah "berapa gambar itu?", bukan
           "bagaimana cara transfernya". */}
       {catatanPoin && (
-        <p className="mx-auto mt-10 max-w-[64ch] text-caption text-muted">{catatanPoin}</p>
+        <p className={cn("mx-auto max-w-[64ch] text-caption text-muted", ringkas ? "mt-6" : "mt-10")}>
+          {catatanPoin}
+        </p>
       )}
 
       {/* Isi ulang, satu baris. Berdiri di ukuran body, bukan caption: ini
           jawaban atas keberatan yang sungguhan, bukan catatan kaki. */}
       {catatanIsiUlang && (
-        <p className="mx-auto mt-6 max-w-[64ch] text-body text-muted">
+        <p className={cn("mx-auto max-w-[64ch] text-muted", ringkas ? "mt-2 text-caption" : "mt-6 text-body")}>
           {catatanIsiUlang}{" "}
           <TextLink href="/finance" className="font-semibold">
             Isi ulang di halaman Keuangan
@@ -252,11 +287,17 @@ export function PricingTiers({
         </p>
       )}
 
+      {/* Di versi ringkas paragraf tata cara bayar tidak ikut: jawabannya sudah
+          ada di FAQ satu lapisan di bawahnya ("Bagaimana cara pembayarannya?")
+          dan di /pricing, dan tiga barisnya sendirian memakan ±60px dari
+          anggaran tinggi lapisan. */}
+      {!ringkas && (
       <p className={cn("mx-auto max-w-[64ch] text-caption text-muted", catatanPoin ? "mt-3" : "mt-10")}>
         Paket dibeli sekali dan aksesnya berlaku selamanya: tidak ada tagihan bulanan dan tidak ada
         perpanjangan. Pembayaran diatur langsung dengan tim Nerona: pilih paket, kirim order,
         selesaikan pembayaran, dan akun Anda diaktifkan. Paket Free aktif seketika tanpa pembayaran.
       </p>
+      )}
     </Band>
   );
 }
