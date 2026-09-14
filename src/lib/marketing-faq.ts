@@ -70,7 +70,7 @@ export interface MetadataFaqOptions {
  */
 function patokan(poinPerGambar: number | null): string {
   if (poinPerGambar === null || poinPerGambar <= 0) return "";
-  return ` Dengan model bawaan hari ini, satu gambar memakai sekitar ${poinPerGambar.toLocaleString("id-ID")} poin — jadi Anda bisa memperkirakan sendiri berapa gambar yang tercakup sebuah paket.`;
+  return ` Dengan model bawaan hari ini, satu gambar memakai sekitar ${poinPerGambar.toLocaleString("id-ID")} poin, jadi Anda bisa memperkirakan sendiri berapa gambar yang tercakup sebuah paket.`;
 }
 
 export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaqItem[] {
@@ -116,7 +116,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     {
       question: "Bisa dipakai untuk vektor, atau cuma foto?",
       answer:
-        "Bisa. Yang dibaca alat ini adalah gambar pratinjau yang sudah tampil di halaman unggah, jadi vektor, ilustrasi, dan render 3D diperlakukan sama seperti foto — Vecteezy bahkan punya aturan judul dan kata kuncinya sendiri di dalam alat. Video belum didukung: yang dibaca ekstensi adalah gambar di halaman, dan berkas video tidak muncul sebagai gambar.",
+        "Bisa. Yang dibaca alat ini adalah gambar pratinjau yang sudah tampil di halaman unggah, jadi vektor, ilustrasi, dan render 3D diperlakukan sama seperti foto. Vecteezy bahkan punya aturan judul dan kata kuncinya sendiri di dalam alat. Video belum didukung: yang dibaca ekstensi adalah gambar di halaman, dan berkas video tidak muncul sebagai gambar.",
     },
 
     /**
@@ -129,26 +129,31 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     {
       question: "Metadata yang dihasilkan berbahasa apa?",
       answer:
-        "Inggris, selalu. Adobe Stock dan Shutterstock menilai metadata dalam bahasa Inggris, jadi prompt produksi kami meminta bahasa Inggris untuk judul, deskripsi, dan setiap kata kunci — tidak ada saklar bahasa yang bisa mengubahnya. Antarmuka Nerona tetap bahasa Indonesia; yang berbahasa Inggris hanya isi metadatanya.",
+        "Inggris, selalu. Adobe Stock dan Shutterstock menilai metadata dalam bahasa Inggris, jadi prompt produksi kami meminta bahasa Inggris untuk judul, deskripsi, dan setiap kata kunci. Tidak ada saklar bahasa yang bisa mengubahnya. Antarmuka Nerona tetap bahasa Indonesia; yang berbahasa Inggris hanya isi metadatanya.",
     },
 
     /**
-     * Sumber: prompts.ts meminta "exactly 50 strings", lalu content.js memotong
-     * sesuai tujuan di getMarketplaceKeywordMax — Canva 20 (komentarnya menyebut
-     * chip ke-21 ditolak diam-diam), Miricanvas 25, sisanya 50. Pembuangan
-     * duplikat, kata sambung yang berdiri sendiri, dan tag placeholder ada di
-     * isBlockedMarketplaceKeyword + KEYWORD_STANDALONE_STOPWORDS.
+     * Sumber: prompts.ts, lalu content.js yang memotong sesuai tujuan di
+     * getMarketplaceKeywordMax: Canva 20 (komentarnya menyebut chip ke-21
+     * ditolak diam-diam), Miricanvas 25, sisanya mengikuti profil prompt.
+     * Pembuangan duplikat, kata sambung yang berdiri sendiri, dan tag
+     * placeholder ada di isBlockedMarketplaceKeyword +
+     * KEYWORD_STANDALONE_STOPWORDS.
      *
      * Sejak 2026-08-21 tidak semua kata kunci datang dari AI: kalau halaman
-     * marketplace menawarkan saran sendiri, saran itu dipakai lebih dulu dan sisa
-     * slot diisi keluaran AI (marketplaces/suggestion-merge.js di extension).
-     * Plafonnya tidak berubah — yang berubah asalnya, jadi pertanyaannya tidak
-     * lagi bisa dijawab dengan "semuanya dari AI".
+     * marketplace menawarkan saran sendiri, saran itu dipakai lebih dulu dan
+     * sisa slot diisi keluaran AI (marketplaces/suggestion-merge.js).
+     *
+     * Yang BERUBAH 2026-09-14 bersama prompt v4: tidak ada lagi angka yang
+     * wajib dipenuhi. Dulu prompt meminta "exactly 50 strings" dan jawaban ini
+     * menjanjikan "sampai 50"; sekarang profil marketplace hanya memberi batas
+     * atas, lantainya 5, dan modelnya diminta berhenti begitu kata kunci
+     * jujurnya habis. Angka di jawaban ini batas, bukan janji.
      */
     {
       question: "Berapa kata kunci yang dihasilkan per gambar?",
       answer:
-        "Sampai 50, dan jumlahnya mengikuti batas marketplace tujuan: Canva 20, Miricanvas 25, sisanya 50. Kalau halaman unggahnya sendiri sudah menawarkan kata kunci, saran itu dipakai lebih dulu dan sisanya diisi keluaran AI. Duplikat, kata sambung yang berdiri sendiri seperti “for” atau “with”, dan tag sisa format dibuang sebelum kata kuncinya masuk ke formulir.",
+        "Sebanyak yang benar-benar terlihat di gambar, bukan jumlah yang dikejar. Prompt produksi memberi batas atas per marketplace (Canva 20, Miricanvas 25, sisanya 40) dan batas bawah 5, lalu berhenti begitu kata kunci yang jujur habis. Pada ikon sederhana biasanya belasan, pada foto yang padat bisa mendekati batasnya. Kalau halaman unggahnya sendiri sudah menawarkan kata kunci, saran itu dipakai lebih dulu dan sisanya diisi keluaran AI. Duplikat, kata sambung yang berdiri sendiri seperti “for” atau “with”, dan tag sisa format dibuang sebelum kata kuncinya masuk ke formulir.",
     },
 
     /**
@@ -166,7 +171,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     {
       question: "Apakah nama merek atau logo ikut jadi kata kunci?",
       answer:
-        "Tidak seharusnya. Prompt kami melarang merek berhak cipta, nama selebritas, dan mengarang lokasi atau peristiwa yang tidak terlihat di gambar — persis yang bikin metadata ditolak. Yang perlu Anda tahu: itu instruksi ke AI, bukan daftar-hitam merek di sisi kami, jadi kalau ada logo yang benar-benar terlihat di karya Anda, periksa sekali sebelum kirim.",
+        "Tidak seharusnya. Prompt kami melarang merek berhak cipta, nama selebritas, dan mengarang lokasi atau peristiwa yang tidak terlihat di gambar, persis yang bikin metadata ditolak. Yang perlu Anda tahu: itu instruksi ke AI, bukan daftar-hitam merek di sisi kami, jadi kalau ada logo yang benar-benar terlihat di karya Anda, periksa sekali sebelum kirim.",
     },
 
     /**
@@ -184,7 +189,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
       question: "Gambar saya diunggah ke server Nerona?",
       beranda: true,
       answer:
-        "Berkas asli di komputer Anda tidak pernah dibuka. Yang dikirim adalah salinan kecil dari pratinjau yang sudah tampil di halaman unggah — diperkecil sampai sisi terpanjang 1280 piksel dan dijadikan JPEG di browser Anda, dipakai sekali untuk dibaca AI, lalu tidak disimpan. Yang tersimpan hanya baris riwayat: marketplace, alamat halaman, judul, dan kata kunci hasilnya.",
+        "Berkas asli di komputer Anda tidak pernah dibuka. Yang dikirim adalah salinan kecil dari pratinjau yang sudah tampil di halaman unggah: diperkecil sampai sisi terpanjang 1280 piksel dan dijadikan JPEG di browser Anda, dipakai sekali untuk dibaca AI, lalu tidak disimpan. Yang tersimpan hanya baris riwayat: marketplace, alamat halaman, judul, dan kata kunci hasilnya.",
     },
 
     /**
@@ -199,7 +204,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
       question: "Apa itu poin, dan bagaimana kalau habis?",
       beranda: true,
       answer:
-        "Poin terpakai setiap kali AI bekerja — besarnya tergantung gambar dan panjang teks yang diproses." +
+        "Poin terpakai setiap kali AI bekerja: besarnya tergantung gambar dan panjang teks yang diproses." +
         patokan(poinPerGambar) +
         " Alat berhenti sementara kalau poin habis, dan Anda bisa isi ulang kapan saja tanpa berlangganan. Poin yang belum terpakai tidak hangus.",
     },
@@ -214,7 +219,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     {
       question: "Apakah ada tagihan bulanan?",
       answer:
-        "Tidak ada. Paket dibeli sekali dan aksesnya berlaku selamanya — tidak ada perpanjangan, tidak ada tagihan berulang, dan kami tidak menyimpan data pembayaran Anda. Yang habis hanya poin, dan itu pun hanya diisi kalau Anda memang mau melanjutkan.",
+        "Tidak ada. Paket dibeli sekali dan aksesnya berlaku selamanya, tidak ada perpanjangan, tidak ada tagihan berulang, dan kami tidak menyimpan data pembayaran Anda. Yang habis hanya poin, dan itu pun hanya diisi kalau Anda memang mau melanjutkan.",
     },
     {
       question: "Bagaimana cara memasang ekstensinya?",
@@ -226,7 +231,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
       question: "Bagaimana cara pembayarannya?",
       beranda: true,
       answer:
-        "Lewat transfer bank. Pilih paket, kirim order, transfer sesuai nominal, lalu unggah bukti transfer — tim kami memverifikasi dan mengaktifkan akun Anda, biasanya di hari yang sama.",
+        "Lewat transfer bank. Pilih paket, kirim order, transfer sesuai nominal, lalu unggah bukti transfer. Tim kami memverifikasi dan mengaktifkan akun Anda, biasanya di hari yang sama.",
       },
 
     /**
@@ -246,7 +251,7 @@ export function metadataFaq({ poinPerGambar }: MetadataFaqOptions): MarketingFaq
     {
       question: "Bagaimana kalau saya minta pengembalian dana?",
       answer:
-        "Hubungi tim Nerona lewat halaman Kontak. Karena pembayarannya lewat transfer dan aktivasinya dilakukan tim kami, permintaan pengembalian dana ditangani satu per satu — sebutkan nomor order Anda beserta alasannya, dan kami jawab di hari kerja yang sama.",
+        "Hubungi tim Nerona lewat halaman Kontak. Karena pembayarannya lewat transfer dan aktivasinya dilakukan tim kami, permintaan pengembalian dana ditangani satu per satu. Sebutkan nomor order Anda beserta alasannya, dan kami jawab di hari kerja yang sama.",
     },
   ];
 }

@@ -112,12 +112,12 @@ export function PromptPresetManager() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-title-2 text-ink">
-              {aktif ? `Prompt saya — ${aktif.name}` : "Prompt Nerona"}
+              {aktif ? `Prompt saya: ${aktif.name}` : "Prompt Nerona"}
             </h2>
             <p className="mt-1 max-w-prose text-body text-muted">
               {aktif
                 ? "Prompt Anda yang dipakai untuk setiap generate metadata, di extension maupun di Nerona Hub."
-                : "Prompt bawaan Nerona: menghasilkan judul, deskripsi, dan 50 keyword yang berorientasi pembeli. Sudah dipakai sekarang — tidak ada yang perlu Anda atur."}
+                : "Prompt bawaan Nerona: menghasilkan judul, deskripsi, dan kata kunci yang berorientasi pembeli, sebanyak yang benar-benar terlihat di gambar. Sudah dipakai sekarang, tidak ada yang perlu Anda atur."}
             </p>
           </div>
           {aktif && (
@@ -142,7 +142,7 @@ export function PromptPresetManager() {
 
         {penuh && (
           <p className="mt-2 text-caption text-muted">
-            Sudah {MAX_PRESET} preset — hapus salah satu dulu untuk menambah.
+            Sudah {MAX_PRESET} preset. Hapus salah satu dulu untuk menambah.
           </p>
         )}
 
@@ -150,7 +150,7 @@ export function PromptPresetManager() {
           <p className="mt-4 text-body text-muted">Memuat…</p>
         ) : presets.length === 0 && editingId === null ? (
           <p className="mt-4 max-w-prose text-body text-muted">
-            Belum ada. Anda bisa menulis prompt sendiri — misalnya untuk satu niche tertentu — dan
+            Belum ada. Anda bisa menulis prompt sendiri (misalnya untuk satu niche tertentu) dan
             menyalakannya kapan saja. Selama belum dinyalakan, prompt Nerona yang dipakai.
           </p>
         ) : (

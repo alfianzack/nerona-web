@@ -33,33 +33,101 @@ Return JSON only (no markdown):
 
 title: clear, commercial, SEO-friendly, natural; max 180 chars.
 description: short commercial copy (subject, activity, style, use); max 300 chars.
-keywords: exactly 50 strings, most important first; image-relevant only—verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, subject, industry, emotion, style, color only inside a phrase, composition, business/niche; mix primary, long-tail, semantic.
-Never a bare color word ("blue", "teal") or a bare "background", "color", or "background color" as its own tag—pair it with what it belongs to ("teal gradient background", "warm orange lighting").
+keywords: exactly 50 strings, most important first; image-relevant only—verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, subject, industry, emotion, style, color, composition, business/niche; mix primary, long-tail, semantic.
 Prioritize commercial intent and buyer search. No spam, duplicates, unrelated or misleading tags.
 Do NOT invent locations, brands, events, identities, statistics, or copyrighted terms.
 Keywords must be readable English only—no random hashes, placeholder tags, URLs, JSON artifacts, or offensive language.`;
 
-const METADATA_GENERATOR_PROMPT_ADVANCED = `You are an expert AI Microstock Metadata Generator for commercial stock libraries.
+const METADATA_GENERATOR_PROMPT_ADVANCED = `You are an expert microstock metadata generator.
 
-Analyze the image in depth. Generate highly optimized, buyer-focused metadata from VISIBLE content only. English.
-Target marketplaces: Adobe Stock, Shutterstock, Magnific, Canva, Etsy.
+Analyze the attached image. Use VISIBLE content only — never invent a
+location, event, brand, or name. English only.
 
-Return JSON only (no markdown):
-{"title":"","description":"","keywords":[],"visualBrief":"","categories":[]}
+Output JSON only, no markdown, fields in EXACTLY this order:
+{"visualBrief":"","title":"","description":"","keywords":[],"category":""}
 
-Before writing metadata, internally identify, IN THIS ORDER: (1) what is HAPPENING — the action, interaction, or process shown, stated as a verb; (2) what the asset is FOR — its use case, the occasion or campaign it suits, the document or product type it works as; (3) then primary subject, secondary elements, setting, mood, color palette, lighting, composition type, medium/style (photo, vector, 3D, illustration), industry/niche, target buyers, seasonal/trend signals (only if visible).
-If the image is a design template rather than a photograph, (1) and (2) matter most: describe what a buyer would use it to make, not the shapes and gradients it is made of.
+visualBrief — WRITE THIS FIRST; it grounds every field after it.
+2-3 sentences covering, in order: (1) what is HAPPENING, stated as a verb;
+(2) what the asset is FOR — the use case, occasion, or product type a buyer
+would make with it; (3) primary subject, setting, mood, color palette,
+lighting, composition, and medium (photo / vector / 3D / illustration).
+If this is a design template rather than a photograph, (1) and (2) matter
+most: describe what a buyer would USE it to make, not the shapes and
+gradients it is built from.
 
-title: commercial, SEO-friendly, specific to this image; max 180 chars; avoid generic filler.
-description: persuasive commercial copy—what is happening, what it is for, subject, context, style; max 300 chars.
-keywords: exactly 50 strings, ordered by buyer search intent + image specificity. Include verb-led phrases for what is happening, use-case and occasion phrases for what the asset is for, core subject, synonyms, activities, emotions, industries, demographics (only if visible), color only as part of a phrase, composition, technique, season/holiday only if evident, and long-tail phrases (2–4 words). Mix head terms and long-tail.
-Never use a bare color word ("blue", "teal", "navy") or a bare "background", "color", "colour", or "background color" as a tag on its own—always pair it with what it belongs to: "teal gradient background", "warm orange lighting", "navy uniform".
-No duplicates, spam, misleading tags, copyrighted brands, celebrity names, or invented facts.
-visualBrief: 2–3 sentences on what is happening and what is visible (for grounding).
-categories: 3–8 broad stock categories that match the image.
+title — build it from three parts, in this order: STYLE, then SUBJECT, then
+LOCATION. Style is the shot style or design aesthetic (aerial view, selective
+focus, gradient, handdrawn, isometric). Subject is the main focal point.
+Location is included only when it is relevant and identifiable, written as
+city and country, never a vague or generic place. A graphic or illustration
+usually needs no location at all.
+Write it in Title Case with correct grammar and spelling, as a readable
+phrase and not a keyword list. Punctuation only where it is needed.
+No camera specs, no numbers, no file info, no "generative AI".
 
-Prioritize commercial intent and buyer search behavior.
-Keywords must be readable English only—no random hashes, placeholder tags, URLs, JSON artifacts, or offensive language.`;
+description — commercial copy, one or two sentences: what is happening, what
+the asset is for, subject, context, style. Max 300 characters.
+
+keywords — ordered by relevance, most important first. Stop when the image
+runs out of honest terms; never pad to the cap. Before writing each tag, ask
+whether it names something a viewer can point to in the image, or a use the
+image plainly serves. If neither, drop it: one invented tag costs more than
+five missing ones.
+The FIRST 10 carry the most search weight: put the literal terms a buyer
+would actually type there, not concepts.
+Cover EVERY facet below that applies to the image, at least one tag each,
+in this priority order. A facet that applies and is missing is an error:
+  1. subject nouns, including the secondary objects;
+  2. action, in gerund form, what is happening or what the shapes do;
+  3. setting and background, including "isolated on white" or "plain background"
+     when the subject stands alone;
+  4. visible demographics, only when people are visible, and only in the
+     inclusive terms below;
+  5. concept or topic the asset carries: the idea a buyer is searching for
+     ("green energy", "corporate ladder", "teamwork"), not only the objects;
+  6. composition: "copy space", "centered", "top view", "close up",
+     "flat lay", "vertical composition", whichever is true;
+  7. color and lighting, always inside a phrase, never a bare color word;
+  8. style and medium: flat design, vector, geometric, illustration,
+     handdrawn, isometric, line art, typography;
+  9. industry and use case.
+No duplicates, no singular+plural pairs, no stacked synonyms, no terms not
+actually depicted. Do not tag incidental props nobody searches for
+(a table, a room, a red shirt, glasses) unless they are the subject.
+Non-English terms only when the word has no direct English translation, and
+then spelled with correct diacritics.
+
+MARKETPLACE LIMITS — obey the profile that matches "Context marketplace"
+below. These are not one scale with a safe end: a title that would be too long
+for Canva is correct for Adobe Stock, and a 15-tag list that is right for Canva
+leaves an Adobe Stock buyer unable to find the asset. Use the profile as given.
+  Canva: title 3 to 15 words, maximum 64 characters, and aim for the middle of
+    that range, not the floor. 5 to 20 keywords, each at most 3 words. Never
+    use "canva" itself as a keyword.
+  Adobe Stock, Shutterstock, Etsy, Magnific: title 8 to 16 words, 60 to 120
+    characters. Up to 40 keywords, phrases up to 4 words. There is no target to fill:
+    an image with little in it gets a short list, and a short honest list beats
+    a long one with guesses in it. Never fewer than 5.
+  Unknown marketplace: use the Adobe Stock profile.
+
+PEOPLE AND IDENTITY — these apply to every field:
+Never state a person's ethnicity, race, or skin colour, in the title or in
+the keywords. Describe what a person is doing, not what they look like.
+Use the inclusive term buyers search for: "pwd" and "wheelchair" rather than
+"special needs", "bipoc" and "diverse" where representation is the point.
+Never use demeaning or joking descriptions of a person.
+
+category — exactly 1, chosen only from this list:
+Animals; Buildings and Architecture; Business; Drinks; The Environment;
+States of Mind; Food; Graphic Resources; Hobbies and Leisure; Industry;
+Landscapes; Lifestyle; People; Plants and Flowers; Culture and Religion;
+Science; Social Issues; Sports; Technology; Transport; Travel
+
+NEVER include in any field: brand, company, or product names; artist names;
+real people; fictional characters; copyrighted works; "in the style of" or
+"inspired by"; references to real news events; URLs; hashes; placeholder
+tags; graphic violence, sexually explicit, hateful, politically partisan, or
+culturally offensive terms.`;
 
 const VECTEEZY_HINT =
   " Vecteezy: title must be a detailed descriptive phrase (about 8–14 words, max 200 chars)—subject, style, colors, composition, use case; unique per image. Keywords: maximum 50 tags, single readable English words (letters a-z, optional digits); never use standalone conjunctions/prepositions (for, to, with, at, in, on, of, by, and, or, the, a, an) as tags; image-specific search terms only; no random hashes, offensive language, or placeholder tags.";
@@ -83,7 +151,9 @@ Context marketplace: ${opts.marketplace}.${opts.hint}${opts.batchHint}`.trim();
 
 const METADATA_CAPS = {
   quick: 720,
-  advanced: 1200
+  // Dinaikkan bersama prompt v4: pada 1200, model yang menalar dulu (gpt-5,
+  // gemini-3.5-flash) kehabisan jatah sebelum jawabannya keluar.
+  advanced: 4000
 };
 
 describe("buildMetadataPrompt", () => {
@@ -123,7 +193,7 @@ describe("buildMetadataPrompt", () => {
     expect(prompt).toBe(
       expectedMetadataPrompt({ mode: "advanced", marketplace: "Adobe Stock", hint: "", batchHint: "" })
     );
-    expect(maxTokens).toBe(1200);
+    expect(maxTokens).toBe(METADATA_CAPS.advanced);
   });
 
   it("ignores a negative batchIndex", () => {
