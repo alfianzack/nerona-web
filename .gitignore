@@ -17,3 +17,6 @@ public/*.dmg
 
 # Keluaran skrip banding prompt: laporan HTML ber-base64 gambar, puluhan MB.
 .banding/
+# Jalan banding lain dari sesi yang sama (ulangan, v2, v3, v4): isinya sama
+# beratnya, dan yang perlu disimpan cuma teks promptnya di scripts/banding/.
+.banding-*/

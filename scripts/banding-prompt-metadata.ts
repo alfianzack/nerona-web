@@ -90,11 +90,27 @@ const TANPA_JURI = process.argv.includes("--tanpa-juri");
 const KERING = process.argv.includes("--kering");
 const MAKS_MB = argAngka("maks-mb", 4);
 const JEDA = argAngka("jeda", 0);
+/**
+ * Menukar kepala lengan "lama" dengan teks prompt dari sebuah berkas. Dengan
+ * begitu yang diukur bisa calon pengganti melawan prompt yang berlaku, bukan
+ * cuma sejarah melawan sekarang. Label "lama" di laporan sengaja tidak diubah;
+ * yang dibaca mata adalah sumbernya, dan sumber itu ikut tercetak.
+ */
+const KEPALA_LAMA = argTeks("kepala-lama");
+/**
+ * Mencoba modelId provider yang BELUM punya baris AiModel, tanpa menulis apa pun
+ * ke registri produksi lebih dulu. Dipakai untuk menjajal calon pengganti model
+ * bawaan; tarifnya memakai tarif global di Koneksi AI, jadi angka poin yang
+ * dicetak perkiraan, bukan tagihan model itu.
+ */
+const MODEL_MENTAH = argTeks("model-mentah");
 
 const PEMAKAIAN = `Pemakaian:
   npm run banding:prompt -- --folder "<folder gambar>" [--kering] [--batas 30]
                             [--marketplace adobe] [--model <id>] [--juri <id>]
-                            [--tanpa-juri] [--maks-mb 4] [--jeda 0]`;
+                            [--tanpa-juri] [--maks-mb 4] [--jeda 0]
+                            [--kepala-lama "<berkas prompt kandidat>"]
+                            [--model-mentah "<modelId di luar registri>"]`;
 
 // --------------------------------------------------------------------------
 // Gambar
@@ -168,6 +184,15 @@ interface ModelSiap {
  */
 async function siapkanModel(pilihan: string | undefined): Promise<ModelSiap> {
   const global = await getAiSettings();
+  if (MODEL_MENTAH && !pilihan) {
+    const bawaan = await prisma.aiProvider.findFirst({ where: { isDefault: true } });
+    return {
+      keterangan: `${MODEL_MENTAH} (di luar registri — tarif memakai tarif global)`,
+      modelId: MODEL_MENTAH,
+      ...resolveProviderCredentials(bawaan),
+      pricing: global.pricing,
+    };
+  }
   const row = pilihan
     ? await prisma.aiModel.findFirst({
         where: { OR: [{ id: pilihan }, { modelId: pilihan }] },
@@ -264,8 +289,10 @@ async function main() {
   const lama: Lengan = bangunLengan({
     nama: "lama",
     marketplace: MARKETPLACE,
-    kepala: bacaFixturePromptLama(),
-    sumberKepala: `git ${KOMIT_PROMPT_LAMA}`,
+    kepala: KEPALA_LAMA
+      ? readFileSync(path.resolve(KEPALA_LAMA), "utf8").trimEnd()
+      : bacaFixturePromptLama(),
+    sumberKepala: KEPALA_LAMA ? `berkas ${KEPALA_LAMA}` : `git ${KOMIT_PROMPT_LAMA}`,
   });
   const sekarang: Lengan = bangunLengan({
     nama: "sekarang",
