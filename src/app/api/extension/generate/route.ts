@@ -143,6 +143,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "ai_error" }, { status: 502 });
   }
 
+  /**
+   * Balasan yang tidak bisa dipakai tidak menagih poin.
+   *
+   * Dua kegagalan ini terbukti 2026-09-14, keduanya HTTP 200 tanpa galat: GPT 5
+   * mengembalikan string kosong (token penalarannya menghabiskan jatah
+   * max_tokens sebelum satu huruf jawaban keluar), dan gemini/gemini-3.5-flash
+   * mengembalikan JSON yang terpotong di tengah. Sebelum penjaga ini keduanya
+   * tetap memotong poin dan mengembalikan ok: true, jadi tenant membayar penuh
+   * untuk balasan yang tidak bisa diurai extension maupun Hub.
+   *
+   * Ongkos ke provider tetap kita bayar, dan itu disengaja: yang salah bukan
+   * tenant, dan menagih untuk hasil kosong lebih mahal daripada token hangus.
+   */
+  if (!result.text.trim()) {
+    console.error("[extension/generate] balasan kosong", { modelId, usage: result.usage });
+    return NextResponse.json({ ok: false, error: "ai_empty" }, { status: 502 });
+  }
+  if (result.finishReason === "length") {
+    console.error("[extension/generate] balasan terpotong di batas token", {
+      modelId,
+      maxTokens: built.maxTokens,
+      usage: result.usage,
+    });
+    return NextResponse.json({ ok: false, error: "ai_truncated" }, { status: 502 });
+  }
+
   const cost = costForUsage({ usage: result.usage, pricing });
   let pointsBalance = state.pointsBalance;
   try {

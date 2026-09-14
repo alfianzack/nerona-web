@@ -297,4 +297,39 @@ describe("pencatatan pemakaian", () => {
       withImage: false,
     });
   });
+
+  /**
+   * GPT 5 terbukti mengembalikan string kosong untuk metadata pada 2026-09-14,
+   * dan gemini/gemini-3.5-flash mengembalikan JSON yang terpotong di tengah.
+   * Keduanya HTTP 200, tanpa galat, dan poinnya tetap terpotong: tenant membayar
+   * penuh untuk balasan yang tidak bisa dipakai. Dua uji di bawah yang menutup
+   * pintu itu. Model penalar memakai jatah max_tokens untuk menalar, jadi ini
+   * bukan kasus tepi satu model.
+   */
+  it("balasan kosong: tidak menagih poin, tidak mencatat pemakaian", async () => {
+    (chatCompletion as any).mockResolvedValue({
+      text: "   ",
+      model: "gpt-5",
+      usage: { promptTokens: 2000, completionTokens: 900 },
+    });
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toMatchObject({ ok: false, error: "ai_empty" });
+    expect(spendPoints).not.toHaveBeenCalled();
+    expect(recordAiUsage).not.toHaveBeenCalled();
+  });
+
+  it("balasan terpotong di batas token: diperlakukan sama dengan kosong", async () => {
+    (chatCompletion as any).mockResolvedValue({
+      text: '{"visualBrief":"sebagian sa',
+      model: "gemini/gemini-3.5-flash",
+      finishReason: "length",
+      usage: { promptTokens: 2000, completionTokens: 1200 },
+    });
+    const res = await POST(req(metadataBody));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toMatchObject({ ok: false, error: "ai_truncated" });
+    expect(spendPoints).not.toHaveBeenCalled();
+    expect(recordAiUsage).not.toHaveBeenCalled();
+  });
 });

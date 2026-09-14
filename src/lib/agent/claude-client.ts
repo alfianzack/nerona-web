@@ -14,6 +14,13 @@ export interface ChatCompletionResult {
   text: string;
   model: string;
   usage: { promptTokens: number; completionTokens: number } | null;
+  /**
+   * Sebab model berhenti, apa adanya dari provider ("stop", "length", ...).
+   * Dibawa keluar karena "length" berarti jawabannya terpotong di batas token,
+   * dan teks terpotong tidak bisa dibedakan dari jawaban pendek yang sah kalau
+   * hanya isinya yang dilihat. Null kalau provider tidak mengirimkannya.
+   */
+  finishReason: string | null;
   /** Kosong kalau model tidak meminta tool (atau `tools` tidak dikirim). */
   toolCalls: ToolCall[];
 }
@@ -69,5 +76,12 @@ export async function chatCompletion(params: {
         arguments: String(call?.function?.arguments ?? ""),
       }))
     : [];
-  return { text, model: params.model, usage, toolCalls };
+  const finishReason = data?.choices?.[0]?.finish_reason ?? null;
+  return {
+    text,
+    model: params.model,
+    usage,
+    finishReason: typeof finishReason === "string" ? finishReason : null,
+    toolCalls,
+  };
 }
