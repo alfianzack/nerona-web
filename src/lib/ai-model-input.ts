@@ -29,5 +29,14 @@ export function parseModelInput(body: any): AiModelInput {
     active: body?.active !== false,
     providerId: typeof body?.providerId === "string" ? body.providerId : "",
     sortOrder: Number.isFinite(Number(body?.sortOrder)) ? Number(body.sortOrder) : 0,
+    // Jenisnya diteruskan apa adanya; yang memutuskan "image" atau jatuh ke
+    // "chat" adalah cleanInput, supaya aturannya cuma hidup di satu tempat.
+    kind: typeof body?.kind === "string" ? body.kind : "chat",
+    // Sengaja TIDAK lewat rate(): 0 sah untuk tarif token tapi tidak sah untuk
+    // tarif per gambar, dan yang tahu bedanya cuma cleanInput yang melihat kind.
+    usdPerImage:
+      body?.usdPerImage === "" || body?.usdPerImage === null || body?.usdPerImage === undefined
+        ? null
+        : Number(body.usdPerImage),
   };
 }

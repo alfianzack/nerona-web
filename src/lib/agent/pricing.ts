@@ -80,6 +80,36 @@ export function pricingFromInput(
 export const REFERENCE_IMAGE_USAGE: TokenUsage = { promptTokens: 2_600, completionTokens: 400 };
 
 /**
+ * Ongkos satu gambar dalam poin.
+ *
+ * Terpisah dari costForUsage, dan bukan karena rapi: generator gambar menagih
+ * PER GAMBAR, bukan per token. Memaksakannya lewat costForUsage berarti mengarang
+ * jumlah token untuk sesuatu yang tidak punya token, dan angka karangan itu akan
+ * ikut ke mana-mana.
+ *
+ * Bedanya yang paling terasa buat tenant: harga ini sudah pasti SEBELUM tombol
+ * diklik, sementara metadata baru ketahuan sesudah balasannya kembali. Layar
+ * generate boleh menyebut angka pastinya, dan janji itu berdiri di atas fungsi
+ * ini.
+ */
+export function costForImage(params: {
+  usdPerImage: number | null | undefined;
+  pointsPerUsd: number;
+}): number {
+  const { usdPerImage, pointsPerUsd } = params;
+  // Kolom usdPerImage nullable karena baris chat tidak memakainya. Baris image
+  // tanpa tarif adalah salah konfigurasi, dan menagih 0 poin untuknya akan
+  // menyembunyikan kesalahan itu sampai tagihan provider datang.
+  if (!usdPerImage || usdPerImage <= 0) {
+    throw new Error("Model gambar tanpa tarif per gambar (usdPerImage) tidak bisa ditagih.");
+  }
+  if (!pointsPerUsd || pointsPerUsd <= 0) {
+    throw new Error("pointsPerUsd belum diisi, ongkos gambar tidak bisa dihitung.");
+  }
+  return toPoints(usdPerImage * pointsPerUsd);
+}
+
+/**
  * Points always round UP, but only on a real fraction: binary floating point turns an
  * exact 975 into 975.0000000000001, and a bare ceil would over-charge a point for it.
  */

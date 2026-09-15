@@ -57,7 +57,10 @@ export async function defaultModelPointsPerImage(): Promise<number | null> {
       // Baris DEFAULT, bukan termurah — bedanya adalah selisih antara "tarif
       // yang owner tetapkan" dan "tarif yang kebetulan paling murah". Alasan
       // yang sama dituliskan di resolveAiForUser.
-      prisma.aiModel.findFirst({ where: { isDefault: true, active: true } }),
+      // Jenis chat, bukan sekadar bawaan: angka di halaman jualan ini menyebut
+      // ongkos METADATA, dan baris model gambar akan menampilkan harga generator
+      // sebagai harga metadata.
+      prisma.aiModel.findFirst({ where: { kind: "chat", isDefault: true, active: true } }),
       getAiSettings(),
     ]);
 

@@ -62,30 +62,31 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
 
-  accounts                   Account[]
-  sessions                   Session[]
-  adminRole                  AdminRole?
-  licenses                   License[]        @relation("UserLicenses")
-  grantedLicenses            License[]        @relation("GrantedByAdmin")
-  orders                     Order[]
-  emailVerificationTokens    EmailVerificationToken[]
-  passwordResetTokens        PasswordResetToken[]
-  enrollments                Enrollment[]
-  lessonProgress             LessonProgress[]
-  agentProfile               AgentProfile?
-  orderRequests              OrderRequest[]   @relation("UserOrderRequests")
-  fulfilledOrderRequests     OrderRequest[]   @relation("FulfilledOrderRequests")
-  shopProducts               ShopProduct[]
-  shopOrders                 ShopOrder[]
-  pointTransactions         PointTransaction[] @relation("UserPointTransactions")
-  adjustedPointTransactions PointTransaction[] @relation("PointAdjustedByAdmin")
+  accounts                  Account[]
+  sessions                  Session[]
+  adminRole                 AdminRole?
+  licenses                  License[]                @relation("UserLicenses")
+  grantedLicenses           License[]                @relation("GrantedByAdmin")
+  orders                    Order[]
+  emailVerificationTokens   EmailVerificationToken[]
+  passwordResetTokens       PasswordResetToken[]
+  enrollments               Enrollment[]
+  lessonProgress            LessonProgress[]
+  agentProfile              AgentProfile?
+  orderRequests             OrderRequest[]           @relation("UserOrderRequests")
+  fulfilledOrderRequests    OrderRequest[]           @relation("FulfilledOrderRequests")
+  shopProducts              ShopProduct[]
+  shopOrders                ShopOrder[]
+  pointTransactions         PointTransaction[]       @relation("UserPointTransactions")
+  adjustedPointTransactions PointTransaction[]       @relation("PointAdjustedByAdmin")
   extensionTokens           ExtensionToken[]
   metadataLogs              MetadataLog[]
   devicePairings            DevicePairing[]
   promptPresets             PromptPreset[]
   aiModelId                 String?
-  aiModel                   AiModel?         @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
+  aiModel                   AiModel?                 @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
   aiUsageLogs               AiUsageLog[]
+  imageGenerations          ImageGeneration[]
 
   @@index([aiModelId])
   @@map("users")
@@ -95,29 +96,29 @@ model AdminRole {
   id        String   @id @default(cuid())
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // "owner_admin" | "support"
+  role      String // "owner_admin" | "support"
   createdAt DateTime @default(now())
 
   @@map("admin_roles")
 }
 
 model Plan {
-  id             String   @id @default(cuid())
-  name           String
+  id              String   @id @default(cuid())
+  name            String
   // Harga BULANAN dalam rupiah; null = "Hubungi kami". Harga 3/6/12 bulan
   // dihitung dari sini lewat lib/plan-duration.ts, tidak disimpan terpisah.
   // Dulu berupa teks bebas (`priceLabel`), yang tidak bisa dikalikan durasi.
-  priceMonthly   Int?
-  marketplaces   String   @default("*")
-  rejectAnalyzer Boolean  @default(false)
+  priceMonthly    Int?
+  marketplaces    String   @default("*")
+  rejectAnalyzer  Boolean  @default(false)
   /// Paket ini menyertakan Nerona Hub (aplikasi desktop).
-  hub            Boolean  @default(false)
+  hub             Boolean  @default(false)
   // AI generations per month shown on pricing pages; null = unlimited.
   // Display-only for now — the extension has no backend hook to enforce it,
   // same as the marketplaces limit.
   generationLimit Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   licenses License[]
 
@@ -129,8 +130,8 @@ model License {
   userId         String
   user           User      @relation("UserLicenses", fields: [userId], references: [id])
   licenseKey     String    @unique
-  status         String    // "active" | "revoked" | "comp"
-  source         String    // "manual_grant"
+  status         String // "active" | "revoked" | "comp"
+  source         String // "manual_grant"
   grantedById    String?
   grantedBy      User?     @relation("GrantedByAdmin", fields: [grantedById], references: [id])
   notes          String?
@@ -264,7 +265,7 @@ model Enrollment {
   user      User     @relation(fields: [userId], references: [id])
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id])
-  source    String   // "manual_grant"
+  source    String // "manual_grant"
   createdAt DateTime @default(now())
 
   @@unique([userId, courseId])
@@ -329,7 +330,7 @@ model AgentMemory {
   profileId String
   profile   AgentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   fact      String       @db.Text
-  source    String       // "auto" | "explicit"
+  source    String // "auto" | "explicit"
   createdAt DateTime     @default(now())
 
   @@map("agent_memories")
@@ -388,7 +389,7 @@ model AgentMessage {
   waMessageId String?       @unique
   phone       String? // null for channels without a phone number (web chat)
   channel     String        @default("whatsapp") // "whatsapp" | "web"
-  direction   String        // "in" | "out"
+  direction   String // "in" | "out"
   body        String        @db.Text
   createdAt   DateTime      @default(now())
 
@@ -415,24 +416,24 @@ model AgentJob {
 // after receiving payment; free-tier signups never create one (activated
 // instantly instead).
 model OrderRequest {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation("UserOrderRequests", fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("UserOrderRequests", fields: [userId], references: [id], onDelete: Cascade)
   product        String // "metadata" | "agent" | "points"
   planName       String // "Pro" | "Business" | "1.000 poin"
-  durationMonths Int      @default(1) // 1 | 3 | 6 | 12; tidak berlaku untuk top-up
+  durationMonths Int       @default(1) // 1 | 3 | 6 | 12; tidak berlaku untuk top-up
   // Top-up saja. Harga ikut disimpan, bukan dibaca ulang dari Setting saat
   // dikonfirmasi: kalau owner mengubah harga di antara order dan verifikasi,
   // invoice akan menyebut angka yang berbeda dari yang sudah ditransfer.
   pointsAmount   Int?
   priceAmount    Int?
   contactNote    String?
-  status        String    @default("pending") // "pending" | "fulfilled" | "cancelled"
-  isRenewal     Boolean   @default(false) // auto-generated monthly renewal request
-  createdAt     DateTime  @default(now())
-  fulfilledAt   DateTime?
-  fulfilledById String?
-  fulfilledBy   User?     @relation("FulfilledOrderRequests", fields: [fulfilledById], references: [id])
+  status         String    @default("pending") // "pending" | "fulfilled" | "cancelled"
+  isRenewal      Boolean   @default(false) // auto-generated monthly renewal request
+  createdAt      DateTime  @default(now())
+  fulfilledAt    DateTime?
+  fulfilledById  String?
+  fulfilledBy    User?     @relation("FulfilledOrderRequests", fields: [fulfilledById], references: [id])
 
   // Payment-proof image uploaded by the customer (bank transfer confirmation).
   proofImage      Bytes?
@@ -559,8 +560,8 @@ model PointTransaction {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation("UserPointTransactions", fields: [userId], references: [id], onDelete: Cascade)
-  delta       Int      // signed: positive = credit, negative = debit
-  reason      String   // "manual_adjust" | "spend" | "plan_grant" (future: "topup")
+  delta       Int // signed: positive = credit, negative = debit
+  reason      String // "manual_adjust" | "spend" | "plan_grant" (future: "topup")
   note        String?
   createdById String?
   createdBy   User?    @relation("PointAdjustedByAdmin", fields: [createdById], references: [id])
@@ -594,12 +595,12 @@ model MetadataLog {
 }
 
 model ExtensionToken {
-  id         String    @id @default(cuid())
+  id         String          @id @default(cuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token      String    @unique
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String          @unique
   label      String?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime        @default(now())
   lastUsedAt DateTime?
   pairings   DevicePairing[]
 
@@ -659,6 +660,39 @@ model PromptPreset {
 /// Gateway tempat panggilan AI dikirim, beserta kuncinya. Didaftarkan sekali,
 /// dipakai banyak baris AiModel — supaya kunci yang sama tidak pernah ditempel
 /// dua kali dan diputar di satu tempat saja.
+/// Satu baris per permintaan generate gambar.
+///
+/// Buku besarnya sendiri, dan SENGAJA tidak menulis ke ai_usage_logs: tabel itu
+/// berbentuk token dan rata-ratanya memberi makan estimasi poin per gambar
+/// metadata. Menaruh generate gambar di sana akan menarik estimasi itu ke angka
+/// yang tidak berhubungan, persis kesalahan yang pernah terjadi waktu panggilan
+/// keyword tercatat sebagai ber-gambar.
+model ImageGeneration {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Null kalau barisnya sudah dihapus dari registri; prompt-nya tetap berguna.
+  aiModelId    String?
+  prompt       String    @db.Text
+  size         String
+  /// Tautan milik provider, berumur pendek (jam sampai hari). Gambar penuhnya
+  /// TIDAK disimpan Nerona; ini keputusan owner, dan akibatnya hasil yang tidak
+  /// sempat diunduh hilang.
+  providerUrl  String?   @db.Text
+  urlExpiresAt DateTime?
+  /// ~20 KB JPEG yang dikecilkan browser. Pola yang sama dengan Order.proofImage.
+  /// Ini yang membuat galeri tetap terbaca sesudah tautannya mati.
+  thumbnail    Bytes?
+  thumbMime    String?
+  points       Int       @default(0)
+  /// ok | no_image | blocked | upstream. Yang bukan ok tidak pernah menagih poin.
+  status       String    @default("ok")
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("image_generations")
+}
+
 model AiProvider {
   id        String   @id @default(cuid())
   label     String
@@ -686,15 +720,24 @@ model AiProvider {
 //
 // Gateway (baseUrl/apiKey) tidak lagi menempel di sini — lihat AiProvider.
 model AiModel {
-  id         String   @id @default(cuid())
-  label      String
-  modelId    String
-  note       String?
-  inPerMTok  Float
-  outPerMTok Float
+  id           String     @id @default(cuid())
+  label        String
+  modelId      String
+  note         String?
+  inPerMTok    Float
+  outPerMTok   Float
+  /// Jenis pekerjaan model ini. "chat" menagih per token lewat inPerMTok dan
+  /// outPerMTok; "image" menagih per gambar lewat usdPerImage. Satu tabel, bukan
+  /// dua, supaya panel provider, gerbang paket, dan tombol aktif yang sudah
+  /// hidup langsung berlaku untuk model gambar.
+  kind         String     @default("chat")
+  /// Tarif satu gambar dalam USD. Wajib terisi saat kind = "image", diabaikan
+  /// untuk chat. Poinnya ceil(usdPerImage * pointsPerUsd), memakai pointsPerUsd
+  /// yang sama dengan metadata supaya harga tetap punya satu tuas.
+  usdPerImage  Float?
   /// Punya penglihatan. Empat dari lima fitur mengirim gambar, jadi model tanpa
   /// ini tidak pernah ditawarkan ke tenant.
-  vision     Boolean  @default(true)
+  vision       Boolean    @default(true)
   /// Paket yang boleh melihat dan memakai model ini — satu kolom per paket,
   /// menggantikan `paidOnly`. Dicentang berarti terlihat. Semua default true
   /// supaya menambah kolom tidak pernah diam-diam menyembunyikan model.
@@ -702,18 +745,21 @@ model AiModel {
   /// Kolom bernama paket berarti paket keempat menuntut migrasi. Sampai itu
   /// terjadi, paket berbayar bernama lain diperlakukan sebagai Pro — lihat
   /// planTierFromState di lib/ai-models.ts.
-  planFree     Boolean @default(true)
-  planPro      Boolean @default(true)
-  planBusiness Boolean @default(true)
-  isDefault  Boolean  @default(false)
-  active     Boolean  @default(true)
+  planFree     Boolean    @default(true)
+  planPro      Boolean    @default(true)
+  planBusiness Boolean    @default(true)
+  /// Bawaan UNTUK JENISNYA, bukan bawaan global: satu baris chat default dan
+  /// satu baris image default hidup berdampingan. Dijaga kode, bukan constraint,
+  /// karena Postgres tidak punya unique parsial lintas-nilai yang murah di sini.
+  isDefault    Boolean    @default(false)
+  active       Boolean    @default(true)
   /// Wajib. Kolom opsional akan berarti "kosong = pakai gateway global", dan
   /// gateway global itulah yang dihapus perubahan ini.
-  providerId String
-  provider   AiProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  sortOrder  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  providerId   String
+  provider     AiProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   users     User[]
   usageLogs AiUsageLog[]
@@ -728,13 +774,13 @@ model AiModel {
 /// acuan di pricing.ts hanya konstanta terkalibrasi, sedangkan ini pemakaian
 /// yang benar-benar terjadi, per model.
 model AiUsageLog {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// NULL kalau panggilan memakai model bawaan dari Setting, bukan baris registri.
-  aiModelId String?
-  aiModel   AiModel? @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
-  feature   String
+  aiModelId        String?
+  aiModel          AiModel? @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
+  feature          String
   /// Panggilan ini membawa gambar. Estimasi "poin per gambar" hanya boleh
   /// dirata-rata dari baris ini — panggilan teks (agen, saran keyword) punya
   /// profil token yang sama sekali berbeda dan akan menariknya turun.

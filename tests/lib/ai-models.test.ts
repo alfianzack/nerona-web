@@ -26,6 +26,8 @@ import {
   setTenantModel,
   createModel,
   planTierFromState,
+  setDefaultModel,
+  updateModel,
   AiModelError,
 } from "@/lib/ai-models";
 import { REFERENCE_IMAGE_USAGE, costForUsage } from "@/lib/agent/pricing";
@@ -394,5 +396,119 @@ describe("resolveAiForUser menghormati paket yang BERLAKU SEKARANG", () => {
     });
     const resolved = await resolveAiForUser("user-1");
     expect(resolved.modelId).toBe("mahal");
+  });
+});
+
+/**
+ * Katalog model sekarang memuat dua jenis pekerjaan: "chat" untuk metadata dan
+ * kawan-kawannya, "image" untuk generator gambar. Keduanya tinggal di satu tabel
+ * supaya panel provider dan gerbang paket tidak perlu digandakan.
+ *
+ * Harganya yang tidak sebanding: chat ditagih per token, image per gambar. Satu
+ * baris image yang bocor ke jalur chat berarti tarif per gambar dipakai sebagai
+ * tarif per juta token, dan tagihannya meleset ribuan kali lipat tanpa satu pun
+ * galat muncul. Empat uji di bawah menjaga pemisahan itu di tiap pintu.
+ */
+describe("pemisahan jenis model, chat lawan image", () => {
+  it("resolveAiForUser tidak pernah mengambil baris image sebagai bawaan chat", async () => {
+    (prisma.aiModel.findFirst as any).mockResolvedValue(row({ kind: "chat", isDefault: true }));
+    await resolveAiForUser("u1");
+    expect((prisma.aiModel.findFirst as any).mock.calls[0][0]).toMatchObject({
+      where: expect.objectContaining({ kind: "chat" }),
+    });
+  });
+
+  it("listModelsForTenant tidak menawarkan model gambar untuk metadata", async () => {
+    await listModelsForTenant({ tier: "business" } as any);
+    expect((prisma.aiModel.findMany as any).mock.calls[0][0]).toMatchObject({
+      where: expect.objectContaining({ kind: "chat" }),
+    });
+  });
+
+  it("setDefaultModel hanya membersihkan bawaan di jenis yang sama", async () => {
+    (prisma.aiModel.findFirst as any).mockResolvedValue(row({ id: "img1", kind: "image" }));
+    await setDefaultModel("img1");
+    // Menjadikan model gambar sebagai bawaan tidak boleh mencabut bawaan chat:
+    // seluruh jalur metadata akan jatuh ke tarif Koneksi AI tanpa peringatan.
+    expect((prisma.aiModel.updateMany as any).mock.calls[0][0]).toMatchObject({
+      where: { kind: "image" },
+    });
+  });
+
+  it("angka poin per gambar di halaman publik dihitung dari model chat", async () => {
+    // marketing-points memakai baris bawaan untuk menyebut ongkos metadata.
+    // Baris image yang terpilih di sana akan menampilkan harga generator gambar
+    // sebagai harga metadata.
+    const { defaultModelPointsPerImage } = await import("@/lib/marketing-points");
+    (prisma.aiModel.findFirst as any).mockResolvedValue(row({ kind: "chat", isDefault: true }));
+    await defaultModelPointsPerImage();
+    const panggilan = (prisma.aiModel.findFirst as any).mock.calls.at(-1)[0];
+    expect(panggilan).toMatchObject({ where: expect.objectContaining({ kind: "chat" }) });
+  });
+});
+
+/**
+ * Baris model gambar dibuat lewat panel yang sama dengan model chat, karena
+ * gerbang paket, provider, dan tombol aktifnya memang sama. Yang berbeda cuma
+ * cara menagihnya, dan justru di situ letak bahayanya: baris image tanpa
+ * usdPerImage akan lolos ke produksi dan baru ketahuan saat tenant pertama
+ * menekan Buat gambar.
+ */
+describe("membuat baris model gambar", () => {
+  const dasar = {
+    label: "Generator",
+    modelId: "flux-1",
+    inPerMTok: 0,
+    outPerMTok: 0,
+    vision: false,
+    planFree: false,
+    planPro: true,
+    planBusiness: true,
+    active: true,
+    providerId: "p1",
+  };
+
+  beforeEach(() => {
+    (prisma.aiProvider.findFirst as any).mockResolvedValue({ id: "p1" });
+    (prisma.aiModel.create as any).mockImplementation(({ data }: any) => ({ id: "baru", ...data }));
+    (prisma.aiModel.update as any).mockImplementation(({ data }: any) => ({ id: "m1", ...data }));
+  });
+
+  it("menyimpan kind dan tarif per gambar", async () => {
+    await createModel({ ...dasar, kind: "image", usdPerImage: 0.04 } as never);
+    expect((prisma.aiModel.create as any).mock.calls[0][0].data).toMatchObject({
+      kind: "image",
+      usdPerImage: 0.04,
+    });
+  });
+
+  it("menolak baris image tanpa tarif per gambar", async () => {
+    await expect(createModel({ ...dasar, kind: "image" } as never)).rejects.toThrow(AiModelError);
+    await expect(
+      createModel({ ...dasar, kind: "image", usdPerImage: 0 } as never)
+    ).rejects.toThrow(AiModelError);
+    expect(prisma.aiModel.create).not.toHaveBeenCalled();
+  });
+
+  it("baris chat tidak menyimpan tarif per gambar, meski dikirim", async () => {
+    await createModel({ ...dasar, kind: "chat", usdPerImage: 0.04, inPerMTok: 1, outPerMTok: 2 } as never);
+    // Tarif per gambar di baris chat adalah angka yang tidak pernah dipakai,
+    // dan angka yang tidak pernah dipakai selalu jadi angka yang salah dibaca.
+    expect((prisma.aiModel.create as any).mock.calls[0][0].data).toMatchObject({
+      kind: "chat",
+      usdPerImage: null,
+    });
+  });
+
+  it("jenis yang tidak dikenal jatuh ke chat, bukan diteruskan apa adanya", async () => {
+    await createModel({ ...dasar, kind: "video", usdPerImage: 1 } as never);
+    expect((prisma.aiModel.create as any).mock.calls[0][0].data).toMatchObject({ kind: "chat" });
+  });
+
+  it("aturan yang sama berlaku saat menyunting", async () => {
+    (prisma.aiModel.findFirst as any).mockResolvedValue(row({ id: "m1" }));
+    await expect(
+      updateModel("m1", { ...dasar, kind: "image" } as never)
+    ).rejects.toThrow(AiModelError);
   });
 });

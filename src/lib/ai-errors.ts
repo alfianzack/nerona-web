@@ -17,6 +17,8 @@ const MODEL_MESSAGES: Record<AiModelErrorCode, string> = {
   label_required: "Nama model wajib diisi.",
   model_id_required: "Model id wajib diisi.",
   rate_invalid: "Tarif harus angka 0 atau lebih.",
+  image_rate_invalid:
+    "Model gambar butuh tarif per gambar yang lebih besar dari 0. Tanpa itu, generate gambar akan gagal saat dipakai.",
   provider_required: "Provider wajib dipilih.",
   provider_not_found: "Provider itu tidak ditemukan.",
 };

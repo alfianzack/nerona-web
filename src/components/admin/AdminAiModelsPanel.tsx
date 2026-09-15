@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { REFERENCE_IMAGE_USAGE, costForUsage } from "@/lib/agent/pricing";
+import { REFERENCE_IMAGE_USAGE, costForUsage, costForImage } from "@/lib/agent/pricing";
 
 /**
  * Registri model. Selama tabel ini kosong, semua panggilan memakai panel
@@ -34,14 +34,18 @@ interface ModelRow {
   providerId: string;
   estimatedPoints: number;
   sortOrder: number;
+  kind: string;
+  usdPerImage: number | null;
 }
 
 const KOSONG = {
   label: "",
   modelId: "",
   note: "",
+  kind: "chat",
   inPerMTok: "",
   outPerMTok: "",
+  usdPerImage: "",
   providerId: "",
   vision: true,
   planFree: true,
@@ -177,8 +181,10 @@ export function AdminAiModelsPanel() {
       label: row.label,
       modelId: row.modelId,
       note: row.note || "",
+      kind: row.kind || "chat",
       inPerMTok: String(row.inPerMTok),
       outPerMTok: String(row.outPerMTok),
+      usdPerImage: row.usdPerImage === null ? "" : String(row.usdPerImage),
       providerId: row.providerId,
       vision: row.vision,
       planFree: row.planFree,
@@ -194,8 +200,10 @@ export function AdminAiModelsPanel() {
       label: draft.label,
       modelId: draft.modelId,
       note: draft.note,
+      kind: draft.kind,
       inPerMTok: draft.inPerMTok,
       outPerMTok: draft.outPerMTok,
+      usdPerImage: draft.usdPerImage,
       providerId: draft.providerId,
       vision: draft.vision,
       planFree: draft.planFree,
@@ -220,6 +228,17 @@ export function AdminAiModelsPanel() {
   }
 
   const draftEstimate = perkiraan(Number(draft.inPerMTok) || 0, Number(draft.outPerMTok) || 0);
+
+  // Dihitung dengan costForImage, fungsi yang SAMA dengan yang menagih. Menyalin
+  // rumusnya ke panel akan membuat angka yang dilihat owner boleh berbeda dari
+  // yang dipotong dari tenant, dan selisih semacam itu tidak pernah ketahuan.
+  const poinGambar = (() => {
+    try {
+      return costForImage({ usdPerImage: Number(draft.usdPerImage), pointsPerUsd });
+    } catch {
+      return null;
+    }
+  })();
 
   return (
     <Card padding="lg">
@@ -333,6 +352,42 @@ export function AdminAiModelsPanel() {
             value={draft.note}
             onChange={(e) => setDraft({ ...draft, note: e.target.value })}
           />
+          <label className="grid gap-1.5">
+            <span className="text-label text-ink">Jenis pekerjaan</span>
+            <select
+              className="rounded-control px-3 py-2 text-body text-ink ring-1 ring-border"
+              value={draft.kind}
+              onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
+            >
+              <option value="chat">Chat, untuk metadata dan kawan-kawannya</option>
+              <option value="image">Gambar, untuk Studio</option>
+            </select>
+            <span className="text-caption text-muted">
+              Menentukan cara menagihnya: chat per token, gambar per gambar. Bawaan juga
+              terpisah, jadi menandai model gambar sebagai bawaan tidak mencabut bawaan chat.
+            </span>
+          </label>
+
+          {draft.kind === "image" ? (
+            <>
+              <Field
+                id="model-per-gambar"
+                label="Tarif per gambar (USD)"
+                inputMode="decimal"
+                className={ISIAN_MONO}
+                value={draft.usdPerImage}
+                onChange={(e) => setDraft({ ...draft, usdPerImage: e.target.value })}
+              />
+              <p className="text-caption text-muted">
+                Satu gambar ={" "}
+                <span className="font-mono tabular-nums">
+                  {poinGambar === null ? "?" : poinGambar.toLocaleString("id-ID")}
+                </span>{" "}
+                poin. Angka ini yang dilihat tenant di tombol Buat, dan angka yang sama yang
+                dipotong.
+              </p>
+            </>
+          ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               id="model-in"
@@ -351,11 +406,14 @@ export function AdminAiModelsPanel() {
               onChange={(e) => setDraft({ ...draft, outPerMTok: e.target.value })}
             />
           </div>
-          <p className="text-caption text-muted">
-            Dengan tarif itu, satu gambar ≈{" "}
-            <span className="font-mono tabular-nums">{draftEstimate.toLocaleString("id-ID")}</span>{" "}
-            poin.
-          </p>
+          )}
+          {draft.kind !== "image" && (
+            <p className="text-caption text-muted">
+              Dengan tarif itu, satu gambar ≈{" "}
+              <span className="font-mono tabular-nums">{draftEstimate.toLocaleString("id-ID")}</span>{" "}
+              poin.
+            </p>
+          )}
 
           <label className="grid gap-1.5">
             <span className="text-label text-ink">Provider</span>

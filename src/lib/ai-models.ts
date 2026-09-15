@@ -13,6 +13,8 @@ export type AiModelErrorCode =
   | "label_required"
   | "model_id_required"
   | "rate_invalid"
+  /** Baris kind = "image" tanpa usdPerImage yang masuk akal. */
+  | "image_rate_invalid"
   | "provider_required"
   | "provider_not_found";
 
@@ -110,7 +112,11 @@ export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   const row =
     picked ??
     ((await prisma.aiModel.findFirst({
-      where: { isDefault: true, active: true },
+      // kind: "chat" WAJIB di sini. Tanpanya, baris model gambar yang ditandai
+      // bawaan akan terpilih sebagai model metadata, dan tarif per GAMBAR dipakai
+      // sebagai tarif per JUTA TOKEN. Tagihannya meleset ribuan kali lipat dan
+      // tidak ada satu pun galat yang muncul.
+      where: { kind: "chat", isDefault: true, active: true },
       include: { provider: true },
     })) as ModelRow | null);
 
@@ -192,6 +198,9 @@ export async function listModelsForTenant(plan: PlanContext): Promise<TenantMode
   const { pricing } = await getAiSettings();
   const rows = (await prisma.aiModel.findMany({
     where: {
+      // Daftar ini yang dipilih tenant untuk metadata, jadi model gambar tidak
+      // berhak muncul di sini meski paketnya mengizinkan.
+      kind: "chat",
       active: true,
       vision: true,
       ...planWhere(plan.tier),
@@ -255,6 +264,10 @@ export interface AiModelInput {
   active: boolean;
   providerId: string;
   sortOrder?: number;
+  /** "chat" (bawaan) atau "image". Nilai lain diperlakukan sebagai chat. */
+  kind?: string;
+  /** Tarif satu gambar dalam USD. Wajib dan hanya berlaku saat kind = "image". */
+  usdPerImage?: number | null;
 }
 
 function cleanInput(input: AiModelInput) {
@@ -267,6 +280,20 @@ function cleanInput(input: AiModelInput) {
   }
   const providerId = (input.providerId || "").trim();
   if (!providerId) throw new AiModelError("provider_required");
+
+  // Jenis yang tidak dikenal jatuh ke chat, bukan diteruskan apa adanya: nilai
+  // asing di kolom ini akan membuat baris itu tidak pernah terpilih oleh jalur
+  // mana pun, dan owner tidak akan tahu kenapa.
+  const kind = input.kind === "image" ? "image" : "chat";
+
+  // Baris image tanpa tarif per gambar akan lolos ke produksi dan baru ketahuan
+  // saat tenant pertama menekan Buat gambar, sebagai kegagalan yang terlihat
+  // seperti gangguan provider. Ditolak di sini, sebelum tersimpan.
+  const usdPerImage = kind === "image" ? Number(input.usdPerImage) : null;
+  if (kind === "image" && (!Number.isFinite(usdPerImage) || (usdPerImage as number) <= 0)) {
+    throw new AiModelError("image_rate_invalid");
+  }
+
   return {
     label,
     modelId,
@@ -280,6 +307,10 @@ function cleanInput(input: AiModelInput) {
     active: input.active,
     providerId,
     sortOrder: input.sortOrder ?? 0,
+    kind,
+    // Null untuk baris chat, bukan angka yang dikirim panel: angka yang tidak
+    // pernah dipakai selalu jadi angka yang salah dibaca nanti.
+    usdPerImage,
   };
 }
 
@@ -339,8 +370,13 @@ export async function deleteModel(id: string) {
 export async function setDefaultModel(id: string) {
   const existing = await prisma.aiModel.findFirst({ where: { id } });
   if (!existing) throw new AiModelError("not_found");
+  // Bawaan itu per JENIS: satu baris chat bawaan dan satu baris image bawaan
+  // hidup berdampingan. Membersihkan seluruh tabel akan mencabut bawaan chat
+  // begitu owner menandai model gambar, dan seluruh jalur metadata diam-diam
+  // jatuh ke tarif Koneksi AI.
+  const kind = (existing as { kind?: string }).kind ?? "chat";
   await prisma.$transaction([
-    prisma.aiModel.updateMany({ where: {}, data: { isDefault: false } }),
+    prisma.aiModel.updateMany({ where: { kind }, data: { isDefault: false } }),
     prisma.aiModel.update({ where: { id }, data: { isDefault: true, active: true } }),
   ]);
 }
