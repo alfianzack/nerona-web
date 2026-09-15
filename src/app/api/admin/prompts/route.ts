@@ -39,7 +39,14 @@ export async function POST(request: Request) {
 
   // Absen = biarkan apa adanya; "" = kembalikan ke bawaan. Bedanya penting:
   // panel mengirim satu kolom saja saat tombol reset ditekan.
-  const values: { advanced?: string; contract?: string } = {};
+  const values: { advanced?: string; contract?: string; versi?: "v4" | "pra_v4" | "kustom" } = {};
+
+  if (body.versi !== undefined) {
+    if (body.versi !== "v4" && body.versi !== "pra_v4" && body.versi !== "kustom") {
+      return NextResponse.json({ ok: false, message: "Versi prompt tidak dikenal." }, { status: 400 });
+    }
+    values.versi = body.versi;
+  }
   for (const field of ["advanced", "contract"] as const) {
     const raw = body[field];
     if (raw === undefined) continue;

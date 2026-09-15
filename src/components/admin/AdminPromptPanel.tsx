@@ -21,11 +21,29 @@ const ISIAN =
   "ring-1 ring-border placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent";
 
 type Field = "advanced" | "contract";
+type Versi = "v4" | "pra_v4" | "kustom";
+
+const NAMA_VERSI: Record<Versi, string> = {
+  v4: "v4, yang berlaku sekarang",
+  pra_v4: "Sebelum v4, perilaku lama",
+  kustom: "Teks sendiri",
+};
+
+const KETERANGAN_VERSI: Record<Versi, string> = {
+  v4: "Berhenti saat kata kunci jujurnya habis, dan mengikuti batas tiap marketplace.",
+  pra_v4:
+    "Mewajibkan tepat 50 kata kunci. Pada uji tujuh gambar, itu menghasilkan 5,33 tag yang tidak ada di gambar per gambar, lawan 0,64 pada v4.",
+  kustom: "Teks yang Anda tulis sendiri di kotak di bawah.",
+};
 
 export function AdminPromptPanel() {
   const [advanced, setAdvanced] = useState("");
   const [contract, setContract] = useState("");
   const [overridden, setOverridden] = useState({ advanced: false, contract: false });
+  const [versi, setVersi] = useState<Versi>("v4");
+  // Teks kustom disimpan terpisah dari yang ditampilkan: berpindah ke bawaan
+  // lalu kembali tidak boleh menghapus tulisan owner (keputusan owner).
+  const [kustom, setKustom] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -42,6 +60,8 @@ export function AdminPromptPanel() {
     } else {
       setAdvanced(data.settings.advanced);
       setContract(data.settings.contract);
+      setVersi(data.settings.versi ?? "v4");
+      setKustom(data.settings.advancedKustom ?? "");
       setOverridden({
         advanced: data.settings.advancedOverridden,
         contract: data.settings.contractOverridden,
@@ -55,7 +75,7 @@ export function AdminPromptPanel() {
     void muat();
   }, []);
 
-  async function kirim(values: Partial<Record<Field, string>>) {
+  async function kirim(values: Partial<Record<Field, string>> & { versi?: Versi }) {
     setBusy(true);
     setSaved(false);
     setError("");
@@ -79,13 +99,44 @@ export function AdminPromptPanel() {
       <h2 className="text-title-2 text-ink">Prompt Metadata Nerona</h2>
       <p className="mt-1 max-w-prose text-body text-muted">
         Prompt bawaan yang dipakai setiap tenant yang belum memasang prompt sendiri. Tidak pernah
-        ditampilkan di sisi tenant. Kosongkan lalu simpan untuk kembali ke bawaan versi kode.
+        ditampilkan di sisi tenant. Pilih versinya di bawah; kotak teks hanya berlaku saat versi
+        &ldquo;Teks sendiri&rdquo; dipilih.
       </p>
 
       {loading ? (
         <p className="mt-4 text-body text-muted">Memuat…</p>
       ) : (
         <div className="mt-6 grid gap-6">
+          <div className="grid gap-1.5">
+            <label htmlFor="prompt-versi" className="text-caption font-medium text-muted">
+              Versi yang dipakai
+            </label>
+            <select
+              id="prompt-versi"
+              className="min-h-[44px] w-full rounded-control bg-surface px-3.5 py-2.5 text-body text-ink ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-accent"
+              value={versi}
+              disabled={busy}
+              onChange={(e) => {
+                const baru = e.target.value as Versi;
+                setVersi(baru);
+                void kirim({ versi: baru });
+              }}
+            >
+              {(Object.keys(NAMA_VERSI) as Versi[]).map((v) => (
+                <option key={v} value={v}>
+                  {NAMA_VERSI[v]}
+                </option>
+              ))}
+            </select>
+            <p className="text-caption text-muted">{KETERANGAN_VERSI[versi]}</p>
+            {versi !== "kustom" && kustom && (
+              <p className="text-caption text-muted">
+                Teks sendiri Anda tetap tersimpan, dan kembali dipakai begitu Anda memilih
+                &ldquo;Teks sendiri&rdquo;.
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-1.5">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="prompt-advanced" className="text-caption font-medium text-muted">
@@ -131,7 +182,7 @@ export function AdminPromptPanel() {
             />
             <p className="max-w-prose text-caption text-muted">
               Ditempel di akhir prompt tenant. Ia yang menjaga keluaran tetap JSON yang bisa dibaca
-              extension dan Hub — dan yang menahan endpoint generate dipakai sebagai LLM serbaguna.
+              extension dan Hub, dan yang menahan endpoint generate dipakai sebagai LLM serbaguna.
             </p>
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={() => kirim({ contract })} disabled={busy}>
