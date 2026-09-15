@@ -23,27 +23,36 @@ const ISIAN =
 type Field = "advanced" | "contract";
 type Versi = "v4" | "pra_v4" | "kustom";
 
+/**
+ * Yang ditawarkan di layar cuma dua (keputusan owner 2026-09-15). "kustom"
+ * tetap hidup di lapisan data supaya override yang sudah dipasang SEBELUM
+ * saklar ini ada tidak mati diam-diam, tapi ia tidak punya kontrol sendiri:
+ * kotak teks yang tidak bisa berlaku adalah kontrol yang tidak melakukan
+ * apa-apa, dan itu dilarang aturan antislop proyek ini.
+ */
+const PILIHAN: Array<Exclude<Versi, "kustom">> = ["v4", "pra_v4"];
+
 const NAMA_VERSI: Record<Versi, string> = {
   v4: "v4, yang berlaku sekarang",
   pra_v4: "Sebelum v4, perilaku lama",
-  kustom: "Teks sendiri",
+  kustom: "Teks sendiri (tersimpan, tidak ditawarkan lagi)",
 };
 
 const KETERANGAN_VERSI: Record<Versi, string> = {
   v4: "Berhenti saat kata kunci jujurnya habis, dan mengikuti batas tiap marketplace.",
   pra_v4:
     "Mewajibkan tepat 50 kata kunci. Pada uji tujuh gambar, itu menghasilkan 5,33 tag yang tidak ada di gambar per gambar, lawan 0,64 pada v4.",
-  kustom: "Teks yang Anda tulis sendiri di kotak di bawah.",
+  kustom:
+    "Teks yang pernah Anda simpan sendiri. Memilih salah satu versi di atas akan menggantikannya, dan teksnya tetap tersimpan.",
 };
 
 export function AdminPromptPanel() {
   const [advanced, setAdvanced] = useState("");
   const [contract, setContract] = useState("");
-  const [overridden, setOverridden] = useState({ advanced: false, contract: false });
+  // Hanya ekor kontrak yang masih punya penanda override. Badan prompt sekarang
+  // dipilih lewat versi, jadi "dioverride" tidak berarti apa-apa untuknya.
+  const [contractOverridden, setContractOverridden] = useState(false);
   const [versi, setVersi] = useState<Versi>("v4");
-  // Teks kustom disimpan terpisah dari yang ditampilkan: berpindah ke bawaan
-  // lalu kembali tidak boleh menghapus tulisan owner (keputusan owner).
-  const [kustom, setKustom] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -61,11 +70,7 @@ export function AdminPromptPanel() {
       setAdvanced(data.settings.advanced);
       setContract(data.settings.contract);
       setVersi(data.settings.versi ?? "v4");
-      setKustom(data.settings.advancedKustom ?? "");
-      setOverridden({
-        advanced: data.settings.advancedOverridden,
-        contract: data.settings.contractOverridden,
-      });
+      setContractOverridden(Boolean(data.settings.contractOverridden));
       setError("");
     }
     setLoading(false);
@@ -99,8 +104,7 @@ export function AdminPromptPanel() {
       <h2 className="text-title-2 text-ink">Prompt Metadata Nerona</h2>
       <p className="mt-1 max-w-prose text-body text-muted">
         Prompt bawaan yang dipakai setiap tenant yang belum memasang prompt sendiri. Tidak pernah
-        ditampilkan di sisi tenant. Pilih versinya di bawah; kotak teks hanya berlaku saat versi
-        &ldquo;Teks sendiri&rdquo; dipilih.
+        ditampilkan di sisi tenant. Pilih versi yang dipakai di bawah.
       </p>
 
       {loading ? (
@@ -122,48 +126,16 @@ export function AdminPromptPanel() {
                 void kirim({ versi: baru });
               }}
             >
-              {(Object.keys(NAMA_VERSI) as Versi[]).map((v) => (
+              {(versi === "kustom" ? ([...PILIHAN, "kustom"] as Versi[]) : PILIHAN).map((v) => (
                 <option key={v} value={v}>
                   {NAMA_VERSI[v]}
                 </option>
               ))}
             </select>
             <p className="text-caption text-muted">{KETERANGAN_VERSI[versi]}</p>
-            {versi !== "kustom" && kustom && (
-              <p className="text-caption text-muted">
-                Teks sendiri Anda tetap tersimpan, dan kembali dipakai begitu Anda memilih
-                &ldquo;Teks sendiri&rdquo;.
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <label htmlFor="prompt-advanced" className="text-caption font-medium text-muted">
-                Badan prompt (mode advanced)
-              </label>
-              {overridden.advanced && <Badge tone="warning">Dioverride</Badge>}
-            </div>
-            <textarea
-              id="prompt-advanced"
-              rows={16}
-              className={ISIAN}
-              value={advanced}
-              onChange={(e) => setAdvanced(e.target.value)}
-            />
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => kirim({ advanced })} disabled={busy}>
-                Simpan badan
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => kirim({ advanced: "" })}
-                disabled={busy || !overridden.advanced}
-              >
-                Kembalikan ke bawaan
-              </Button>
-            </div>
+            <p className="text-caption text-muted">
+              Panjang prompt yang sedang hidup: {advanced.length.toLocaleString("id-ID")} karakter.
+            </p>
           </div>
 
           <div className="grid gap-1.5">
@@ -171,7 +143,7 @@ export function AdminPromptPanel() {
               <label htmlFor="prompt-contract" className="text-caption font-medium text-muted">
                 Ekor kontrak (hanya untuk prompt kustom tenant)
               </label>
-              {overridden.contract && <Badge tone="warning">Dioverride</Badge>}
+              {contractOverridden && <Badge tone="warning">Dioverride</Badge>}
             </div>
             <textarea
               id="prompt-contract"
@@ -192,7 +164,7 @@ export function AdminPromptPanel() {
                 size="sm"
                 variant="ghost"
                 onClick={() => kirim({ contract: "" })}
-                disabled={busy || !overridden.contract}
+                disabled={busy || !contractOverridden}
               >
                 Kembalikan ke bawaan
               </Button>
