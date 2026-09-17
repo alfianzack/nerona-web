@@ -4,7 +4,9 @@ import {
   buildKeywordPrompt,
   buildMetadataPrompt,
   buildRejectPrompt,
-  buildScoringPrompt
+  buildRisikoPrompt,
+  buildScoringPrompt,
+  buildSkorPrompt
 } from "@/lib/extension/prompts";
 
 /**
@@ -731,5 +733,103 @@ Rejected: Low quality
   it("uses (none) when contextSnippet is empty", () => {
     const { prompt } = buildRejectPrompt({ marketplace: "Adobe Stock", contextSnippet: "" });
     expect(prompt.endsWith("On-page context (trimmed):\n(none)")).toBe(true);
+  });
+});
+
+/**
+ * Prompt `risiko` (badge di gambar, fitur C).
+ *
+ * Ia sengaja BUKAN prompt `reject`. Prompt reject dibuka dengan "The
+ * contributor indicates this asset was REJECTED", premis yang sudah memaksa
+ * jawaban: dipakai untuk gambar yang belum dikirim, ia akan mengarang alasan
+ * penolakan untuk gambar yang baik-baik saja. Dua tes di bawah memaku
+ * pemisahan itu, karena menyatukan keduanya "supaya hemat" adalah godaan yang
+ * pasti datang lagi.
+ */
+describe("buildRisikoPrompt", () => {
+  it("tidak membawa premis bahwa gambarnya sudah ditolak", () => {
+    const { prompt } = buildRisikoPrompt({ marketplace: "Adobe Stock" });
+    expect(prompt).not.toMatch(/was REJECTED|NOT ACCEPTED/i);
+  });
+
+  it("menyatakan bahwa 'tidak ada risiko' itu jawaban yang benar dan sering", () => {
+    const { prompt } = buildRisikoPrompt({ marketplace: "Adobe Stock" });
+    expect(prompt).toMatch(/common|often|normal/i);
+    expect(prompt).toMatch(/"aman"/);
+  });
+
+  it("menyebut marketplace yang sedang dinilai", () => {
+    expect(buildRisikoPrompt({ marketplace: "Canva" }).prompt).toContain("Canva");
+  });
+
+  it("meminta bentuk JSON yang dibaca badge, bukan bentuk reject", () => {
+    const { prompt } = buildRisikoPrompt({ marketplace: "Adobe Stock" });
+    for (const kunci of ['"risiko"', '"alasan"', '"sebab"', '"yakin"', '"tindakan"', '"butuhRelease"']) {
+      expect(prompt).toContain(kunci);
+    }
+    expect(prompt).not.toContain("suggestedKeywords");
+  });
+
+  it("menanyakan model release, sebab penolakan yang paling mahal", () => {
+    expect(buildRisikoPrompt({ marketplace: "Adobe Stock" }).prompt).toMatch(/release/i);
+  });
+
+  it("jatahnya jauh lebih kecil daripada reject, karena jalan otomatis tiap gambar", () => {
+    const risiko = buildRisikoPrompt({ marketplace: "Adobe Stock" });
+    const reject = buildRejectPrompt({ marketplace: "Adobe Stock" });
+    expect(risiko.maxTokens).toBe(500);
+    expect(risiko.maxTokens).toBeLessThan(reject.maxTokens);
+  });
+});
+
+/**
+ * Prompt `skor` (panel Skor Gambar, fitur D).
+ *
+ * Menggantikan DUA panggilan yang dulu terpisah (scoring dan commercial
+ * intent) dengan satu, karena keduanya menilai gambar yang sama. Yang lama
+ * TIDAK diubah dan tidak dihapus: ekstensi yang sudah terpasang di komputer
+ * orang masih memanggilnya, dan mengubah prompt di bawah kaki mereka berarti
+ * hasil yang berbeda tanpa ada yang memperbarui apa pun.
+ *
+ * Yang paling penting dijaga: model harus menilai keyword YANG ADA, bukan
+ * mengarang daftarnya sendiri. Skor relevansi hanya berguna kalau ia menjawab
+ * "keyword yang saya punya ini cocok tidak", dan daftar karangan membuat panel
+ * menampilkan angka untuk keyword yang tidak pernah ada di form.
+ */
+describe("buildSkorPrompt", () => {
+  const kw = ["business meeting", "laptop work", "modern office"];
+
+  it("membawa keyword yang sedang ada di form, satu per satu", () => {
+    const { prompt } = buildSkorPrompt({ marketplace: "Adobe Stock", keywords: kw });
+    for (const k of kw) expect(prompt).toContain(k);
+  });
+
+  it("melarang model menambah atau mengganti keyword", () => {
+    const { prompt } = buildSkorPrompt({ marketplace: "Adobe Stock", keywords: kw });
+    expect(prompt).toMatch(/exactly the keywords|do not add|same spelling/i);
+  });
+
+  it("meminta tujuan komersial dan relevansi dalam satu balasan", () => {
+    const { prompt } = buildSkorPrompt({ marketplace: "Adobe Stock", keywords: kw });
+    expect(prompt).toContain('"tujuanKomersial"');
+    expect(prompt).toContain('"relevansi"');
+    expect(prompt).toContain('"rel"');
+  });
+
+  it("menyebut marketplace yang dinilai", () => {
+    expect(buildSkorPrompt({ marketplace: "Canva", keywords: kw }).prompt).toContain("Canva");
+  });
+
+  it("jatah token ikut banyaknya keyword, karena tiap keyword satu baris jawaban", () => {
+    const sedikit = buildSkorPrompt({ marketplace: "Adobe Stock", keywords: kw });
+    const banyak = buildSkorPrompt({
+      marketplace: "Adobe Stock",
+      keywords: Array.from({ length: 40 }, (_, i) => "keyword " + i),
+    });
+    expect(banyak.maxTokens).toBeGreaterThan(sedikit.maxTokens);
+  });
+
+  it("daftar keyword kosong tetap menghasilkan prompt yang sah", () => {
+    expect(buildSkorPrompt({ marketplace: "Adobe Stock", keywords: [] }).prompt.length).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { cariDuplikatUntukUser } from "@/lib/extension/duplikat";
+import { getGuardRules } from "@/lib/extension/guard-rules";
+import { normalizeImageHash } from "@/lib/metadata-log";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { resolveAiForUser } from "@/lib/ai-models";
@@ -11,9 +14,11 @@ import { tolakKalauBasi } from "@/lib/extension-version";
 import { resolveMetadataPrompt } from "@/lib/extension/prompt-resolver";
 import {
   buildScoringPrompt,
+  buildSkorPrompt,
   buildCommercialIntentPrompt,
   buildKeywordPrompt,
   buildRejectPrompt,
+  buildRisikoPrompt,
 } from "@/lib/extension/prompts";
 
 export const maxDuration = 60;
@@ -44,6 +49,14 @@ function buildPromptFor(feature: string, b: any): { prompt: string; maxTokens: n
       });
     case "reject":
       return buildRejectPrompt({ marketplace: b.marketplace, contextSnippet: b.contextSnippet });
+    // Badge risiko pra-kirim. Bukan `reject`, dan jangan disatukan dengannya:
+    // prompt reject berangkat dari premis bahwa asetnya SUDAH ditolak.
+    case "risiko":
+      return buildRisikoPrompt({ marketplace: b.marketplace });
+    // Panel Skor Gambar. `scoring` dan `commercial_intent` dibiarkan hidup
+    // untuk extension yang sudah terpasang dan belum diperbarui.
+    case "skor":
+      return buildSkorPrompt({ marketplace: b.marketplace, keywords: b.keywords });
     default:
       return null;
   }
@@ -121,6 +134,30 @@ export async function POST(request: Request) {
   }
   const messages = [{ role: "user", content: content_ }];
 
+  /**
+   * Penjaga duplikat menumpang di panggilan yang memang sudah terjadi.
+   *
+   * Dijalankan berbarengan dengan panggilan AI, bukan sesudahnya: satu query
+   * berindeks tidak perlu menambah waktu tunggu kontributor. Kegagalannya
+   * ditelan dengan sengaja, karena tidak tahu ada duplikat jauh lebih murah
+   * daripada menggagalkan generate yang metadatanya sudah jadi.
+   */
+  const duplikatNanti =
+    feature === "metadata"
+      ? getGuardRules()
+          .then((rules) =>
+            cariDuplikatUntukUser({
+              userId: resolved.userId,
+              sidik: normalizeImageHash(body.imageHash),
+              ambang: rules.duplikatAmbang,
+            })
+          )
+          .catch((err) => {
+            console.error("[extension/generate] pencarian duplikat gagal", err);
+            return null;
+          })
+      : Promise.resolve(null);
+
   // Tarif ikut model yang dipilih tenant ini, dan diputuskan SEBELUM panggilan.
   // Setelah panggilan, id model yang dikembalikan provider tidak pernah dipakai
   // untuk mencari tarif — itu jalan yang dulu menagih kurang tanpa suara.
@@ -186,5 +223,11 @@ export async function POST(request: Request) {
     points: cost,
   });
 
-  return NextResponse.json({ ok: true, content: result.text, usage: result.usage, pointsBalance });
+  return NextResponse.json({
+    ok: true,
+    content: result.text,
+    usage: result.usage,
+    pointsBalance,
+    duplikat: await duplikatNanti,
+  });
 }

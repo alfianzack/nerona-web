@@ -88,6 +88,10 @@ describe("recordMetadataLog", () => {
         title: "Cute cat illustration",
         keywords: "cat, cute",
         keywordCount: 2,
+        // Ditambahkan bersama penjaga duplikat 2026-09-17. Pencocokan di sini
+        // sengaja tetap objek persis, bukan objectContaining: kolom baru yang
+        // masuk diam-diam ke baris riwayat harus terlihat di sini dulu.
+        imageHash: null,
       },
     });
   });
@@ -142,5 +146,60 @@ describe("scoping", () => {
     expect(findMany.mock.calls[1][0].include).toEqual({
       user: { select: { email: true, name: true } },
     });
+  });
+});
+
+/**
+ * Sidik gambar (penjaga duplikat). Kolomnya nullable dan sengaja begitu: sidik
+ * yang tidak sah harus jadi null, bukan disimpan apa adanya. Sidik rusak yang
+ * tersimpan akan ikut dibandingkan besok dan menuduh gambar yang salah.
+ */
+describe("recordMetadataLog, sidik gambar", () => {
+  it("menyimpan sidik 16 huruf heks", async () => {
+    await recordMetadataLog({
+      userId: "u1",
+      marketplace: "adobe",
+      pageUrl: "",
+      title: "Cat",
+      keywords: "cat",
+      imageHash: "0f1e2d3c4b5a6978",
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ imageHash: "0f1e2d3c4b5a6978" }),
+    });
+  });
+
+  it("menurunkan huruf besar supaya pembandingnya tidak meleset", async () => {
+    await recordMetadataLog({
+      userId: "u1",
+      marketplace: "adobe",
+      pageUrl: "",
+      title: "Cat",
+      keywords: "cat",
+      imageHash: "0F1E2D3C4B5A6978",
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ imageHash: "0f1e2d3c4b5a6978" }),
+    });
+  });
+
+  it("tanpa sidik, kolomnya null, bukan string kosong", async () => {
+    await recordMetadataLog({ userId: "u1", marketplace: "adobe", pageUrl: "", title: "Cat", keywords: "cat" });
+    expect(create).toHaveBeenCalledWith({ data: expect.objectContaining({ imageHash: null }) });
+  });
+
+  it("sidik yang panjangnya salah atau bukan heks dibuang, bukan disimpan", async () => {
+    for (const rusak of ["0000", "zzzzzzzzzzzzzzzz", "0f1e2d3c4b5a69780", 12345, {}]) {
+      create.mockClear();
+      await recordMetadataLog({
+        userId: "u1",
+        marketplace: "adobe",
+        pageUrl: "",
+        title: "Cat",
+        keywords: "cat",
+        imageHash: rusak as never,
+      });
+      expect(create).toHaveBeenCalledWith({ data: expect.objectContaining({ imageHash: null }) });
+    }
   });
 });

@@ -587,10 +587,17 @@ model MetadataLog {
   title        String
   keywords     String   @db.Text
   keywordCount Int
+  /// Sidik dHash 64 bit, 16 huruf heks. Nullable karena baris lama memang tidak
+  /// punya, dan tidak ada backfill: sidik hanya bisa dihitung dari gambarnya.
+  imageHash    String?
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([createdAt])
+  /// Melayani dua pencarian duplikat sekaligus: kecocokan persis lewat indeks,
+  /// dan pengambilan sidik terbaru milik satu kontributor untuk dibandingkan
+  /// jaraknya di memori.
+  @@index([userId, imageHash])
   @@map("metadata_logs")
 }
 

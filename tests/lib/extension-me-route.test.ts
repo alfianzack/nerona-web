@@ -4,6 +4,11 @@ vi.mock("@/lib/extension-auth", () => ({ resolveExtensionToken: vi.fn() }));
 vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
 vi.mock("@/lib/ai-models", () => ({ resolveAiForUser: vi.fn() }));
 vi.mock("@/lib/extension-version", () => ({ infoPembaruanExtension: vi.fn() }));
+// Aturan penjaga unggahan ikut di respons ini sejak 2026-09-17. Dibiarkan
+// membaca pembaca aslinya, cuma barisnya yang dipalsukan: yang perlu dibuktikan
+// bukan parsernya (itu punya berkasnya sendiri) melainkan bahwa aturannya
+// benar-benar ikut berangkat ke extension.
+vi.mock("@/lib/prisma", () => ({ prisma: { setting: { findUnique: vi.fn().mockResolvedValue(null) } } }));
 
 import { GET } from "@/app/api/extension/me/route";
 import { resolveExtensionToken } from "@/lib/extension-auth";
@@ -87,6 +92,18 @@ describe("GET /api/extension/me", () => {
 
   /// Daftar marketplace yang berwenang ikut di setiap panggilan, jadi klien
   /// tidak perlu menyalinnya dengan tangan lagi.
+  it("membawa aturan penjaga unggahan, supaya extension tidak perlu rilis baru tiap batas berubah", async () => {
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({ marketplaces: "*", validUntil: null });
+    (resolveAiForUser as any).mockResolvedValue({ modelId: "m", label: "M" });
+    (infoPembaruanExtension as any).mockResolvedValue({ latest: "", min: "", url: "" });
+
+    const body = await (await GET(req("Bearer nrx_ok"))).json();
+    expect(body.guardRules.umum.judulMaks).toBe(120);
+    expect(body.guardRules.perMarketplace.canva.kataTerlarang).toContain("canva");
+    expect(body.guardRules.bobot.relevansi).toBe(40);
+  });
+
   it("membawa daftar marketplace yang berwenang", async () => {
     (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
     (getExtensionAccountState as any).mockResolvedValue({

@@ -9,6 +9,15 @@ vi.mock("@/lib/agent/claude-client", () => ({ chatCompletion: vi.fn() }));
 vi.mock("@/lib/points", () => ({ spendPoints: vi.fn() }));
 vi.mock("@/lib/ai-usage", () => ({ recordAiUsage: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ hit: vi.fn(() => ({ ok: true, remaining: 89, retryAfterSeconds: 0 })) }));
+// Penjaga duplikat (2026-09-17) membaca aturan dari Setting dan riwayat sidik
+// dari metadata_logs, keduanya berbarengan dengan panggilan AI. Dipalsukan
+// kosong di sini: perilakunya sendiri diuji di extension-duplikat.test.ts.
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    setting: { findUnique: vi.fn().mockResolvedValue(null) },
+    metadataLog: { findMany: vi.fn().mockResolvedValue([]) },
+  },
+}));
 vi.mock("@/lib/extension-version", () => ({ tolakKalauBasi: vi.fn() }));
 vi.mock("@/lib/extension/prompt-resolver", () => ({
   resolveMetadataPrompt: vi.fn(async () => ({ prompt: "P", maxTokens: 1234 })),
@@ -19,6 +28,8 @@ vi.mock("@/lib/extension/prompts", () => ({
   buildCommercialIntentPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
   buildKeywordPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
   buildRejectPrompt: vi.fn(() => ({ prompt: "P", maxTokens: 1234 })),
+  buildRisikoPrompt: vi.fn(() => ({ prompt: "P-risiko", maxTokens: 500 })),
+  buildSkorPrompt: vi.fn(() => ({ prompt: "P-skor", maxTokens: 700 })),
 }));
 
 import { POST } from "@/app/api/extension/generate/route";
@@ -148,6 +159,10 @@ describe("POST /api/extension/generate", () => {
       content: "meta",
       usage: { promptTokens: 1200, completionTokens: 150 },
       pointsBalance: 95,
+      // Ditambahkan bersama penjaga duplikat 2026-09-17. null berarti "tidak
+      // ada yang mirip", dan bentuknya tetap dipaku di sini supaya bidang baru
+      // tidak menyelinap ke balasan yang dibaca extension terpasang.
+      duplikat: null,
     });
 
     // Lewat resolver, bukan builder telanjang: preset tenant hanya bisa
@@ -331,5 +346,145 @@ describe("pencatatan pemakaian", () => {
     expect(await res.json()).toMatchObject({ ok: false, error: "ai_truncated" });
     expect(spendPoints).not.toHaveBeenCalled();
     expect(recordAiUsage).not.toHaveBeenCalled();
+  });
+
+  it("menyebut gambar yang mirip dari riwayat kontributor sendiri", async () => {
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
+    (tolakKalauBasi as any).mockResolvedValue(null);
+    (resolveAiForUser as any).mockResolvedValue({
+      aiModelId: "am1", modelId: "m", apiKey: "k", baseUrl: "b", pricing: {},
+    });
+    (chatCompletion as any).mockResolvedValue({
+      text: "meta", usage: { promptTokens: 10, completionTokens: 10 }, finishReason: "stop",
+    });
+    (spendPoints as any).mockResolvedValue(95);
+
+    const { prisma } = await import("@/lib/prisma");
+    (prisma.metadataLog.findMany as any).mockResolvedValue([
+      {
+        id: "lama",
+        title: "Business team meeting",
+        marketplace: "adobe",
+        createdAt: new Date("2026-07-14T00:00:00Z"),
+        imageHash: "0f1e2d3c4b5a6978",
+      },
+    ]);
+
+    const res = await POST(
+      new Request("http://test/api/extension/generate", {
+        method: "POST",
+        headers: { authorization: "Bearer nrx_ok", "content-type": "application/json" },
+        body: JSON.stringify({
+          feature: "metadata",
+          marketplace: "Adobe Stock",
+          imageHash: "0f1e2d3c4b5a6978",
+          image: { mime: "image/jpeg", dataBase64: "AAA" },
+        }),
+      })
+    );
+    const body = await res.json();
+    expect(body.duplikat.title).toBe("Business team meeting");
+    expect(body.duplikat.jarak).toBe(0);
+  });
+
+  it("fitur risiko memakai prompt sendiri dan tetap mengirim gambarnya", async () => {
+    const { buildRisikoPrompt } = await import("@/lib/extension/prompts");
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
+    (tolakKalauBasi as any).mockResolvedValue(null);
+    (resolveAiForUser as any).mockResolvedValue({
+      aiModelId: "am1", modelId: "m", apiKey: "k", baseUrl: "b", pricing: {},
+    });
+    (chatCompletion as any).mockResolvedValue({
+      text: '{"risiko":"aman","alasan":[],"butuhRelease":false}',
+      usage: { promptTokens: 10, completionTokens: 10 },
+      finishReason: "stop",
+    });
+    (spendPoints as any).mockResolvedValue(95);
+
+    const res = await POST(
+      new Request("http://test/api/extension/generate", {
+        method: "POST",
+        headers: { authorization: "Bearer nrx_ok", "content-type": "application/json" },
+        body: JSON.stringify({
+          feature: "risiko",
+          marketplace: "Adobe Stock",
+          image: { mime: "image/jpeg", dataBase64: "AAA" },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(buildRisikoPrompt).toHaveBeenCalledWith({ marketplace: "Adobe Stock" });
+
+    // Gambarnya ikut: tanpa itu model menilai risiko tanpa melihat apa pun.
+    const kirim = (chatCompletion as any).mock.calls.at(-1)[0];
+    expect(JSON.stringify(kirim.messages)).toContain("image_url");
+    expect(kirim.maxTokens).toBe(500);
+  });
+
+  it("fitur risiko tidak ikut mencari duplikat, itu urusan generate metadata", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    (prisma.metadataLog.findMany as any).mockClear();
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
+    (tolakKalauBasi as any).mockResolvedValue(null);
+    (resolveAiForUser as any).mockResolvedValue({
+      aiModelId: "am1", modelId: "m", apiKey: "k", baseUrl: "b", pricing: {},
+    });
+    (chatCompletion as any).mockResolvedValue({
+      text: "{}", usage: { promptTokens: 1, completionTokens: 1 }, finishReason: "stop",
+    });
+    (spendPoints as any).mockResolvedValue(95);
+
+    await POST(
+      new Request("http://test/api/extension/generate", {
+        method: "POST",
+        headers: { authorization: "Bearer nrx_ok", "content-type": "application/json" },
+        body: JSON.stringify({
+          feature: "risiko",
+          marketplace: "Adobe Stock",
+          imageHash: "0f1e2d3c4b5a6978",
+          image: { mime: "image/jpeg", dataBase64: "AAA" },
+        }),
+      })
+    );
+    expect(prisma.metadataLog.findMany).not.toHaveBeenCalled();
+  });
+
+  it("fitur skor meneruskan keyword yang ada di form, bukan cuma gambarnya", async () => {
+    const { buildSkorPrompt } = await import("@/lib/extension/prompts");
+    (resolveExtensionToken as any).mockResolvedValue({ userId: "u1" });
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, pointsBalance: 100 });
+    (tolakKalauBasi as any).mockResolvedValue(null);
+    (resolveAiForUser as any).mockResolvedValue({
+      aiModelId: "am1", modelId: "m", apiKey: "k", baseUrl: "b", pricing: {},
+    });
+    (chatCompletion as any).mockResolvedValue({
+      text: '{"tujuanKomersial":"x","relevansi":[]}',
+      usage: { promptTokens: 10, completionTokens: 10 },
+      finishReason: "stop",
+    });
+    (spendPoints as any).mockResolvedValue(95);
+
+    const res = await POST(
+      new Request("http://test/api/extension/generate", {
+        method: "POST",
+        headers: { authorization: "Bearer nrx_ok", "content-type": "application/json" },
+        body: JSON.stringify({
+          feature: "skor",
+          marketplace: "Adobe Stock",
+          keywords: ["business meeting", "laptop work"],
+          image: { mime: "image/jpeg", dataBase64: "AAA" },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    // Tanpa daftar keyword, model akan mengarang daftarnya sendiri dan panel
+    // menampilkan angka untuk kata yang tidak ada di form kontributor.
+    expect(buildSkorPrompt).toHaveBeenCalledWith({
+      marketplace: "Adobe Stock",
+      keywords: ["business meeting", "laptop work"],
+    });
   });
 });

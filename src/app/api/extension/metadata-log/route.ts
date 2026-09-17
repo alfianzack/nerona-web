@@ -43,6 +43,10 @@ export async function POST(request: Request) {
       pageUrl: body.pageUrl,
       title: body.title,
       keywords: body.keywords,
+      // Sidik gambar untuk penjaga duplikat. Baris inilah satu-satunya tempat
+      // sidik tersimpan, jadi kontributor yang belum memperbarui extension tetap
+      // mencatat riwayat, hanya tanpa ikut perbandingan duplikat.
+      imageHash: body.imageHash,
     });
     if (!row) {
       return NextResponse.json({ ok: false, error: "empty" }, { status: 400 });

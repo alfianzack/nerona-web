@@ -4,6 +4,7 @@ import { getExtensionAccountState } from "@/lib/extension-sync";
 import { resolveAiForUser } from "@/lib/ai-models";
 import { infoPembaruanExtension } from "@/lib/extension-version";
 import { MARKETPLACES } from "@/lib/marketplaces";
+import { getGuardRules } from "@/lib/extension/guard-rules";
 
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("authorization") || "";
@@ -24,10 +25,11 @@ export async function GET(request: Request) {
   // `update` ikut di sini alih-alih di endpoint sendiri: extension sudah
   // memanggil rute ini secara berkala, jadi badge versi baru tidak menambah
   // satu pun permintaan jaringan.
-  const [state, ai, update] = await Promise.all([
+  const [state, ai, update, guardRules] = await Promise.all([
     getExtensionAccountState(resolved.userId),
     resolveAiForUser(resolved.userId),
     infoPembaruanExtension(),
+    getGuardRules(),
   ]);
   return NextResponse.json({
     ok: true,
@@ -48,5 +50,15 @@ export async function GET(request: Request) {
     // sinilah kebenarannya berada. Klien yang memakainya tidak bisa lagi
     // menyimpang diam-diam.
     allMarketplaces: MARKETPLACES.map((m) => m.key),
+    // Aturan penjaga unggahan menumpang di sini dengan alasan yang sama seperti
+    // `update` dan `allMarketplaces`: extension sudah memanggil rute ini,
+    // jadi aturan yang bisa disunting owner sampai ke semua browser tanpa satu
+    // pun permintaan tambahan, dan tanpa rilis extension baru.
+    //
+    // Extension menyimpannya di chrome.storage dan tetap jalan dengan salinan
+    // terakhir kalau rute ini tak terjangkau. Yang TIDAK boleh terjadi adalah
+    // memeriksa metadata dengan batas marketplace yang sudah usang tanpa ada
+    // yang tahu, dan itu sebabnya `versi` ikut dikirim.
+    guardRules,
   });
 }

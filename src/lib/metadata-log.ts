@@ -19,6 +19,25 @@ export interface RecordMetadataLogInput {
   title: unknown;
   /** Array atau string dipisah koma — keduanya berakhir sebagai satu string. */
   keywords: unknown;
+  /** Sidik dHash 64 bit dari extension, 16 huruf heks. Lihat lib/extension/duplikat.ts. */
+  imageHash?: unknown;
+}
+
+const SIDIK_PANJANG = 16;
+const SIDIK_HEKS = /^[0-9a-f]+$/;
+
+/**
+ * Sidik yang tidak sah jadi null, bukan disimpan apa adanya.
+ *
+ * Bedanya besar: sidik rusak yang tersimpan akan ikut dibandingkan besok dan
+ * menuduh gambar yang salah sebagai duplikat. Null cuma berarti baris ini tidak
+ * ikut perbandingan, dan itu jauh lebih murah daripada tuduhan palsu.
+ */
+export function normalizeImageHash(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const bersih = value.trim().toLowerCase();
+  if (bersih.length !== SIDIK_PANJANG || !SIDIK_HEKS.test(bersih)) return null;
+  return bersih;
 }
 
 function text(value: unknown, max: number): string {
@@ -69,6 +88,7 @@ export async function recordMetadataLog(input: RecordMetadataLogInput) {
       title,
       keywords: keywords.text,
       keywordCount: keywords.count,
+      imageHash: normalizeImageHash(input.imageHash),
     },
   });
 }

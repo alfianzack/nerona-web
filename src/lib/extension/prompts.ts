@@ -866,3 +866,134 @@ ${ctx || "(none)"}
 `.trim();
   return { prompt, maxTokens: REJECT_AI_CAPS.openAiMaxTokens };
 }
+
+// ---------------------------------------------------------------------------
+// Risk badge (fitur C, 2026-09-17)
+//
+// SENGAJA terpisah dari Reject Analyzer, dan penggabungan keduanya harus
+// ditolak: prompt reject dibuka dengan "The contributor indicates this asset
+// was REJECTED", premis yang sudah menentukan jawaban. Dipakai untuk gambar
+// yang belum dikirim, premis itu memaksa model mengarang alasan penolakan untuk
+// gambar yang tidak punya masalah apa pun.
+//
+// Jatah tokennya jauh lebih kecil daripada reject (500 lawan 1024), dan itu
+// bukan penghematan kosmetik: prompt ini jalan OTOMATIS di tiap gambar yang
+// digulir kontributor, jadi ukuran jawaban langsung jadi tarif per gambar yang
+// ia bayar. Reject menulis judul, deskripsi, dan 12 sampai 40 keyword usulan;
+// ini tidak menulis metadata sama sekali.
+// ---------------------------------------------------------------------------
+
+const RISIKO_AI_CAPS = {
+  openAiMaxTokens: 500,
+  geminiMaxOutputTokens: 500,
+  claudeMaxTokens: 500
+};
+
+export interface BuildRisikoPromptInput {
+  marketplace: string;
+}
+
+export function buildRisikoPrompt({ marketplace }: BuildRisikoPromptInput): BuildPromptResult {
+  const prompt = `
+You are a stock marketplace pre-submission reviewer for ${marketplace}.
+The contributor has NOT submitted this asset yet. Nothing has been rejected.
+
+Task: judge what would most likely get this image rejected if it were submitted
+to ${marketplace} now, and how confident you are about each point.
+
+Most images have no notable problem. "aman" with an empty reason list is a
+correct and common answer, and you must give it whenever nothing specific
+stands out. Do not invent a concern to look thorough: a false warning costs the
+contributor real time.
+
+Look for what actually gets assets rejected:
+- people, faces, tattoos, or private property that need a model or property release
+- visible logos, brand names, trademarks, artwork, or recognisable landmarks
+- technical faults that are visible at this size: heavy noise, missed focus,
+  obvious compression or upscaling artefacts, blown highlights
+- content the marketplace will not host at all
+
+Return JSON only (no markdown fences, no commentary). Use this exact shape:
+{
+  "risiko": "aman" | "perlu dilihat" | "berisiko",
+  "alasan": [{"sebab": "string", "yakin": "rendah" | "sedang" | "tinggi", "tindakan": "string"}],
+  "butuhRelease": true | false
+}
+
+Rules:
+- "risiko" is "aman" when "alasan" is empty, and "alasan" is empty when nothing specific stands out
+- at most 3 entries in "alasan", most serious first
+- "sebab" names what you can actually see, in one short sentence
+- "tindakan" is what the contributor can do about it, in one short sentence
+- "butuhRelease" is true only when a person or private property is recognisable
+- Indonesian for "sebab" and "tindakan"; you are guessing, not deciding for ${marketplace}
+`.trim();
+  return { prompt, maxTokens: RISIKO_AI_CAPS.openAiMaxTokens };
+}
+
+// ---------------------------------------------------------------------------
+// Skor Gambar (fitur D, 2026-09-17)
+//
+// Menggantikan dua panggilan yang dulu terpisah: AI Scoring Agent dan
+// Commercial Intent Analyzer. Keduanya menilai gambar yang sama, dan JSON
+// scoring lama sudah memuat "commercial_intent" di dalamnya, jadi kontributor
+// membayar dua kali untuk jawaban yang tumpang tindih.
+//
+// Prompt lama SENGAJA tidak diubah dan tidak dihapus. Ekstensi yang sudah
+// terpasang di komputer orang masih memanggil `scoring` dan
+// `commercial_intent`; mengubah teksnya di bawah kaki mereka berarti hasil yang
+// berbeda tanpa ada yang memperbarui apa pun. Keduanya boleh dicabut kalau
+// nanti telemetri menunjukkan tidak ada lagi yang memanggilnya.
+//
+// Bedanya yang paling penting dari scoring lama: prompt ini menilai keyword
+// YANG SUDAH ADA di form, bukan mengarang daftarnya sendiri. Skor relevansi
+// hanya berguna kalau ia menjawab "keyword yang saya punya ini cocok tidak".
+// ---------------------------------------------------------------------------
+
+/** Satu baris relevansi per keyword, plus ruang untuk kalimat tujuan komersial. */
+const SKOR_TOKEN_DASAR = 400;
+const SKOR_TOKEN_PER_KEYWORD = 25;
+
+export interface BuildSkorPromptInput {
+  marketplace: string;
+  keywords: string[];
+}
+
+export function buildSkorPrompt({ marketplace, keywords }: BuildSkorPromptInput): BuildPromptResult {
+  const daftar = (Array.isArray(keywords) ? keywords : [])
+    .map((k) => String(k).trim())
+    .filter(Boolean);
+
+  const prompt = `
+You are a stock image reviewer for ${marketplace}.
+
+Two questions about the image, answered together:
+
+1. What is this asset commercially for? One concrete sentence naming the buyer
+   and the use, not a description of what is in the frame.
+2. For each keyword the contributor already has, how well does it match what is
+   actually visible or unmistakably implied in this image, from 0 to 100?
+
+Score the keywords below. Return exactly the keywords given, in the same order
+and with the same spelling. Do not add keywords, do not remove any, and do not
+correct spelling: the contributor is scoring the list they have, and a list you
+invented would put numbers next to words that are not in their form.
+
+Keywords:
+${daftar.length ? daftar.map((k) => "- " + k).join("\n") : "(none)"}
+
+Return JSON only (no markdown fences, no commentary). Use this exact shape:
+{
+  "tujuanKomersial": "string",
+  "relevansi": [{"k": "string", "rel": 0}]
+}
+
+Rules:
+- "rel" is 0 to 100. Below 50 means a buyer searching that word would not want this image
+- be strict: a keyword that describes a mood you cannot see is not relevant
+- "tujuanKomersial" in Indonesian, one sentence
+- keyword strings stay in English, exactly as given
+`.trim();
+
+  return { prompt, maxTokens: SKOR_TOKEN_DASAR + daftar.length * SKOR_TOKEN_PER_KEYWORD };
+}
