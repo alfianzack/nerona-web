@@ -32,7 +32,7 @@ interface ModelRow {
   isDefault: boolean;
   active: boolean;
   providerId: string;
-  estimatedPoints: number;
+  estimatedPoints: number | null;
   sortOrder: number;
   kind: string;
   usdPerImage: number | null;
@@ -268,7 +268,17 @@ export function AdminAiModelsPanel() {
                     <span className="text-body font-medium text-ink">{row.label}</span>
                     {row.isDefault && <Badge tone="info">Bawaan</Badge>}
                     {!row.active && <Badge tone="neutral">Nonaktif</Badge>}
-                    {!row.vision && <Badge tone="warning">Tanpa gambar</Badge>}
+                    {/* Lencana jenis, bukan hiasan: dua baris bawaan hidup
+                        berdampingan (satu chat, satu gambar), jadi tanpa ini
+                        "Bawaan" muncul dua kali tanpa keterangan bawaan apa.
+                        "Tanpa gambar" sendiri soal penglihatan model, dan itu
+                        tidak berarti apa-apa untuk baris yang tugasnya membuat
+                        gambar. */}
+                    {row.kind === "image" ? (
+                      <Badge tone="neutral">Studio</Badge>
+                    ) : (
+                      !row.vision && <Badge tone="warning">Tanpa gambar</Badge>
+                    )}
                     {/* Hanya disebut kalau ADA yang dibatasi. Baris yang
                         terlihat oleh semua paket tidak perlu lencana — itu
                         keadaan biasa, dan melabelinya cuma menambah keramaian. */}
@@ -289,10 +299,26 @@ export function AdminAiModelsPanel() {
                   </div>
                   <p className="mt-0.5 font-mono text-caption text-muted">{row.modelId}</p>
                   <p className="mt-0.5 text-caption text-muted">
-                    ${row.inPerMTok} / ${row.outPerMTok} per MTok ·{" "}
-                    <span className="tabular-nums">
-                      ± {row.estimatedPoints.toLocaleString("id-ID")} poin per gambar
-                    </span>
+                    {row.estimatedPoints === null ? (
+                      "Tarif per gambar belum diisi, jadi Studio menganggapnya belum aktif."
+                    ) : row.kind === "image" ? (
+                      <>
+                        ${row.usdPerImage} per gambar ·{" "}
+                        {/* Tanpa ±: harga gambar sudah pasti sebelum tombolnya
+                            ditekan, tidak seperti metadata yang baru ketahuan
+                            setelah balasan provider kembali. */}
+                        <span className="tabular-nums">
+                          {row.estimatedPoints.toLocaleString("id-ID")} poin per gambar
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        ${row.inPerMTok} / ${row.outPerMTok} per MTok ·{" "}
+                        <span className="tabular-nums">
+                          ± {row.estimatedPoints.toLocaleString("id-ID")} poin per gambar
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
