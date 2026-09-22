@@ -118,6 +118,46 @@ export async function creditTopupPoints(params: {
   return getBalance(params.userId);
 }
 
+/**
+ * Galat sementara dari pooler Supabase. Potongannya dibungkus transaksi, jadi
+ * kegagalan apa pun di daftar ini sudah di-rollback dan mengulang sekali tidak
+ * bisa memotong dua kali.
+ */
+const TRANSIENT_DB_CODES = new Set(["P1001", "P1017", "P2024", "P2034"]);
+
+async function runSpendTransaction(params: {
+  userId: string;
+  cost: number;
+  note?: string;
+}): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    await tx.pointTransaction.create({
+      data: {
+        userId: params.userId,
+        delta: -Math.abs(params.cost),
+        reason: "spend",
+        note: params.note ?? null,
+        createdById: null,
+      },
+    });
+    const agg = await tx.pointTransaction.aggregate({
+      where: { userId: params.userId },
+      _sum: { delta: true },
+    });
+    return agg._sum.delta ?? 0;
+  });
+}
+
+/**
+ * Memotong poin untuk satu panggilan AI yang sudah terjadi.
+ *
+ * Potongan dan pembacaan saldo duduk di satu transaksi supaya keduanya tidak
+ * pernah berbeda kabar. Versi sebelumnya menulis baris potongan lalu membaca
+ * saldo dengan panggilan terpisah: pembacaan yang gagal melempar walaupun poin
+ * sudah terpotong, dan ketiga pemanggilnya menelan galat itu lalu menampilkan
+ * saldo sebelum potongan. Melempar dari sini sekarang selalu berarti satu hal
+ * saja, tenant tidak tertagih.
+ */
 export async function spendPoints(params: {
   userId: string;
   cost: number;
@@ -126,14 +166,12 @@ export async function spendPoints(params: {
   if (!Number.isInteger(params.cost) || params.cost <= 0) {
     throw new Error("spendPoints: cost must be a positive integer");
   }
-  await prisma.pointTransaction.create({
-    data: {
-      userId: params.userId,
-      delta: -Math.abs(params.cost),
-      reason: "spend",
-      note: params.note ?? null,
-      createdById: null,
-    },
-  });
-  return getBalance(params.userId);
+  try {
+    return await runSpendTransaction(params);
+  } catch (err: any) {
+    if (TRANSIENT_DB_CODES.has(err?.code)) {
+      return runSpendTransaction(params);
+    }
+    throw err;
+  }
 }

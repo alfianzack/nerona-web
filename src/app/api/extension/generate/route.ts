@@ -211,7 +211,15 @@ export async function POST(request: Request) {
   try {
     pointsBalance = await spendPoints({ userId: resolved.userId, cost, note: `Extension ${feature}` });
   } catch (err) {
-    console.error("[extension/generate] spend failed", err);
+    // Metadatanya tetap dikirim: ongkos ke provider sudah dibayar, dan menahan
+    // hasilnya tidak mengembalikan uang itu. Identitasnya ikut dicatat supaya
+    // potongan yang lolos bisa dicocokkan dengan baris AiUsageLog jam yang sama.
+    console.error("[extension/generate] poin gagal dipotong", {
+      userId: resolved.userId,
+      cost,
+      feature,
+      err,
+    });
   }
 
   await recordAiUsage({

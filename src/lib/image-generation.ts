@@ -192,7 +192,7 @@ export async function generateImage(input: ImageGenInput): Promise<ImageGenResul
   } catch (err) {
     // Barisnya sudah tertulis dan gambarnya sudah jadi. Gagal memotong poin di
     // sini tidak boleh membatalkan hasil yang sudah dibayar Nerona ke provider.
-    console.error("[image-generation] gagal memotong poin", err);
+    console.error("[image-generation] gagal memotong poin", { userId, cost: poin, err });
   }
 
   return {

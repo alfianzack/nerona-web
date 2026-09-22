@@ -67,6 +67,10 @@ describe("adjustPoints", () => {
 });
 
 describe("spendPoints", () => {
+  beforeEach(() => {
+    (prisma.$transaction as any).mockImplementation((cb: any) => cb(prisma));
+  });
+
   it("always writes a negative spend row and returns the new balance", async () => {
     (prisma.pointTransaction.aggregate as any).mockResolvedValue({ _sum: { delta: -5 } });
     const bal = await spendPoints({ userId: "u1", cost: 10, note: "AI reply" });
@@ -74,6 +78,50 @@ describe("spendPoints", () => {
       data: { userId: "u1", delta: -10, reason: "spend", note: "AI reply", createdById: null },
     });
     expect(bal).toBe(-5);
+  });
+
+  // Penjaga untuk cacat yang sebenarnya: potongan ditulis dulu, saldo dibaca
+  // sesudahnya di luar transaksi. Pembacaan yang gagal melempar padahal poin
+  // sudah terpotong, dan pemanggilnya mencatat "spend failed" lalu menampilkan
+  // saldo lama ke tenant yang baru saja dibayar.
+  it("charges and reads the balance on the same transaction client", async () => {
+    const tx = {
+      pointTransaction: {
+        create: vi.fn().mockResolvedValue({}),
+        aggregate: vi.fn().mockResolvedValue({ _sum: { delta: -5 } }),
+      },
+    };
+    (prisma.$transaction as any).mockImplementation((cb: any) => cb(tx));
+
+    const bal = await spendPoints({ userId: "u1", cost: 10 });
+
+    expect(tx.pointTransaction.create).toHaveBeenCalledTimes(1);
+    expect(tx.pointTransaction.aggregate).toHaveBeenCalledTimes(1);
+    expect(prisma.pointTransaction.create).not.toHaveBeenCalled();
+    expect(bal).toBe(-5);
+  });
+
+  it("retries once on a Prisma serialization failure (P2034) and returns the success value", async () => {
+    (prisma.pointTransaction.aggregate as any).mockResolvedValue({ _sum: { delta: -5 } });
+    const serializationError = Object.assign(new Error("could not serialize access"), { code: "P2034" });
+    (prisma.$transaction as any)
+      .mockRejectedValueOnce(serializationError)
+      .mockImplementationOnce((cb: any) => cb(prisma));
+
+    const bal = await spendPoints({ userId: "u1", cost: 10 });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(bal).toBe(-5);
+  });
+
+  // Gagal yang benar-benar gagal harus tetap sampai ke pemanggil: itu satu-satunya
+  // sinyal bahwa panggilan AI barusan tidak tertagih.
+  it("propagates the error when the retry also fails", async () => {
+    const serializationError = Object.assign(new Error("could not serialize access"), { code: "P2034" });
+    (prisma.$transaction as any).mockRejectedValue(serializationError);
+
+    await expect(spendPoints({ userId: "u1", cost: 10 })).rejects.toThrow("could not serialize access");
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
   });
 
   it("throws for a zero cost and does not create a row", async () => {

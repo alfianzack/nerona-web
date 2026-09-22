@@ -69,7 +69,14 @@ export async function runAgentTurn(params: {
       note: `AI reply · ${channel} · ${result.model} · ${result.usage?.promptTokens ?? 0}+${result.usage?.completionTokens ?? 0} tok`,
     });
   } catch (err) {
-    console.error("[agent-turn] spendPoints failed", err);
+    // Identitasnya ikut dicatat supaya potongan yang lolos bisa dicocokkan
+    // dengan baris AiUsageLog di jam yang sama.
+    console.error("[agent-turn] poin gagal dipotong", {
+      userId: profile.userId,
+      cost,
+      channel,
+      err,
+    });
   }
 
   // withImage false: balasan agen murni teks. Mencampurnya ke rata-rata "poin
