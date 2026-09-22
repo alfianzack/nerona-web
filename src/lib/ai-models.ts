@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getAiSettings } from "@/lib/ai-settings";
 import { resolveProviderCredentials } from "@/lib/ai-providers";
-import { REFERENCE_IMAGE_USAGE, costForUsage, type AiPricing, type TokenUsage } from "@/lib/agent/pricing";
+import {
+  REFERENCE_IMAGE_USAGE,
+  costForImage,
+  costForUsage,
+  type AiPricing,
+  type TokenUsage,
+} from "@/lib/agent/pricing";
 import { averageImageUsageByModel } from "@/lib/ai-usage";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 
@@ -76,6 +82,33 @@ export function estimatePointsPerImage(
 
 function pricingFor(row: ModelRow, pointsPerUsd: number): AiPricing {
   return { inPerMTok: row.inPerMTok, outPerMTok: row.outPerMTok, pointsPerUsd };
+}
+
+/**
+ * Poin per gambar untuk panel owner, dihitung menurut jenis barisnya.
+ *
+ * Baris image punya harga PASTI: ceil(usdPerImage x pointsPerUsd), angka yang
+ * sama dengan yang dipotong Studio. Melewatkannya ke jalur tarif token seperti
+ * baris chat selalu menghasilkan 1 poin, karena kolom MTok baris image memang
+ * nol, dan 1 poin itu muncul justru di layar tempat owner menetapkan harganya.
+ *
+ * Null berarti barisnya kind = "image" tanpa tarif yang bisa dipakai. Itu
+ * keadaan yang sama persis dengan yang membuat Studio bilang belum aktif, jadi
+ * panel harus bisa menyebutnya, bukan menampilkan angka penggantinya.
+ */
+function poinPerGambarUntukPanel(
+  row: { kind: string; usdPerImage: number | null } & ModelRow,
+  pointsPerUsd: number,
+  nyata?: TokenUsage
+): number | null {
+  if (row.kind !== "image") {
+    return estimatePointsPerImage(pricingFor(row, pointsPerUsd), nyata);
+  }
+  try {
+    return costForImage({ usdPerImage: row.usdPerImage, pointsPerUsd });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -173,11 +206,6 @@ const KOLOM_PAKET = {
   business: "planBusiness",
 } as const;
 
-/** Saringan basis data untuk satu tingkat paket. */
-function planWhere(tier: PlanTier) {
-  return { [KOLOM_PAKET[tier]]: true };
-}
-
 /** Apakah satu baris boleh dipakai tingkat paket ini. */
 function allowsPlan(row: Pick<ModelRow, "planFree" | "planPro" | "planBusiness">, tier: PlanTier) {
   return row[KOLOM_PAKET[tier]];
@@ -194,34 +222,85 @@ export interface PlanContext {
  * gambar, jadi menawarkannya sama dengan menawarkan pilihan yang pasti gagal —
  * dan gagalnya setelah poin terpotong.
  */
-export async function listModelsForTenant(plan: PlanContext): Promise<TenantModelView[]> {
-  const { pricing } = await getAiSettings();
-  const rows = (await prisma.aiModel.findMany({
-    where: {
-      // Daftar ini yang dipilih tenant untuk metadata, jadi model gambar tidak
-      // berhak muncul di sini meski paketnya mengizinkan.
-      kind: "chat",
-      active: true,
-      vision: true,
-      ...planWhere(plan.tier),
-    },
-    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
-  })) as ModelRow[];
+/** Bahan mentah daftar model, sebelum disaring per paket. */
+interface BahanDaftar {
+  pricing: AiPricing;
+  rows: ModelRow[];
+  nyata: Map<string, TokenUsage>;
+}
 
-  const nyata = await averageImageUsageByModel(rows.map((row) => row.id));
+/**
+ * Ketiga query ini tidak saling membutuhkan, jadi berangkat bersama.
+ *
+ * Basis datanya jauh: satu perjalanan pulang-pergi berharga ratusan milidetik,
+ * dan tiga perjalanan berurutan itulah yang dulu membuat layar Model AI
+ * menunggu detik-detikan untuk pekerjaan yang muat dalam satu perjalanan.
+ */
+function ambilBahanDaftar(): Promise<BahanDaftar> {
+  return Promise.all([
+    getAiSettings(),
+    prisma.aiModel.findMany({
+      where: {
+        // Daftar ini yang dipilih tenant untuk metadata, jadi model gambar tidak
+        // berhak muncul di sini meski paketnya mengizinkan.
+        kind: "chat",
+        active: true,
+        vision: true,
+      },
+      orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+    }) as Promise<ModelRow[]>,
+    averageImageUsageByModel(null),
+  ]).then(([{ pricing }, rows, nyata]) => ({ pricing, rows, nyata }));
+}
 
+/**
+ * Saringan paket dikerjakan di sini, bukan di klausa `where`. Bedanya bukan
+ * selera: klausa `where` butuh `tier`, dan menunggunya berarti query daftar
+ * tidak boleh berangkat sebelum lisensinya dibaca. `allowsPlan` menyaring baris
+ * yang sama persis tanpa ketergantungan itu.
+ */
+function saringUntukPaket({ pricing, rows, nyata }: BahanDaftar, tier: PlanTier): TenantModelView[] {
   // Hanya kolom yang memang perlu dilihat. Tarif per baris dan `providerId`
   // urusan owner, bukan sesuatu yang perlu diketahui tenant.
-  return rows.map((row) => ({
-    id: row.id,
-    label: row.label,
-    note: row.note,
-    estimatedPoints: estimatePointsPerImage(
-      pricingFor(row, pricing.pointsPerUsd),
-      nyata.get(row.id)
-    ),
-    isDefault: row.isDefault,
-  }));
+  return rows
+    .filter((row) => allowsPlan(row, tier))
+    .map((row) => ({
+      id: row.id,
+      label: row.label,
+      note: row.note,
+      estimatedPoints: estimatePointsPerImage(
+        pricingFor(row, pricing.pointsPerUsd),
+        nyata.get(row.id)
+      ),
+      isDefault: row.isDefault,
+    }));
+}
+
+export async function listModelsForTenant(plan: PlanContext): Promise<TenantModelView[]> {
+  return saringUntukPaket(await ambilBahanDaftar(), plan.tier);
+}
+
+export interface TenantModelScreen {
+  models: TenantModelView[];
+  selectedId: string | null;
+  tier: PlanTier;
+}
+
+/**
+ * Semua yang dibutuhkan layar Model AI, dalam satu gelombang query.
+ *
+ * Tingkat paket menyaring daftar, tapi daftarnya tidak menunggu tingkat paket:
+ * keduanya berangkat bersamaan dan penyaringan terjadi setelah semuanya pulang.
+ */
+export async function tenantModelScreen(userId: string): Promise<TenantModelScreen> {
+  const [state, user, bahan] = await Promise.all([
+    getExtensionAccountState(userId),
+    prisma.user.findUnique({ where: { id: userId }, select: { aiModelId: true } }),
+    ambilBahanDaftar(),
+  ]);
+
+  const tier = planTierFromState(state);
+  return { models: saringUntukPaket(bahan, tier), selectedId: user?.aiModelId ?? null, tier };
 }
 
 /**
@@ -340,8 +419,9 @@ export async function listModelsForAdmin() {
   const nyata = await averageImageUsageByModel(rows.map((row) => row.id));
   return rows.map((row) => ({
     ...row,
-    estimatedPoints: estimatePointsPerImage(
-      pricingFor(row as ModelRow, pricing.pointsPerUsd),
+    estimatedPoints: poinPerGambarUntukPanel(
+      row as never,
+      pricing.pointsPerUsd,
       nyata.get(row.id)
     ),
   }));

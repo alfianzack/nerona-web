@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -13,32 +13,17 @@ interface ModelOption {
   isDefault: boolean;
 }
 
-export function ModelPicker() {
-  const [models, setModels] = useState<ModelOption[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tier, setTier] = useState<"free" | "pro" | "business">("business");
-  const [loading, setLoading] = useState(true);
+interface ModelPickerProps {
+  models: ModelOption[];
+  /** Pilihan yang tersimpan; null berarti tenant memakai model bawaan Nerona. */
+  selectedId: string | null;
+  tier: "free" | "pro" | "business";
+}
+
+export function ModelPicker({ models, selectedId: tersimpan, tier }: ModelPickerProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(tersimpan);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
-  async function muat() {
-    setLoading(true);
-    const res = await fetch("/api/model");
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.ok) {
-      setError("Gagal memuat daftar model.");
-    } else {
-      setModels(data.models);
-      setSelectedId(data.selectedId);
-      setTier(data.tier === "free" || data.tier === "pro" ? data.tier : "business");
-      setError("");
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    void muat();
-  }, []);
 
   async function pilih(modelId: string | null) {
     setBusy(true);
@@ -54,15 +39,10 @@ export function ModelPicker() {
       setError(data?.message || "Gagal menyimpan pilihan.");
       return;
     }
-    await muat();
-  }
-
-  if (loading) {
-    return (
-      <Card padding="lg">
-        <p className="text-body text-muted">Memuat…</p>
-      </Card>
-    );
+    // Memuat ulang seluruh daftar dari server akan membayar perjalanan kedua
+    // untuk mengetahui apa yang sudah kita ketahui: yang berubah hanya baris
+    // mana yang dipakai. Daftar, harga, dan paketnya tidak ikut bergeser.
+    setSelectedId(modelId);
   }
 
   // Registri kosong bukan galat — artinya Nerona belum menawarkan pilihan, dan

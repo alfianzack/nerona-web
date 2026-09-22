@@ -67,16 +67,24 @@ export async function recordAiUsage(params: RecordAiUsageParams): Promise<void> 
  * yang memutuskan memakai konstanta terkalibrasi sebagai gantinya.
  */
 export async function averageImageUsageByModel(
-  modelIds: string[]
+  /**
+   * `null` berarti semua model. Dipakai saat pemanggilnya belum tahu id mana
+   * yang akan ditampilkan: menunggu daftarnya berarti satu perjalanan tambahan
+   * ke basis data, sedangkan menyaringnya di sini tidak menghemat apa-apa —
+   * jendela 30 hari dan `withImage` sudah memotong barisnya, dan registri model
+   * hanya berisi belasan baris. Kunci berlebih di peta tidak mengganggu: yang
+   * membacanya selalu menyebut satu id.
+   */
+  modelIds: string[] | null
 ): Promise<Map<string, TokenUsage>> {
-  const ids = modelIds.filter(Boolean);
+  const ids = modelIds?.filter(Boolean) ?? null;
   const hasil = new Map<string, TokenUsage>();
-  if (ids.length === 0) return hasil;
+  if (ids !== null && ids.length === 0) return hasil;
 
   const rows = await prisma.aiUsageLog.groupBy({
     by: ["aiModelId"],
     where: {
-      aiModelId: { in: ids },
+      ...(ids === null ? {} : { aiModelId: { in: ids } }),
       withImage: true,
       createdAt: { gte: new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000) },
     },

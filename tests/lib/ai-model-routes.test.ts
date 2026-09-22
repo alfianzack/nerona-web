@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getServerSessionMock = vi.fn();
-const listForTenantMock = vi.fn();
 const setTenantModelMock = vi.fn();
 const listForAdminMock = vi.fn();
 const createModelMock = vi.fn();
@@ -21,7 +20,6 @@ vi.mock("@/lib/ai-models", async () => {
   const actual = await vi.importActual<typeof import("@/lib/ai-models")>("@/lib/ai-models");
   return {
     ...actual,
-    listModelsForTenant: (...a: unknown[]) => listForTenantMock(...(a as [])),
     setTenantModel: (...a: unknown[]) => setTenantModelMock(...(a as [])),
     listModelsForAdmin: (...a: unknown[]) => listForAdminMock(...(a as [])),
     createModel: (...a: unknown[]) => createModelMock(...(a as [])),
@@ -34,7 +32,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { user: { findUnique: vi.fn().mockResolvedValue({ aiModelId: "m1" }) } },
 }));
 
-import { GET as tenantGet, PATCH as tenantPatch } from "@/app/api/model/route";
+import { PATCH as tenantPatch } from "@/app/api/model/route";
 import {
   GET as adminGet,
   POST as adminPost,
@@ -65,41 +63,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   getServerSessionMock.mockResolvedValue({ user: { id: "user-1", role: null } });
   accountStateMock.mockResolvedValue({ plan: "Pro", active: true });
-  listForTenantMock.mockResolvedValue([]);
   listForAdminMock.mockResolvedValue([]);
+  setTenantModelMock.mockResolvedValue(undefined);
 });
 
-describe("GET /api/model", () => {
-  it("refuses an anonymous caller", async () => {
-    getServerSessionMock.mockResolvedValue(null);
-    expect((await tenantGet()).status).toBe(401);
-    expect(listForTenantMock).not.toHaveBeenCalled();
-  });
-
-  it("meneruskan tingkat paket, bukan sekadar berbayar atau tidak", async () => {
-    await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "pro" });
-  });
-
-  it("memperlakukan Free sebagai tingkat free", async () => {
-    accountStateMock.mockResolvedValue({ plan: "Free", active: true });
-    await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "free" });
-  });
-
-  it("membedakan Business dari Pro — itu gunanya kolom terpisah", async () => {
-    accountStateMock.mockResolvedValue({ plan: "Business", active: true });
-    await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "business" });
-  });
-
-  it("menurunkan lisensi kedaluwarsa ke free, betapa pun mahal paketnya", async () => {
-    accountStateMock.mockResolvedValue({ plan: "Business", active: false });
-    await tenantGet();
-    expect(listForTenantMock).toHaveBeenCalledWith({ tier: "free" });
-  });
-});
-
+// Pemetaan paket yang dulu diuji lewat GET /api/model kini diuji langsung di
+// tests/lib/ai-models.test.ts (describe "tenantModelScreen"): rutenya hilang,
+// penjagaannya tidak.
 describe("PATCH /api/model", () => {
   it("stores the tenant's choice with their own plan context", async () => {
     const res = await tenantPatch(body({ modelId: "m1" }));
@@ -199,9 +169,9 @@ describe("/api/admin/ai-models", () => {
     expect((await adminDelete(body({}, "DELETE"), ctx)).status).toBe(403);
   });
 
-  it("tidak mengubah rute tenant — tenant biasa tetap boleh memilih model", async () => {
+  it("tidak mengubah rute tenant, tenant biasa tetap boleh memilih model", async () => {
     getServerSessionMock.mockResolvedValue({ user: { id: "u1", role: null } });
     accountStateMock.mockResolvedValue({ active: true, plan: "pro" });
-    expect((await tenantGet()).status).toBe(200);
+    expect((await tenantPatch(body({ modelId: "m1" }))).status).toBe(200);
   });
 });

@@ -22,6 +22,7 @@ vi.mock("@/lib/extension-sync", () => ({ getExtensionAccountState: vi.fn() }));
 import {
   estimatePointsPerImage,
   listModelsForTenant,
+  tenantModelScreen,
   resolveAiForUser,
   setTenantModel,
   createModel,
@@ -60,6 +61,12 @@ function row(over: Record<string, unknown> = {}) {
     sortOrder: 0,
     ...over,
   };
+}
+
+/** Janji yang baru selesai saat kita menyuruhnya, untuk memeriksa urutan query. */
+function tertunda<T>() {
+  let selesai!: (nilai: T) => void;
+  return { janji: new Promise<T>((r) => (selesai = r)), selesai: (n: T) => selesai(n) };
 }
 
 beforeEach(() => {
@@ -217,19 +224,85 @@ describe("listModelsForTenant", () => {
   });
 
   it.each([
-    ["free", "planFree"],
-    ["pro", "planPro"],
-    ["business", "planBusiness"],
-  ] as const)("menyaring daftar dengan kolom paket %s", async (tier, kolom) => {
-    await listModelsForTenant({ tier });
-    const where = (prisma.aiModel.findMany as any).mock.calls[0][0].where;
-    expect(where[kolom]).toBe(true);
+    ["free", ["bebas"]],
+    ["pro", ["bebas", "berbayar"]],
+    ["business", ["bebas", "berbayar", "teratas"]],
+  ] as const)("paket %s hanya melihat model yang memang haknya", async (tier, terlihat) => {
+    (prisma.aiModel.findMany as any).mockResolvedValue([
+      row({ id: "bebas", planFree: true, planPro: true, planBusiness: true }),
+      row({ id: "berbayar", planFree: false, planPro: true, planBusiness: true }),
+      row({ id: "teratas", planFree: false, planPro: false, planBusiness: true }),
+    ]);
+    const daftar = await listModelsForTenant({ tier });
+    expect(daftar.map((m) => m.id)).toEqual([...terlihat]);
+  });
+
+  /**
+   * Inti perbaikan lambatnya halaman Model AI. Ketiga query ini tidak saling
+   * membutuhkan, jadi menunggunya satu per satu membayar tiga kali perjalanan
+   * ke Tokyo untuk pekerjaan yang muat dalam satu perjalanan.
+   */
+  it("menembakkan ketiga query sekaligus, bukan berurutan", async () => {
+    const setelan = tertunda<typeof GLOBAL>();
+    (getAiSettings as any).mockReturnValue(setelan.janji);
+
+    const jalan = listModelsForTenant({ tier: "business" });
+    expect(prisma.aiModel.findMany).toHaveBeenCalled();
+    expect(averageImageUsageByModel).toHaveBeenCalled();
+
+    setelan.selesai(GLOBAL);
+    await jalan;
   });
 
   it("never leaks a row's api key", async () => {
     (prisma.aiModel.findMany as any).mockResolvedValue([row({ apiKey: "row-key" })]);
     const rows = await listModelsForTenant({ tier: "business" });
     expect(JSON.stringify(rows)).not.toContain("row-key");
+  });
+});
+
+describe("tenantModelScreen", () => {
+  beforeEach(() => {
+    (prisma.aiModel.findMany as any).mockResolvedValue([row()]);
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1" });
+  });
+
+  it("mengembalikan daftar, pilihan tersimpan, dan tingkat paket sekaligus", async () => {
+    const layar = await tenantModelScreen("user-1");
+    expect(layar.models.map((m) => m.id)).toEqual(["m1"]);
+    expect(layar.selectedId).toBe("m1");
+    expect(layar.tier).toBe("business");
+  });
+
+  it("belum pernah memilih berarti selectedId null, bukan galat", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: null });
+    expect((await tenantModelScreen("user-1")).selectedId).toBeNull();
+  });
+
+  // Pemetaan paket ini dulu dijaga di rute GET /api/model. Rutenya hilang,
+  // penjagaannya tidak boleh ikut hilang.
+  it.each([
+    ["Free", true, "free"],
+    ["Pro", true, "pro"],
+    ["Business", true, "business"],
+    // Lisensi kedaluwarsa turun ke free, betapa pun mahal paketnya.
+    ["Business", false, "free"],
+  ] as const)("paket %s (aktif: %s) jadi tingkat %s", async (plan, active, tier) => {
+    (getExtensionAccountState as any).mockResolvedValue({ plan, active });
+    expect((await tenantModelScreen("user-1")).tier).toBe(tier);
+  });
+
+  it("menembakkan semua query sekaligus, tidak menunggu tingkat paketnya dulu", async () => {
+    const keadaan = tertunda<{ plan: string; active: boolean }>();
+    (getExtensionAccountState as any).mockReturnValue(keadaan.janji);
+
+    const jalan = tenantModelScreen("user-1");
+    expect(prisma.aiModel.findMany).toHaveBeenCalled();
+    expect(prisma.user.findUnique).toHaveBeenCalled();
+    expect(getAiSettings).toHaveBeenCalled();
+
+    keadaan.selesai({ plan: "Business", active: true });
+    await jalan;
   });
 });
 
@@ -339,10 +412,20 @@ describe("estimasi tenant memakai pemakaian nyata begitu datanya cukup", () => {
     );
   });
 
-  it("hanya menanyakan model yang benar-benar ditampilkan", async () => {
+  /**
+   * Rata-rata diminta untuk semua model, bukan hanya yang ditampilkan: idnya
+   * belum ada saat query ini berangkat. Yang harus dijaga adalah tiap baris
+   * tetap memakai rata-ratanya sendiri, bukan milik tetangganya.
+   */
+  it("tiap baris memakai rata-ratanya sendiri, bukan milik baris lain", async () => {
     (prisma.aiModel.findMany as any).mockResolvedValue([baris()]);
-    await listModelsForTenant({ tier: "business" });
-    expect(averageImageUsageByModel).toHaveBeenCalledWith(["m1"]);
+    (averageImageUsageByModel as any).mockResolvedValue(
+      new Map([["m-lain", { promptTokens: 60_000, completionTokens: 10_000 }]])
+    );
+    const daftar = await listModelsForTenant({ tier: "business" });
+    expect(daftar[0].estimatedPoints).toBe(
+      costForUsage({ usage: REFERENCE_IMAGE_USAGE, pricing: { inPerMTok: 0.25, outPerMTok: 1.5, pointsPerUsd: 1_000 } })
+    );
   });
 });
 
