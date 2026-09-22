@@ -72,12 +72,66 @@ Buat `.env.local` di server. Daftar lengkap (diambil dari kode, bukan perkiraan)
 
 | Variabel | Keterangan |
 | --- | --- |
-| `DATABASE_URL` | Connection string Postgres. Di VPS dengan Postgres lokal, boleh sama dengan `DIRECT_URL` |
+| `DATABASE_URL` | Connection string Postgres. Kalau basis datanya Supabase, **baca kotak di bawah**: port dan flag-nya menentukan kecepatan seluruh aplikasi. Di VPS dengan Postgres lokal, boleh sama dengan `DIRECT_URL` |
 | `DIRECT_URL` | Dipakai Prisma untuk migrasi |
 | `NEXTAUTH_URL` | `https://domain-anda.com` (harus https) |
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
 | `CRON_SECRET` | `openssl rand -base64 32`. **Kalau kosong, endpoint cron menolak semua request (fail closed)** |
 | `OWNER_ADMIN_EMAIL` | Email pemilik; dipakai `prisma/seed.ts` untuk membuat role `owner_admin` |
+
+### Supabase di VPS: jangan pakai pooler transaksi
+
+`.env.example` menunjuk `DATABASE_URL` ke port **6543** dengan `?pgbouncer=true`.
+Itu benar untuk serverless (lihat `docs/vercel.md`) dan **salah untuk VPS**.
+
+`pgbouncer=true` menyuruh Prisma berhenti memakai ulang prepared statement, jadi
+tiap query mengurai dan merencanakan ulang dari nol. Ongkosnya beberapa
+perjalanan pulang-pergi tambahan per query. Diukur pada 2026-09-22 dari
+Indonesia ke Supabase `ap-northeast-1`, `SELECT 1` berulang:
+
+| | tanpa `pgbouncer=true` | dengan `pgbouncer=true` |
+| --- | --- | --- |
+| port 5432 (session mode) | **263 ms** | 561 ms |
+| port 6543 (transaction mode) | 269 ms | 1291 ms |
+
+Portnya sendiri tidak berpengaruh (263 lawan 269). Flag-nya yang menggandakan.
+Bukan pula soal basis datanya sibuk: `SELECT pg_sleep(0.5)` menambah tepat ~500 ms
+di kedua jalur, jadi selisihnya murni ongkos di luar kerja query.
+
+Di VPS, `next start` lewat PM2 adalah satu proses yang hidup terus dan memegang
+kolam koneksinya sendiri. Itu persis keadaan yang cocok untuk **session mode**,
+dan pooler transaksi cuma membayar mahal untuk manfaat yang tidak dipakai.
+
+Jadi di VPS, samakan keduanya ke port 5432 tanpa flag:
+
+```env
+DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+```
+
+Efeknya pada halaman sungguhan, server yang sama, diukur berdampingan:
+
+| Layar | pooler 6543 | session 5432 |
+| --- | --- | --- |
+| `/paket` | 4075 ms | 1218 ms |
+| `/api/admin/payment-gateway` | 4034 ms | 825 ms |
+| `/api/admin/ai-models` | 2714 ms | 646 ms |
+| `/model` | 2134 ms | 621 ms |
+| `/dashboard` | 1912 ms | 612 ms |
+| layar satu gelombang (`/prompt`, `/profile`, `/api/admin/orders`, dll) | ~1350 ms | ~275 ms |
+
+**Jangan** membuang `pgbouncer=true` sambil tetap di port 6543. Sudah dicoba:
+pecah di gelombang pertama dengan `42P05 prepared statement "s13" already exists`.
+Di transaction mode satu koneksi klien dilempar-lempar ke koneksi server yang
+berbeda, jadi prepared statement saling tabrakan. Flag itu memang ada untuk
+mencegah itu. Di session mode tabrakan itu tidak mungkin terjadi: 288 query model
+sungguhan lewat 5432 tanpa flag, nol galat.
+
+Satu batas yang perlu diingat: session mode memberi satu koneksi server untuk
+tiap koneksi klien. `ecosystem.config.js` memakai `instances: 1`, jadi hanya ada
+satu kolam. Kalau suatu saat PM2 dinaikkan ke beberapa instance, tiap proses
+membuka kolamnya sendiri, dan `?connection_limit=N` perlu disetel supaya
+totalnya tidak melewati jatah koneksi proyek Supabase Anda.
 
 ### Rilis (Nerona Hub & extension)
 
