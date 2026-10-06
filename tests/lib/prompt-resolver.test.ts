@@ -7,8 +7,8 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { resolveMetadataPrompt } from "@/lib/extension/prompt-resolver";
-import { buildMetadataPrompt } from "@/lib/extension/prompts";
+import { resolveMetadataPrompt, resolveTrialPrompt } from "@/lib/extension/prompt-resolver";
+import { buildMetadataPrompt, METADATA_CONTRACT_TAIL } from "@/lib/extension/prompts";
 import { prisma } from "@/lib/prisma";
 
 beforeEach(() => {
@@ -156,5 +156,27 @@ describe("resolveMetadataPrompt with an active preset", () => {
     expect(resolved.maxTokens).toBe(
       buildMetadataPrompt({ marketplace: "Adobe Stock", promptMode: "advanced" }).maxTokens
     );
+  });
+});
+
+describe("resolveTrialPrompt", () => {
+  it("teks editor dipakai sebagai badan, dengan ekor kontrak, walau ada preset aktif", async () => {
+    activePreset("preset lama");
+    const resolved = await resolveTrialPrompt({ userId: "user-1", marketplace: "Canva", body: "  teks baru  " });
+    const harap = buildMetadataPrompt({
+      marketplace: "Canva",
+      promptMode: "advanced",
+      body: "teks baru",
+      tail: METADATA_CONTRACT_TAIL,
+    });
+    expect(resolved.prompt).toBe(harap.prompt);
+    expect(resolved.prompt).not.toContain("preset lama");
+  });
+
+  it("teks kosong jatuh ke prompt yang berlaku, persis seperti extension", async () => {
+    activePreset("preset aktif");
+    const resolved = await resolveTrialPrompt({ userId: "user-1", marketplace: "Canva", body: "   " });
+    const harap = await resolveMetadataPrompt({ userId: "user-1", marketplace: "Canva", promptMode: "advanced" });
+    expect(resolved.prompt).toBe(harap.prompt);
   });
 });

@@ -5,11 +5,8 @@ import { normalizeImageHash } from "@/lib/metadata-log";
 import { resolveExtensionToken } from "@/lib/extension-auth";
 import { getExtensionAccountState } from "@/lib/extension-sync";
 import { resolveAiForUser } from "@/lib/ai-models";
-import { recordAiUsage } from "@/lib/ai-usage";
-import { chatCompletion } from "@/lib/agent/claude-client";
-import { costForUsage } from "@/lib/agent/pricing";
-import { spendPoints } from "@/lib/points";
 import { hit } from "@/lib/rate-limit";
+import { panggilAiBerbayar } from "@/lib/extension/panggilan-berbayar";
 import { tolakKalauBasi } from "@/lib/extension-version";
 import { resolveMetadataPrompt } from "@/lib/extension/prompt-resolver";
 import {
@@ -166,76 +163,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "ai_not_configured" }, { status: 503 });
   }
 
-  let result;
-  try {
-    result = await chatCompletion({
-      messages,
-      model: modelId,
-      apiKey,
-      baseUrl,
-      maxTokens: built.maxTokens,
-    });
-  } catch (err) {
-    console.error("[extension/generate] upstream error", err);
-    return NextResponse.json({ ok: false, error: "ai_error" }, { status: 502 });
-  }
-
-  /**
-   * Balasan yang tidak bisa dipakai tidak menagih poin.
-   *
-   * Dua kegagalan ini terbukti 2026-09-14, keduanya HTTP 200 tanpa galat: GPT 5
-   * mengembalikan string kosong (token penalarannya menghabiskan jatah
-   * max_tokens sebelum satu huruf jawaban keluar), dan gemini/gemini-3.5-flash
-   * mengembalikan JSON yang terpotong di tengah. Sebelum penjaga ini keduanya
-   * tetap memotong poin dan mengembalikan ok: true, jadi tenant membayar penuh
-   * untuk balasan yang tidak bisa diurai extension maupun Hub.
-   *
-   * Ongkos ke provider tetap kita bayar, dan itu disengaja: yang salah bukan
-   * tenant, dan menagih untuk hasil kosong lebih mahal daripada token hangus.
-   */
-  if (!result.text.trim()) {
-    console.error("[extension/generate] balasan kosong", { modelId, usage: result.usage });
-    return NextResponse.json({ ok: false, error: "ai_empty" }, { status: 502 });
-  }
-  if (result.finishReason === "length") {
-    console.error("[extension/generate] balasan terpotong di batas token", {
-      modelId,
-      maxTokens: built.maxTokens,
-      usage: result.usage,
-    });
-    return NextResponse.json({ ok: false, error: "ai_truncated" }, { status: 502 });
-  }
-
-  const cost = costForUsage({ usage: result.usage, pricing });
-  let pointsBalance = state.pointsBalance;
-  try {
-    pointsBalance = await spendPoints({ userId: resolved.userId, cost, note: `Extension ${feature}` });
-  } catch (err) {
-    // Metadatanya tetap dikirim: ongkos ke provider sudah dibayar, dan menahan
-    // hasilnya tidak mengembalikan uang itu. Identitasnya ikut dicatat supaya
-    // potongan yang lolos bisa dicocokkan dengan baris AiUsageLog jam yang sama.
-    console.error("[extension/generate] poin gagal dipotong", {
-      userId: resolved.userId,
-      cost,
-      feature,
-      err,
-    });
-  }
-
-  await recordAiUsage({
+  const hasil = await panggilAiBerbayar({
     userId: resolved.userId,
-    aiModelId,
+    ai: { aiModelId, modelId, apiKey, baseUrl, pricing },
+    messages,
+    maxTokens: built.maxTokens,
     feature,
     withImage,
-    usage: result.usage,
-    points: cost,
+    note: `Extension ${feature}`,
+    saldoAwal: state.pointsBalance,
+    label: "extension/generate",
   });
+  if (!hasil.ok) {
+    return NextResponse.json({ ok: false, error: hasil.error }, { status: hasil.status });
+  }
 
   return NextResponse.json({
     ok: true,
-    content: result.text,
-    usage: result.usage,
-    pointsBalance,
+    content: hasil.text,
+    usage: hasil.usage,
+    pointsBalance: hasil.pointsBalance,
     duplikat: await duplikatNanti,
   });
 }

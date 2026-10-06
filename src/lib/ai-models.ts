@@ -172,6 +172,45 @@ export async function resolveAiForUser(userId: string): Promise<ResolvedAi> {
   };
 }
 
+/**
+ * Model untuk satu panggilan Coba prompt, yang boleh berbeda dari pilihan
+ * tersimpan tenant.
+ *
+ * Penjagaannya sama dengan setTenantModel, ditambah `kind`: daftar di layar
+ * sudah menyaring semua ini, tapi rute uji menerima id dari klien, dan
+ * menyembunyikan pilihan di layar bukan penjagaan. Tarifnya dari baris yang
+ * sama, jadi uji dengan model mahal ditagih dengan tarif model mahal.
+ *
+ * Tanpa id, hasilnya resolveAiForUser apa adanya.
+ */
+export async function resolveAiForTrial(userId: string, aiModelId: string | null): Promise<ResolvedAi> {
+  if (!aiModelId) return resolveAiForUser(userId);
+
+  const [row, global, state] = await Promise.all([
+    prisma.aiModel.findFirst({ where: { id: aiModelId }, include: { provider: true } }) as Promise<
+      (ModelRow & { kind?: string }) | null
+    >,
+    getAiSettings(),
+    getExtensionAccountState(userId),
+  ]);
+  // Baris model gambar dianggap tidak ada, bukan "tidak aktif": bagi layar ini
+  // ia memang bukan pilihan, dan tarif per gambarnya tidak berarti apa-apa
+  // sebagai tarif per juta token.
+  if (!row || (row.kind ?? "chat") !== "chat") throw new AiModelError("not_found");
+  if (!row.active) throw new AiModelError("inactive");
+  if (!row.vision) throw new AiModelError("no_vision");
+  if (!allowsPlan(row, planTierFromState(state))) throw new AiModelError("plan_not_allowed");
+
+  const creds = resolveProviderCredentials(row.provider ?? null);
+  return {
+    aiModelId: row.id,
+    modelId: row.modelId,
+    label: row.label,
+    ...creds,
+    pricing: pricingFor(row, global.pricing.pointsPerUsd),
+  };
+}
+
 export interface TenantModelView {
   id: string;
   label: string;

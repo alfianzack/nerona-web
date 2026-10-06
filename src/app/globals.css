@@ -57,6 +57,14 @@
     --danger: 190 18 60;
     --danger-bg: 255 241 242;
 
+    /* Mint hasil AI, nilai yang sama dengan permukaan publik (lihat docblock
+       `--result` di blok marketing). Sebelumnya hanya ada di sana, jadi chip
+       keyword di dalam aplikasi (kartu Coba prompt) tampil tanpa latar sama
+       sekali: `bg-result-bg` membaca variabel yang tidak terdefinisi. */
+    --result: 47 191 143;
+    --result-bg: 219 243 234;
+    --result-ink: 11 83 65;
+
     --radius-card: 12px;
     --radius-control: 8px;
     --radius-action: 8px;

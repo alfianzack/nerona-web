@@ -24,6 +24,7 @@ import {
   listModelsForTenant,
   tenantModelScreen,
   resolveAiForUser,
+  resolveAiForTrial,
   setTenantModel,
   createModel,
   planTierFromState,
@@ -593,5 +594,42 @@ describe("membuat baris model gambar", () => {
     await expect(
       updateModel("m1", { ...dasar, kind: "image" } as never)
     ).rejects.toThrow(AiModelError);
+  });
+});
+
+describe("resolveAiForTrial", () => {
+  it("tanpa pilihan, sama persis dengan resolveAiForUser", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1", aiModel: row() });
+    expect(await resolveAiForTrial("user-1", null)).toEqual(await resolveAiForUser("user-1"));
+  });
+
+  it("memakai baris yang dipilih, dengan tarif baris itu, bukan model tersimpan", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ aiModelId: "m1", aiModel: row() });
+    (prisma.aiModel.findFirst as any).mockResolvedValue(
+      row({ id: "m2", label: "GPT 5", modelId: "gpt-5", inPerMTok: 1.25, outPerMTok: 10 })
+    );
+    const resolved = await resolveAiForTrial("user-1", "m2");
+    expect(resolved.aiModelId).toBe("m2");
+    expect(resolved.modelId).toBe("gpt-5");
+    expect(resolved.label).toBe("GPT 5");
+    expect(resolved.pricing).toEqual({ inPerMTok: 1.25, outPerMTok: 10, pointsPerUsd: 1_000 });
+    expect(resolved.apiKey).toBe("kunci-a");
+  });
+
+  it("menolak baris yang tidak ada, tidak aktif, tanpa penglihatan, atau model gambar", async () => {
+    const tolak = async (baris: unknown, kode: string) => {
+      (prisma.aiModel.findFirst as any).mockResolvedValue(baris);
+      await expect(resolveAiForTrial("user-1", "mx")).rejects.toMatchObject({ code: kode });
+    };
+    await tolak(null, "not_found");
+    await tolak(row({ active: false }), "inactive");
+    await tolak(row({ vision: false }), "no_vision");
+    await tolak(row({ kind: "image" }), "not_found");
+  });
+
+  it("menolak model yang tidak diizinkan paket tenant", async () => {
+    (getExtensionAccountState as any).mockResolvedValue({ active: true, plan: "Free" });
+    (prisma.aiModel.findFirst as any).mockResolvedValue(row({ planFree: false }));
+    await expect(resolveAiForTrial("user-1", "m1")).rejects.toMatchObject({ code: "plan_not_allowed" });
   });
 });

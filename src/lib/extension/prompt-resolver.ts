@@ -53,3 +53,39 @@ export async function resolveMetadataPrompt({
     body: mode === "advanced" ? settings.advanced : undefined,
   });
 }
+
+export interface ResolveTrialPromptInput {
+  userId: string;
+  marketplace: string;
+  /** Teks di editor layar Prompt, boleh belum disimpan. Kosong = prompt yang berlaku. */
+  body?: string;
+}
+
+/**
+ * Prompt untuk layar Coba prompt.
+ *
+ * Teks editor diperlakukan persis seperti preset aktif (cap advanced, ekor
+ * kontrak terkunci), supaya yang diuji tenant adalah yang nanti dijalankan
+ * extension setelah preset itu disimpan dan dinyalakan. Ekornya juga yang
+ * membuat rute uji tidak bisa dipakai sebagai proxy LLM serbaguna.
+ *
+ * Tanpa teks, jalurnya resolveMetadataPrompt apa adanya: yang diuji adalah
+ * prompt yang sekarang dipakai extension, tanpa satu byte pun berbeda.
+ */
+export async function resolveTrialPrompt({
+  userId,
+  marketplace,
+  body,
+}: ResolveTrialPromptInput): Promise<BuildPromptResult> {
+  const teks = (body ?? "").trim();
+  if (!teks) {
+    return resolveMetadataPrompt({ userId, marketplace, promptMode: "advanced" });
+  }
+  const settings = await getPromptSettings();
+  return buildMetadataPrompt({
+    marketplace,
+    promptMode: "advanced",
+    body: teks,
+    tail: settings.contract,
+  });
+}
