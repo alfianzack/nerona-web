@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm, EMPTY_PRODUCT, type ProductFormValues } from "@/components/shop/ProductForm";
 import { formatRupiah } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 interface Product {
   id: string;
@@ -18,7 +19,6 @@ interface Product {
   isActive: boolean;
 }
 
-const PAGE_SIZE = 20;
 
 /**
  * Belum ada primitive untuk <select>. Bentuknya sengaja dijiplak dari Input —
@@ -161,7 +161,7 @@ export function ProductManager() {
       header: "Stok",
       sortable: true,
       render: (p) => (
-        <span className="font-mono tabular-nums">{p.stock === null ? "—" : String(p.stock)}</span>
+        <span className="font-mono tabular-nums">{p.stock === null ? "-" : String(p.stock)}</span>
       ),
     },
     {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Pagination } from "@/components/ui/Pagination";
 import { Icon } from "@/components/ui/icons";
 
 interface OrderRow {
@@ -20,21 +21,32 @@ interface OrderRow {
 
 export function AdminOrdersPanel() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
 
-  async function load() {
-    const res = await fetch("/api/admin/orders");
+  // Setelah Aktifkan atau Tolak, halaman yang sama dimuat ulang. Kalau order
+  // itu baris terakhir di halamannya, server menjepit nomor halaman ke yang
+  // terakhir masih berisi, jadi layar tidak mendarat di halaman kosong.
+  async function load(nextPage = page) {
+    setLoading(true);
+    const res = await fetch(`/api/admin/orders?page=${nextPage}`);
     const data = await res.json().catch(() => null);
+    setLoading(false);
     if (!res.ok || !data?.ok) {
       setError("Gagal memuat daftar order.");
       return;
     }
+    setError("");
     setOrders(data.orders);
+    setPage(data.page);
+    setTotal(data.total);
   }
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -61,7 +73,13 @@ export function AdminOrdersPanel() {
     <div className="max-w-2xl space-y-3">
       {error && <p className="text-caption text-danger">{error}</p>}
 
-      {orders.length === 0 && (
+      {loading && orders.length === 0 && (
+        <Card>
+          <p className="text-body text-muted">Memuat order yang menunggu...</p>
+        </Card>
+      )}
+
+      {!loading && !error && orders.length === 0 && (
         <Card>
           <p className="text-body text-muted">Tidak ada order yang menunggu.</p>
         </Card>
@@ -78,7 +96,7 @@ export function AdminOrdersPanel() {
                     : order.product === "metadata"
                       ? "Metadata"
                       : "Agent"}{" "}
-                  — {order.planName}
+                  · {order.planName}
                 </p>
                 {/* Dua chip yang dulu ditulis tangan: satu pil abu-abu, satu
                     pil biru yang warnanya ditulis sebagai hex lepas di tempat.
@@ -90,7 +108,7 @@ export function AdminOrdersPanel() {
                 {order.isRenewal && <Badge tone="info">Perpanjangan</Badge>}
               </div>
               <p className="mt-1 text-caption text-muted">
-                {order.user.name ? `${order.user.name} — ` : ""}
+                {order.user.name ? `${order.user.name} · ` : ""}
                 {order.user.email}
               </p>
             </div>
@@ -138,6 +156,15 @@ export function AdminOrdersPanel() {
           </div>
         </Card>
       ))}
+
+      <Pagination
+        className="pt-2"
+        page={page}
+        total={total}
+        noun="order menunggu"
+        onPageChange={(p) => load(p)}
+        busy={loading}
+      />
     </div>
   );
 }

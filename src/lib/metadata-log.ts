@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { paginate } from "@/lib/pagination";
 
 /**
  * Riwayat metadata yang di-generate extension.
@@ -134,10 +135,25 @@ export async function listMetadataLogsForUser(userId: string, limit = 100) {
   });
 }
 
-export async function listAllMetadataLogs(limit = 100) {
-  return prisma.metadataLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    include: { user: { select: { email: true, name: true } } },
-  });
+export async function listMetadataLogsForUserPage(userId: string, page: number) {
+  return paginate(
+    page,
+    () => prisma.metadataLog.count({ where: { userId } }),
+    (skip, take) =>
+      prisma.metadataLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, skip, take })
+  );
+}
+
+export async function listAllMetadataLogsPage(page: number) {
+  return paginate(
+    page,
+    () => prisma.metadataLog.count(),
+    (skip, take) =>
+      prisma.metadataLog.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+        include: { user: { select: { email: true, name: true } } },
+      })
+  );
 }

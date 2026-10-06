@@ -1,13 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getBalance, listTransactions } from "@/lib/points";
-import { UserDetailTabs, type PurchaseView } from "@/components/admin/UserDetailTabs";
+import { parsePage } from "@/lib/pagination";
+import { getBalance, listTransactionsPage } from "@/lib/points";
+import { listPurchasesPage } from "@/lib/purchases";
+import { UserDetailTabs } from "@/components/admin/UserDetailTabs";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/icons";
 
-export default async function AdminUserDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminUserDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const user = await prisma.user.findUnique({
     where: { id: params.id },
     select: { id: true, email: true, name: true },
@@ -16,41 +24,17 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
     notFound();
   }
 
-  const [balance, txns, orderRequests, orders] = await Promise.all([
+  const [balance, txns, purchases] = await Promise.all([
     getBalance(user.id),
-    listTransactions(user.id),
-    prisma.orderRequest.findMany({
-      where: { userId: user.id, status: "fulfilled" },
-      orderBy: { fulfilledAt: "desc" },
-      select: { id: true, product: true, planName: true, fulfilledAt: true },
-    }),
-    prisma.order.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, amount: true, note: true, courseId: true, createdAt: true },
-    }),
+    listTransactionsPage(user.id, parsePage(searchParams.poin)),
+    listPurchasesPage(user.id, parsePage(searchParams.beli)),
   ]);
 
-  const purchases: PurchaseView[] = [
-    ...orderRequests.map((o) => ({
-      id: `req-${o.id}`,
-      kind: "plan" as const,
-      label: `${o.product === "agent" ? "Agent" : "Metadata"} — ${o.planName}`,
-      detail: null,
-      amount: null,
-      date: (o.fulfilledAt ?? new Date(0)).toISOString(),
-    })),
-    ...orders.map((o) => ({
-      id: `ord-${o.id}`,
-      kind: "order" as const,
-      label: o.courseId ? "Pembelian kelas" : "Aktivasi lisensi",
-      detail: o.note,
-      amount: o.amount,
-      date: o.createdAt.toISOString(),
-    })),
-  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-
-  const transactions = txns.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() }));
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(searchParams)) {
+    const value = Array.isArray(v) ? v[0] : v;
+    if (value) query[k] = value;
+  }
 
   return (
     <div className="max-w-2xl">
@@ -81,8 +65,16 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
           userEmail={user.email}
           userId={user.id}
           balance={balance}
-          transactions={transactions}
-          purchases={purchases}
+          transactions={{
+            ...txns,
+            rows: txns.rows.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })),
+          }}
+          purchases={{
+            ...purchases,
+            rows: purchases.rows.map((p) => ({ ...p, date: p.date.toISOString() })),
+          }}
+          query={query}
+          initialTab={query.poin || query.beli ? "finance" : "paket"}
         />
       </div>
     </div>

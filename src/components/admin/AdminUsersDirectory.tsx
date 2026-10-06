@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Icon } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface PlanState {
   status: string;
@@ -71,7 +71,7 @@ function avatarFor(row: UserRow): { initials: string; colorClass: string } {
  */
 function StatusPill({ state, fallbackLabel }: { state: PlanState | null; fallbackLabel: string }) {
   if (!state) {
-    return <span className="text-caption text-muted">—</span>;
+    return <span className="text-caption text-muted">Tidak ada</span>;
   }
   const active = state.status === "active" || state.status === "comp";
   const planLabel = state.plan ? state.plan : fallbackLabel;
@@ -88,7 +88,6 @@ export function AdminUsersDirectory() {
   const [filter, setFilter] = useState<FilterKey>("");
   const [counts, setCounts] = useState<FilterCounts | null>(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -108,7 +107,6 @@ export function AdminUsersDirectory() {
     }
     setRows(data.users);
     setPage(data.page);
-    setTotalPages(data.totalPages);
     setTotal(data.total);
     setCounts(data.counts ?? null);
   }
@@ -127,9 +125,6 @@ export function AdminUsersDirectory() {
     setFilter(key);
     load(1, q.trim(), key);
   }
-
-  const from = total === 0 ? 0 : (page - 1) * 25 + 1;
-  const to = Math.min(page * 25, total);
 
   return (
     <div>
@@ -201,7 +196,11 @@ export function AdminUsersDirectory() {
           sempit, dan yang benar di sana adalah menggulir mendatar, bukan
           meremas kolomnya. */}
       <Card padding="none" className="mt-4 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* `relative` menjadikan wadah ini blok acuan bagi label sr-only
+            (position: absolute) di kepala kolom Aksi. Tanpa itu label lolos
+            dari potongan overflow dan di layar 375px seluruh halaman bisa
+            digulir mendatar 381px, terukur 2026-09-28. */}
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-body">
             <thead>
               <tr className="border-b border-border font-mono text-label uppercase text-muted">
@@ -238,7 +237,7 @@ export function AdminUsersDirectory() {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-body font-semibold text-ink">
-                            {row.name ?? "—"}
+                            {row.name ?? "Tanpa nama"}
                             {/* Peran admin dulu berchip emas. Emas menandai
                                 uang, dan sebuah peran bukan uang. */}
                             {row.adminRole && (
@@ -279,51 +278,19 @@ export function AdminUsersDirectory() {
           </table>
         </div>
 
-        {/* Kurung sudut ‹ dan › berhenti dipakai sebagai panah: keduanya glyph
-            teks, dirender font sistem, jadi tingginya berbeda antar mesin dan
-            ukurannya tidak bisa disetel. Arah "berikutnya" memakai chevron
-            yang diputar seperempat putaran — daftar ikon bersama baru punya
-            chevron atas dan bawah. */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
-          <span className="text-caption text-muted">
-            {total === 0 ? (
-              <>
-                <span className="font-mono tabular-nums text-ink">0</span> pengguna
-              </>
-            ) : (
-              <>
-                Menampilkan{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {from}–{to}
-                </span>{" "}
-                dari <span className="font-mono tabular-nums text-ink">{total}</span> pengguna
-              </>
-            )}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => load(page - 1, q.trim(), filter)}
-              disabled={page <= 1 || loading}
-            >
-              <Icon name="arrow-left" className="h-4 w-4 flex-none" />
-              Sebelumnya
-            </Button>
-            <span className="font-mono text-caption tabular-nums text-muted">
-              Hal {page} / {totalPages}
-            </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => load(page + 1, q.trim(), filter)}
-              disabled={page >= totalPages || loading}
-            >
-              Berikutnya
-              <Icon name="chevron-down" className="h-4 w-4 flex-none -rotate-90" />
-            </Button>
-          </div>
-        </div>
+        {/* Kaki paginasi bersama dengan tabel lain (lib/pagination, 25 baris).
+            Kurung sudut sebagai panah sudah lama diganti ikon; aturannya kini
+            hidup di satu komponen, bukan disalin di tiap daftar. */}
+        {total > 0 && (
+          <Pagination
+            className="border-t border-border px-4 py-3"
+            page={page}
+            total={total}
+            noun="pengguna"
+            onPageChange={(p) => load(p, q.trim(), filter)}
+            busy={loading}
+          />
+        )}
       </Card>
     </div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import type { PurchaseView, TxnView } from "@/components/admin/UserDetailTabs";
+import { useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import type { PageView, PurchaseView, TxnView } from "@/components/admin/UserDetailTabs";
+import { pageHref } from "@/lib/pagination";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { Pagination } from "@/components/ui/Pagination";
 
 /**
  * Belum ada primitive untuk <select>. Bentuknya dijiplak dari Input — radius
@@ -28,11 +31,15 @@ function reasonLabel(reason: string): string {
 export function UserFinancePanel(props: {
   userId: string;
   initialBalance: number;
-  initialTransactions: TxnView[];
-  purchases: PurchaseView[];
+  transactions: PageView<TxnView>;
+  purchases: PageView<PurchaseView>;
+  query: Record<string, string>;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [refreshing, startRefresh] = useTransition();
   const [balance, setBalance] = useState(props.initialBalance);
-  const [transactions, setTransactions] = useState<TxnView[]>(props.initialTransactions);
+  const transactions = props.transactions.rows;
   const [amount, setAmount] = useState("");
   const [direction, setDirection] = useState<"add" | "sub">("add");
   const [note, setNote] = useState("");
@@ -63,18 +70,11 @@ export function UserFinancePanel(props: {
       return;
     }
 
+    // Riwayatnya dimuat ulang dari server, bukan disisipi baris tebakan:
+    // daftarnya kini berhalaman, dan baris sisipan di halaman 3 akan tampil di
+    // tempat yang salah sekaligus menggeser hitungan "dari N".
     setBalance(data.balance);
-    setTransactions((prev) => [
-      {
-        id: `optimistic-${prev.length}-${delta}`,
-        delta,
-        reason: "manual_adjust",
-        note: note.trim() || null,
-        createdByName: "Kamu",
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+    startRefresh(() => router.refresh());
     setAmount("");
     setNote("");
   }
@@ -130,8 +130,8 @@ export function UserFinancePanel(props: {
           />
           {/* Menyesuaikan poin memang menyentuh saldo, tapi tidak ada uang yang
               berpindah di sini — emas disimpan untuk top-up dan pembayaran. */}
-          <Button type="submit" disabled={loading}>
-            {loading ? "..." : "Simpan"}
+          <Button type="submit" disabled={loading || refreshing}>
+            {loading || refreshing ? "..." : "Simpan"}
           </Button>
         </form>
         {error && <p className="mt-2 text-caption text-danger">{error}</p>}
@@ -168,16 +168,23 @@ export function UserFinancePanel(props: {
               ))}
             </ul>
           )}
+          <Pagination
+            className="mt-3 border-t border-divider pt-3"
+            page={props.transactions.page}
+            total={props.transactions.total}
+            noun="transaksi"
+            hrefFor={(p) => pageHref(pathname, props.query, "poin", p)}
+          />
         </div>
       </Card>
 
       <Card padding="lg">
         <h3 className="text-title-2 text-ink">Pembelian</h3>
-        {props.purchases.length === 0 ? (
+        {props.purchases.rows.length === 0 ? (
           <p className="mt-2 text-body text-muted">Belum ada pembelian.</p>
         ) : (
           <ul className="mt-4 divide-y divide-divider">
-            {props.purchases.map((p) => (
+            {props.purchases.rows.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
                   <p className="text-body text-ink">{p.label}</p>
@@ -195,6 +202,13 @@ export function UserFinancePanel(props: {
             ))}
           </ul>
         )}
+        <Pagination
+          className="mt-3 border-t border-divider pt-3"
+          page={props.purchases.page}
+          total={props.purchases.total}
+          noun="pembelian"
+          hrefFor={(p) => pageHref(pathname, props.query, "beli", p)}
+        />
       </Card>
     </div>
   );

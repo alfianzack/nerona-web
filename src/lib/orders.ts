@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { paginate } from "./pagination";
 import { generateLicenseKey } from "./license";
 import { grantLicense } from "./admin-grants";
 import { activationExpiryFrom, renewedExpiryFrom } from "@/lib/billing-period";
@@ -463,23 +464,31 @@ export async function listPendingRenewals(userId: string) {
   });
 }
 
-export async function listPendingOrderRequests() {
-  return prisma.orderRequest.findMany({
-    where: { status: "pending" },
-    orderBy: { createdAt: "asc" },
-    // Explicit select so the heavy proofImage blob is never loaded for the list.
-    select: {
-      id: true,
-      product: true,
-      planName: true,
-      durationMonths: true,
-      pointsAmount: true,
-      priceAmount: true,
-      contactNote: true,
-      createdAt: true,
-      proofUploadedAt: true,
-      isRenewal: true,
-      user: { select: { email: true, name: true } },
-    },
-  });
+export async function listPendingOrderRequests(page: number) {
+  const where = { status: "pending" };
+  return paginate(
+    page,
+    () => prisma.orderRequest.count({ where }),
+    (skip, take) =>
+      prisma.orderRequest.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+        skip,
+        take,
+        // Explicit select so the heavy proofImage blob is never loaded for the list.
+        select: {
+          id: true,
+          product: true,
+          planName: true,
+          durationMonths: true,
+          pointsAmount: true,
+          priceAmount: true,
+          contactNote: true,
+          createdAt: true,
+          proofUploadedAt: true,
+          isRenewal: true,
+          user: { select: { email: true, name: true } },
+        },
+      })
+  );
 }

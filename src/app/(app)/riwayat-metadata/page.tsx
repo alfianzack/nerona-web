@@ -1,17 +1,23 @@
 import { requireUser } from "@/lib/session-guards";
-import { getMetadataLogStats, listMetadataLogsForUser } from "@/lib/metadata-log";
+import { getMetadataLogStats, listMetadataLogsForUserPage } from "@/lib/metadata-log";
+import { pageHref, parsePage } from "@/lib/pagination";
 import { MetadataLogSummary } from "@/components/metadata/MetadataLogSummary";
 import { MetadataLogTable } from "@/components/metadata/MetadataLogTable";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 
-export const metadata = { title: "Riwayat Metadata — Nerona" };
+export const metadata = { title: "Riwayat Metadata · Nerona" };
 
-export default async function RiwayatMetadataPage() {
+export default async function RiwayatMetadataPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await requireUser();
   const [stats, logs] = await Promise.all([
     getMetadataLogStats(session.user.id),
-    listMetadataLogsForUser(session.user.id, 100),
+    listMetadataLogsForUserPage(session.user.id, parsePage(searchParams.hal)),
   ]);
 
   return (
@@ -29,10 +35,10 @@ export default async function RiwayatMetadataPage() {
         </section>
 
         <Card padding="lg" className="mt-6">
-          <h2 className="text-title-2 text-ink">100 terakhir</h2>
+          <h2 className="text-title-2 text-ink">Riwayat, terbaru dulu</h2>
           <div className="mt-3">
             <MetadataLogTable
-              rows={logs.map((log) => ({
+              rows={logs.rows.map((log) => ({
                 id: log.id,
                 marketplace: log.marketplace,
                 pageUrl: log.pageUrl,
@@ -43,6 +49,13 @@ export default async function RiwayatMetadataPage() {
               }))}
             />
           </div>
+          <Pagination
+            className="mt-4 border-t border-divider pt-4"
+            page={logs.page}
+            total={logs.total}
+            noun="metadata"
+            hrefFor={(p) => pageHref("/riwayat-metadata", searchParams, "hal", p)}
+          />
         </Card>
       </div>
     </main>

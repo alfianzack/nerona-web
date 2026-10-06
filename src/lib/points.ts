@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { paginate, type Paged } from "@/lib/pagination";
 
 export interface PointTransactionView {
   id: string;
@@ -17,10 +18,11 @@ export async function getBalance(userId: string): Promise<number> {
   return agg._sum.delta ?? 0;
 }
 
-export async function listTransactions(userId: string, take = 50): Promise<PointTransactionView[]> {
+async function fetchTransactions(userId: string, skip: number, take: number): Promise<PointTransactionView[]> {
   const rows = await prisma.pointTransaction.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    skip,
     take,
     include: { createdBy: { select: { name: true, email: true } } },
   });
@@ -32,6 +34,20 @@ export async function listTransactions(userId: string, take = 50): Promise<Point
     createdByName: r.createdBy?.name ?? r.createdBy?.email ?? null,
     createdAt: r.createdAt,
   }));
+}
+
+/** N transaksi terbaru, untuk widget ringkas seperti di /dashboard. */
+export async function listTransactions(userId: string, take = 50): Promise<PointTransactionView[]> {
+  return fetchTransactions(userId, 0, take);
+}
+
+/** Satu halaman riwayat poin, untuk daftar lengkap di /finance dan detail pengguna admin. */
+export async function listTransactionsPage(userId: string, page: number): Promise<Paged<PointTransactionView>> {
+  return paginate(
+    page,
+    () => prisma.pointTransaction.count({ where: { userId } }),
+    (skip, take) => fetchTransactions(userId, skip, take)
+  );
 }
 
 export type AdjustResult = { ok: true; balance: number } | { ok: false; reason: "below_zero" };

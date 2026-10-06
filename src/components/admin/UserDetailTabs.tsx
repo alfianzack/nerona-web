@@ -22,7 +22,14 @@ export interface PurchaseView {
   date: string;
 }
 
-type Tab = "paket" | "finance";
+export type Tab = "paket" | "finance";
+
+/** Satu halaman dari daftar berhalaman, dalam bentuk yang bisa menyeberang dari server ke klien. */
+export interface PageView<T> {
+  rows: T[];
+  total: number;
+  page: number;
+}
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "paket", label: "Paket" },
@@ -33,10 +40,15 @@ export function UserDetailTabs(props: {
   userEmail: string;
   userId: string;
   balance: number;
-  transactions: TxnView[];
-  purchases: PurchaseView[];
+  transactions: PageView<TxnView>;
+  purchases: PageView<PurchaseView>;
+  /** Query string halaman ini, dipakai membangun tautan paginasi. */
+  query: Record<string, string>;
+  /** "finance" saat URL membawa nomor halaman salah satu daftar keuangan,
+      supaya membuka tautan ?poin=2 langsung mendarat di tab yang benar. */
+  initialTab: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("paket");
+  const [tab, setTab] = useState<Tab>(props.initialTab);
 
   return (
     <div>
@@ -71,8 +83,9 @@ export function UserDetailTabs(props: {
           <UserFinancePanel
             userId={props.userId}
             initialBalance={props.balance}
-            initialTransactions={props.transactions}
+            transactions={props.transactions}
             purchases={props.purchases}
+            query={props.query}
           />
         )}
       </div>

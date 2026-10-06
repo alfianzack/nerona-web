@@ -7,6 +7,7 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { formatRupiah } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 import {
   OrderForm,
   type OrderFormPayload,
@@ -50,7 +51,6 @@ const STATUS_TONE: Record<string, BadgeTone> = {
   cancelled: "danger",
 };
 
-const PAGE_SIZE = 20;
 
 /**
  * Belum ada primitive untuk <select>. Bentuknya dijiplak dari Input supaya

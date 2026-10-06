@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Button } from "./Button";
 import { Card } from "./Card";
 import { Icon } from "./icons";
+import { Pagination } from "./Pagination";
 
 export interface Column<T> {
   key: string;
@@ -42,10 +42,6 @@ export function DataTable<T>({
   onPageChange,
   onSortChange,
 }: DataTableProps<T>) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
-
   function handleHeaderClick(col: Column<T>) {
     if (!col.sortable) return;
     if (sort === col.key) {
@@ -133,33 +129,18 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-caption text-muted">
-        <span>
-          Menampilkan <span className="font-mono tabular-nums text-ink">{from}–{to}</span> dari{" "}
-          <span className="font-mono tabular-nums text-ink">{total}</span>
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-          >
-            Sebelumnya
-          </Button>
-          <span className="font-mono tabular-nums text-ink">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
-          >
-            Berikutnya
-          </Button>
-        </div>
-      </div>
+      {/* Kaki paginasi bersama; ia tidak mencetak apa pun saat total 0, jadi
+          garis atasnya ikut hanya kalau ada isi. */}
+      {total > 0 && (
+        <Pagination
+          className="border-t border-border px-4 py-3"
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          busy={loading}
+        />
+      )}
     </Card>
   );
 }

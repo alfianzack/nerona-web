@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PAGE_SIZE } from "@/lib/pagination";
 import type { Prisma } from "@prisma/client";
 
-const PAGE_SIZE = 25;
 const ACTIVE_LICENSE = { in: ["active", "comp"] };
 
 const FILTERS: Record<string, Prisma.UserWhereInput> = {

@@ -15,8 +15,8 @@ import {
   normalizeKeywords,
   recordMetadataLog,
   getMetadataLogStats,
-  listMetadataLogsForUser,
-  listAllMetadataLogs,
+  listMetadataLogsForUserPage,
+  listAllMetadataLogsPage,
 } from "@/lib/metadata-log";
 import { prisma } from "@/lib/prisma";
 
@@ -137,15 +137,29 @@ describe("scoping", () => {
 
   it("includes the owner only in the admin listing", async () => {
     findMany.mockResolvedValue([]);
-    await listMetadataLogsForUser("u1", 10);
+    count.mockResolvedValue(0);
+    await listMetadataLogsForUserPage("u1", 1);
     expect(findMany.mock.calls[0][0].include).toBeUndefined();
     expect(findMany.mock.calls[0][0].where).toEqual({ userId: "u1" });
 
-    await listAllMetadataLogs(10);
+    await listAllMetadataLogsPage(1);
     expect(findMany.mock.calls[1][0].where).toBeUndefined();
     expect(findMany.mock.calls[1][0].include).toEqual({
       user: { select: { email: true, name: true } },
     });
+  });
+
+  it("memotong 25 baris per halaman dan menjepit halaman yang lewat ujung", async () => {
+    findMany.mockResolvedValue([]);
+    count.mockResolvedValue(60);
+    const res = await listMetadataLogsForUserPage("u1", 2);
+    expect(findMany.mock.calls[0][0]).toMatchObject({ skip: 25, take: 25 });
+    expect(res).toMatchObject({ total: 60, page: 2 });
+
+    findMany.mockClear();
+    const clamped = await listMetadataLogsForUserPage("u1", 9);
+    expect(clamped.page).toBe(3);
+    expect(findMany.mock.calls.at(-1)[0]).toMatchObject({ skip: 50, take: 25 });
   });
 });
 

@@ -28,7 +28,7 @@ function fmtDateTime(iso: string): string {
 
 /**
  * Keyword ditampilkan penuh hanya kalau barisnya dibuka. Satu baris bisa berisi
- * 50 keyword; menampilkan semuanya sekaligus membuat daftar 100 baris tidak
+ * 50 keyword; menampilkan semuanya sekaligus membuat daftar 25 baris tidak
  * terbaca sama sekali.
  */
 function KeywordCell({ keywords, count }: { keywords: string; count: number }) {
@@ -45,7 +45,7 @@ function KeywordCell({ keywords, count }: { keywords: string; count: number }) {
     }
   }
 
-  if (!keywords) return <span className="text-caption text-muted">—</span>;
+  if (!keywords) return <span className="text-caption text-muted">Tanpa keyword</span>;
 
   return (
     <div className="min-w-0">

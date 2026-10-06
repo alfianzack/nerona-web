@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { PAGE_SIZE } from "@/lib/pagination";
 import { createOrder, listOrdersPaged, isOrderStatus, type OrderItemInput, type OrderQuery } from "@/lib/shop";
 
 function numParam(value: string | null): number | undefined {
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const page = Math.max(1, Math.floor(Number(searchParams.get("page")) || 1));
-  const pageSize = Math.min(100, Math.max(1, Math.floor(Number(searchParams.get("pageSize")) || 20)));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(Number(searchParams.get("pageSize")) || PAGE_SIZE)));
 
   const sortParam = searchParams.get("sort");
   // "createdAt" masih diterima sebagai alias supaya URL/bookmark lama tetap jalan;

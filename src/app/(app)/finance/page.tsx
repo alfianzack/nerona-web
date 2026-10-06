@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session-guards";
 import { prisma } from "@/lib/prisma";
-import { getBalance, listTransactions } from "@/lib/points";
+import { getBalance, listTransactionsPage } from "@/lib/points";
+import { pageHref, parsePage } from "@/lib/pagination";
+import { listPurchasesPage } from "@/lib/purchases";
 import { listPendingRenewals } from "@/lib/orders";
 import { isAgentPlanExpired } from "@/lib/agent/admin";
 import { getTopupPackages, perPointLabel } from "@/lib/topup";
@@ -12,10 +14,11 @@ import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 import { Stat } from "@/components/ui/Stat";
 import { TextLink } from "@/components/ui/TextLink";
 
-export const metadata = { title: "Finance — Nerona" };
+export const metadata = { title: "Finance · Nerona" };
 
 const POINT_REASON_LABEL: Record<string, string> = {
   manual_adjust: "Penyesuaian admin",
@@ -28,26 +31,25 @@ function fmtDate(d: Date): string {
 }
 
 function fmtDateOrNull(d: Date | null): string {
-  return d ? fmtDate(d) : "—";
+  return d ? fmtDate(d) : "-";
 }
 
-export default async function FinancePage() {
+/**
+ * Dua daftar berhalaman di satu layar, jadi masing-masing punya parameternya
+ * sendiri: `poin` untuk riwayat poin, `beli` untuk pembelian.
+ */
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await requireUser();
 
-  const [balance, transactions, renewals, orderRequests, orders, agentProfile, license, topupPackages] = await Promise.all([
+  const [balance, txnPage, renewals, purchasePage, agentProfile, license, topupPackages] = await Promise.all([
     getBalance(session.user.id),
-    listTransactions(session.user.id, 50),
+    listTransactionsPage(session.user.id, parsePage(searchParams.poin)),
     listPendingRenewals(session.user.id),
-    prisma.orderRequest.findMany({
-      where: { userId: session.user.id, status: "fulfilled" },
-      orderBy: { fulfilledAt: "desc" },
-      select: { id: true, product: true, planName: true, fulfilledAt: true },
-    }),
-    prisma.order.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, amount: true, note: true, courseId: true, createdAt: true },
-    }),
+    listPurchasesPage(session.user.id, parsePage(searchParams.beli)),
     // Di-null-kan saat Agent disembunyikan, bukan disaring di JSX: satu tempat
     // memutuskan, dan setiap pemakaian agentProfile di bawah — baris paket,
     // keadaan kosong, hasActivePlan untuk TopupCard — ikut benar sendiri.
@@ -72,22 +74,8 @@ export default async function FinancePage() {
     perPointLabel: perPointLabel(pkg),
   }));
 
-  const purchases = [
-    ...orderRequests.map((o) => ({
-      id: `req-${o.id}`,
-      label: `${o.product === "agent" ? "Agent" : "Metadata"} — ${o.planName}`,
-      detail: null as string | null,
-      amount: null as number | null,
-      date: o.fulfilledAt ?? new Date(0),
-    })),
-    ...orders.map((o) => ({
-      id: `ord-${o.id}`,
-      label: o.courseId ? "Pembelian kelas" : "Aktivasi lisensi",
-      detail: o.note,
-      amount: o.amount,
-      date: o.createdAt,
-    })),
-  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const transactions = txnPage.rows;
+  const purchases = purchasePage.rows;
 
   return (
     <main className="bg-canvas">
@@ -102,7 +90,7 @@ export default async function FinancePage() {
               {renewals.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-3">
                   <span className="text-body text-ink">
-                    {r.product === "agent" ? "Agent WhatsApp" : "Metadata"} — {r.planName}
+                    {r.product === "agent" ? "Agent WhatsApp" : "Metadata"} · {r.planName}
                   </span>
                   {r.proofUploadedAt ? (
                     <Link
@@ -128,8 +116,8 @@ export default async function FinancePage() {
             Dua angka di atasnya menjawab pertanyaan yang membawa orang ke sini.
 
             Sempat ada angka ketiga, "Poin terpakai", dijumlahkan dari daftar
-            transaksi di halaman ini. Angka itu dibuang: daftarnya dibatasi 50
-            baris, jadi bagi akun yang sudah lewat 50 aktivitas ia diam-diam
+            transaksi di halaman ini. Angka itu dibuang: daftarnya waktu itu dibatasi 50
+            baris (kini berhalaman), jadi bagi akun yang sudah lewat 50 aktivitas ia diam-diam
             terlalu kecil — dan sebuah angka besar di layar uang terbaca sebagai
             total seumur akun berapa pun keterangan di bawahnya. Menampilkannya
             dengan benar butuh agregat di sisi basis data, dan itu pekerjaan
@@ -142,7 +130,7 @@ export default async function FinancePage() {
           />
           <Stat
             label="Pembelian"
-            value={purchases.length.toLocaleString("id-ID")}
+            value={purchasePage.total.toLocaleString("id-ID")}
             hint="Seluruh riwayat di bawah."
           />
         </div>
@@ -162,7 +150,7 @@ export default async function FinancePage() {
                   {agentProfile.plan === "free" ? (
                     <Badge>Paket free</Badge>
                   ) : isAgentPlanExpired(agentProfile) ? (
-                    <Badge tone="danger">Berakhir — silakan perpanjang</Badge>
+                    <Badge tone="danger">Berakhir, silakan perpanjang</Badge>
                   ) : (
                     <Badge tone="success">
                       Berlaku sampai {fmtDateOrNull(agentProfile.planExpiresAt)}
@@ -239,6 +227,13 @@ export default async function FinancePage() {
                 </li>
               ))}
             </ul>
+            <Pagination
+              className="mt-4 border-t border-divider pt-4"
+              page={txnPage.page}
+              total={txnPage.total}
+              noun="aktivitas"
+              hrefFor={(p) => pageHref("/finance", searchParams, "poin", p)}
+            />
           </Card>
 
           <Card>
@@ -267,6 +262,13 @@ export default async function FinancePage() {
                 </li>
               ))}
             </ul>
+            <Pagination
+              className="mt-4 border-t border-divider pt-4"
+              page={purchasePage.page}
+              total={purchasePage.total}
+              noun="pembelian"
+              hrefFor={(p) => pageHref("/finance", searchParams, "beli", p)}
+            />
           </Card>
         </div>
       </div>
